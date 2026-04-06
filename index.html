@@ -285,7 +285,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-famil
     <strong id="mcnum">0</strong>&nbsp;members
   </div>
   <div class="hbtns">
-    <button class="hbtn" id="mode-btn" onclick="toggleTreeMode()" title="Toggle Simple/Complex view">Tree view</button>
+    <button class="hbtn" id="mode-btn" onclick="toggleTreeMode()" title="Toggle Simple/Complex view">All Twygs</button>
     <div id="save-ind">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg>
       Saved
@@ -420,7 +420,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-famil
       </div>
       <div class="sp-option" id="sp-opt-complex" onclick="setSettingsMode('complex')">
         <div>
-          <div class="sp-option-label">Full View</div>
+          <div class="sp-option-label">All Twygs</div>
           <div class="sp-option-sub">All connections including siblings and extended family</div>
         </div>
         <div class="sp-option-check">
@@ -717,7 +717,7 @@ async function loadSettings(){
       if(d.defaultView){
         settingsMode=d.defaultView;
         treeMode=settingsMode;
-        document.getElementById('mode-btn').textContent=treeMode==='simple'?'Full view':'Tree view';
+        document.getElementById('mode-btn').textContent=treeMode==='simple'?'All Twygs':'Tree view';
       }
       if(d.lineColors) lineColors={...DEFAULT_LINE_COLORS,...d.lineColors};
     }
@@ -728,7 +728,7 @@ async function saveSettings(){
   try{
     await settingsDoc().set({ defaultView:settingsMode, lineColors, updatedAt:firebase.firestore.FieldValue.serverTimestamp() });
     treeMode=settingsMode;
-    document.getElementById('mode-btn').textContent=treeMode==='simple'?'Full view':'Tree view';
+    document.getElementById('mode-btn').textContent=treeMode==='simple'?'All Twygs':'Tree view';
     render();
     closeSettings();
     flashSaved();
@@ -739,6 +739,7 @@ function setSettingsMode(mode){
   settingsMode=mode;
   document.getElementById('sp-opt-simple').classList.toggle('active', mode==='simple');
   document.getElementById('sp-opt-complex').classList.toggle('active', mode==='complex');
+  render();
 }
 
 function openSettings(){
@@ -805,7 +806,7 @@ let nxt=Date.now();
 let treeMode='complex'; // 'simple' | 'complex'
 function toggleTreeMode(){
   treeMode=treeMode==='simple'?'complex':'simple';
-  document.getElementById('mode-btn').textContent=treeMode==='simple'?'Full view':'Tree view';
+  document.getElementById('mode-btn').textContent=treeMode==='simple'?'All Twygs':'Tree view';
   render();
 }
 function updateCount(){ document.getElementById('mcnum').textContent=P.length; }
@@ -922,8 +923,16 @@ function getRelToYou(id){
   // Check explicit custom links first
   if(you.customLinks&&you.customLinks[id]) return you.customLinks[id];
   if(p.customLinks&&p.customLinks[you.id]) return p.customLinks[you.id];
-  // Use stored relLabel
-  if(p.relLabel) return genderedRel(p.relLabel,p.gender)||p.relLabel;
+  // Use stored relLabel — already specific ('Sister','Brother') just return as-is
+  if(p.relLabel){
+    // If it's already a specific label (not generic), return directly
+    const specific=['Father','Mother','Son','Daughter','Brother','Sister','Husband','Wife','Partner',
+      'Grandfather','Grandmother','Grandson','Granddaughter','Uncle','Aunt','Nephew','Niece','Cousin',
+      'Father-in-law','Mother-in-law','Brother-in-law','Sister-in-law','Godfather','Godmother',
+      'Stepfather','Stepmother','Stepson','Stepdaughter','Half-brother','Half-sister'];
+    if(specific.includes(p.relLabel)) return p.relLabel;
+    return genderedRel(p.relLabel,p.gender)||p.relLabel;
+  }
   // Infer from tree structure
   if((p.parents||[]).includes(you.id)) return genderedRel('Child',p.gender);
   if((you.parents||[]).includes(id)) return genderedRel('Parent',p.gender);
@@ -1451,7 +1460,15 @@ function removeConnFromCard(fromId, toId, connType){
   if(connType==='labeled'){
     if(from.customLinks) delete from.customLinks[toId];
     if(to.customLinks) delete to.customLinks[fromId];
-    if(to.relLabel) delete to.relLabel;
+    // Clear relLabel on both sides
+    delete from.relLabel;
+    delete to.relLabel;
+    // Also remove from YOU node's customLinks if present
+    const you=P.find(p=>p.isYou);
+    if(you){
+      if(you.customLinks&&you.customLinks[toId]) delete you.customLinks[toId];
+      if(you.customLinks&&you.customLinks[fromId]&&fromId!==you.id) delete you.customLinks[fromId];
+    }
   } else if(connType==='spouse'){
     if(from.spouseOf===toId) delete from.spouseOf;
     if(to.spouseOf===fromId) delete to.spouseOf;
@@ -1557,7 +1574,12 @@ function saveConnection(){
     other.relLabel=label;
   } else if(type==='sibling'){
     (target.parents||[]).forEach(pid=>{ if(!(other.parents||[]).includes(pid)) other.parents=[...(other.parents||[]),pid]; });
-    if(!other.relLabel) other.relLabel='Sibling';
+    if(!target.customLinks) target.customLinks={};
+    if(!other.customLinks) other.customLinks={};
+    const sLbl=label||'Sibling';
+    target.customLinks[other.id]=sLbl;
+    other.customLinks[target.id]=sLbl;
+    if(!other.relLabel) other.relLabel=sLbl;
   } else if(type==='spouse'){
     other.spouseOf=target.id;
     if(!other.gender&&label.toLowerCase()==='husband') other.gender='male';
@@ -1803,7 +1825,15 @@ function submitMember(){
     const target=byId[addFor];
     if(baseRel==='Child') np.parents=[addFor];
     else if(baseRel==='Parent'){ np.parents=[]; if(target) target.parents=[...(target.parents||[]),id]; }
-    else if(baseRel==='Sibling') np.parents=[...(target?.parents||[])];
+    else if(baseRel==='Sibling'){
+      np.parents=[...(target?.parents||[])];
+      // Also store as customLink so the line always draws even without shared parents
+      if(!np.customLinks) np.customLinks={};
+      if(!target.customLinks) target.customLinks={};
+      const sibLabel=genderedRel('Sibling',np.gender)||'Sibling';
+      np.customLinks[addFor]=sibLabel;
+      target.customLinks[id]=sibLabel;
+    }
     else if(baseRel==='Spouse'){ np.spouseOf=addFor; if(target) target.spouseOf=id; }
     else np.parents=[addFor];
   }
