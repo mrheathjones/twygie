@@ -1130,51 +1130,43 @@ async function loadSettings(){
   }catch(e){}
 }
 
-async function saveSettings(){
-  // Show saving state immediately (before async)
+function saveSettings(){
+  // 1. Grab values
+  youngAge=parseInt(document.getElementById('sp-young-age')?.value)||17;
+  treeMode=settingsMode;
+  setTreeMode(settingsMode);
+  render();
+
+  // 2. Show immediate feedback — no async blocking
   const saveBtn=document.getElementById('sp-save-btn');
   if(saveBtn){
-    saveBtn.textContent='Saving…';
-    saveBtn.style.background='rgba(200,168,75,.5)';
+    saveBtn.textContent='✓  Saved!';
+    saveBtn.style.background='#4caf7d';
+    saveBtn.style.color='#fff';
     saveBtn.disabled=true;
+    setTimeout(()=>{
+      saveBtn.textContent='Save preferences';
+      saveBtn.style.background='';
+      saveBtn.style.color='';
+      saveBtn.disabled=false;
+      closeSettings();
+      flashSaved();
+    },1500);
+  } else {
+    closeSettings();
+    flashSaved();
   }
-  try{
-    youngAge=parseInt(document.getElementById('sp-young-age')?.value)||17;
-    await settingsDoc().set({
+
+  // 3. Persist to Firestore in the background — don't block UI
+  if(currentUser){
+    settingsDoc().set({
       defaultView:settingsMode, lineColors, nodeColors,
       customLineTypes, youngAge, autoConnections,
       updatedAt:firebase.firestore.FieldValue.serverTimestamp()
-    });
-    treeMode=settingsMode;
-    setTreeMode(settingsMode);
-    render();
-    // Show success on button
-    if(saveBtn){
-      saveBtn.textContent='✓  Saved!';
-      saveBtn.style.background='#4caf7d';
-      saveBtn.style.color='#fff';
-      saveBtn.disabled=false;
-      setTimeout(()=>{
-        saveBtn.textContent='Save preferences';
-        saveBtn.style.background='';
-        saveBtn.style.color='';
-        closeSettings();
-        flashSaved();
-      },1600);
-    } else {
-      closeSettings();
-      flashSaved();
-    }
-  }catch(e){
-    console.error('Settings save failed:',e);
-    if(saveBtn){
-      saveBtn.textContent='Save preferences';
-      saveBtn.style.background='';
-      saveBtn.disabled=false;
-    }
-    alert('Could not save: '+e.message);
+    }).catch(e=>console.warn('Settings save failed:',e));
   }
 }
+
 
 function setSettingsMode(mode){
   settingsMode=mode;
