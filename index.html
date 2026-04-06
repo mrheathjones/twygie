@@ -126,6 +126,9 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-famil
 .frel{font-size:.68rem;color:var(--muted);font-style:italic}
 .fyr{font-size:.72rem;color:var(--muted);flex-shrink:0}
 .card-actions{display:flex;gap:6px;margin-top:14px;flex-wrap:wrap}
+.fchip-edit-btn{background:transparent;border:none;cursor:pointer;color:rgba(200,168,75,.4);font-size:13px;padding:0 3px;line-height:1;transition:color .2s;flex-shrink:0}
+.fchip-edit-btn:hover{color:rgba(200,168,75,.9)}
+.fchip-edit-select{position:absolute;top:0;left:0;right:0;bottom:0;z-index:10;background:rgba(6,12,22,.97);border:1px solid rgba(200,168,75,.4);border-radius:10px;color:var(--text);font-family:'Outfit',sans-serif;font-size:.82rem;padding:0 10px;outline:none;cursor:pointer;width:100%;-webkit-appearance:none}
 .btn-sm{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:7px;font-family:'Outfit',sans-serif;font-size:.75rem;cursor:pointer;transition:all .2s;border:1px solid}
 .btn-edit{background:rgba(200,168,75,.1);border-color:rgba(200,168,75,.25);color:rgba(200,168,75,.85)}
 .btn-edit:hover{background:rgba(200,168,75,.18);color:var(--gold)}
@@ -1919,12 +1922,13 @@ function fillCard(p){
       const chipPhoto=cp.photo
         ?`<div class="fchip-photo"><img src="${cp.photo}"/></div>`
         :`<div class="fdot" style="background:${cc};box-shadow:0 0 5px ${cc}"></div>`;
-      html+=`<div class="fchip" style="position:relative">
+      html+=`<div class="fchip" id="chip-${p.id}-${cp.id}" style="position:relative">
         <div style="flex:1;display:flex;align-items:center;gap:8px;cursor:pointer" onclick="selectNode('${cp.id}')">
           ${chipPhoto}
-          <div class="fi2"><div class="fn2">${fullName(cp)}</div><div class="frel">${rel}</div></div>
+          <div class="fi2"><div class="fn2">${fullName(cp)}</div><div class="frel" id="frel-${p.id}-${cp.id}">${rel}</div></div>
           <div class="fyr">${dobDisplay(cp).replace('b. ','')}</div>
         </div>
+        <button class="fchip-edit-btn" onclick="editConnRel('${p.id}','${cp.id}','${connType||'labeled'}');event.stopPropagation()" title="Edit relationship">✎</button>
         <button onclick="removeConnFromCard('${p.id}','${cp.id}','${connType||'labeled'}');event.stopPropagation()" title="Remove this connection" style="background:transparent;border:none;cursor:pointer;color:rgba(200,100,100,.35);font-size:16px;padding:0 4px;line-height:1;flex-shrink:0;transition:color .2s" onmouseover="this.style.color='rgba(220,120,120,.9)'" onmouseout="this.style.color='rgba(200,100,100,.35)'">×</button>
       </div>`;
     });
@@ -2081,6 +2085,100 @@ function removePerson(id){
     if(p.customLinks) Object.keys(p.customLinks).forEach(k=>{ if(rm.has(k)) delete p.customLinks[k]; });
   });
   rebuild([]); closeCard(); render(); scheduleSave();
+}
+
+function editConnRel(fromId, toId, connType){
+  const chip=document.getElementById(`chip-${fromId}-${toId}`);
+  if(!chip) return;
+  // Build select with all relationship options
+  const from=P.find(p=>p.id===fromId);
+  const fname=from?(from.firstName||fullName(from).split(' ')[0]):'them';
+  const sel=document.createElement('select');
+  sel.className='fchip-edit-select';
+
+  const groups=[
+    ['Parents',['Father','Mother','Stepfather','Stepmother']],
+    ['Children',['Son','Daughter','Stepson','Stepdaughter']],
+    ['Siblings',['Brother','Sister','Half-brother','Half-sister']],
+    ['Spouse',['Husband','Wife','Partner']],
+    ['Grandparents',['Grandfather','Grandmother','Great-grandfather','Great-grandmother']],
+    ['Grandchildren',['Grandson','Granddaughter','Great-grandson','Great-granddaughter']],
+    ['Aunts & Uncles',['Uncle','Aunt','Great-uncle','Great-aunt']],
+    ['Nephews & Nieces',['Nephew','Niece','Grand-nephew','Grand-niece']],
+    ['First Cousins',['First Cousin','First Cousin Once Removed','First Cousin Twice Removed']],
+    ['Second Cousins',['Second Cousin','Second Cousin Once Removed','Second Cousin Twice Removed']],
+    ['In-Laws',['Father-in-law','Mother-in-law','Son-in-law','Daughter-in-law','Brother-in-law','Sister-in-law']],
+    ['Other',['Godfather','Godmother','Godchild','Guardian','Family Friend','Other']],
+  ];
+
+  // Get current rel label to pre-select
+  const to=P.find(p=>p.id===toId);
+  const currentLabel=to?.relLabel||(to?.customLinks?.[fromId]?.label)||'';
+
+  groups.forEach(([grpLabel,opts])=>{
+    const og=document.createElement('optgroup');
+    og.label=grpLabel;
+    opts.forEach(lbl=>{
+      const o=document.createElement('option');
+      o.value=lbl; o.textContent=lbl;
+      if(lbl===currentLabel) o.selected=true;
+      og.appendChild(o);
+    });
+    sel.appendChild(og);
+  });
+
+  sel.onchange=()=>{
+    const newLabel=sel.value;
+    saveEditedConnRel(fromId,toId,connType,newLabel);
+    sel.remove();
+  };
+  sel.onblur=()=>{ setTimeout(()=>sel.remove(),200); };
+  chip.appendChild(sel);
+  setTimeout(()=>sel.focus(),30);
+}
+
+function saveEditedConnRel(fromId, toId, connType, newLabel){
+  const from=P.find(p=>p.id===fromId);
+  const to=P.find(p=>p.id===toId); if(!from||!to) return;
+
+  const ltype=BLOOD_LABELS.has(newLabel)?'blood':'labeled';
+
+  // Determine if it's a structural change (parent↔child) or just a label change
+  const newIsParent=['Father','Mother','Stepfather','Stepmother'].includes(newLabel);
+  const newIsChild=['Son','Daughter','Stepson','Stepdaughter'].includes(newLabel);
+  const newIsSpouse=['Husband','Wife','Partner'].includes(newLabel);
+  const newIsSibling=['Brother','Sister','Half-brother','Half-sister'].includes(newLabel);
+
+  // Remove old connection first
+  if(connType==='parent') from.parents=(from.parents||[]).filter(pid=>pid!==toId);
+  else if(connType==='child') to.parents=(to.parents||[]).filter(pid=>pid!==fromId);
+  else if(connType==='spouse'){ if(from.spouseOf===toId) delete from.spouseOf; if(to.spouseOf===fromId) delete to.spouseOf; }
+  else { if(from.customLinks) delete from.customLinks[toId]; if(to.customLinks) delete to.customLinks[fromId]; }
+
+  // Apply new connection type
+  if(newIsParent){
+    if(!(from.parents||[]).includes(toId)) from.parents=[...(from.parents||[]),toId];
+  } else if(newIsChild){
+    if(!(to.parents||[]).includes(fromId)) to.parents=[...(to.parents||[]),fromId];
+  } else if(newIsSpouse){
+    to.spouseOf=fromId;
+  } else {
+    if(!from.customLinks) from.customLinks={};
+    if(!to.customLinks) to.customLinks={};
+    const sibLtype=newIsSibling?'sibling':ltype;
+    from.customLinks[toId]={label:newLabel,lineType:sibLtype};
+    to.customLinks[fromId]={label:newLabel,lineType:sibLtype};
+  }
+
+  // Update gender hint
+  const mGender={'father':'male','grandfather':'male','son':'male','grandson':'male','brother':'male','husband':'male','uncle':'male','nephew':'male'};
+  const fGender={'mother':'female','grandmother':'female','daughter':'female','granddaughter':'female','sister':'female','wife':'female','aunt':'female','niece':'female'};
+  const lk=newLabel.toLowerCase();
+  if(!to.gender){ if(mGender[lk]) to.gender='male'; else if(fGender[lk]) to.gender='female'; }
+  to.relLabel=newLabel;
+
+  rebuild(); render(); scheduleSave();
+  selectNode(fromId);
 }
 
 function removeConnFromCard(fromId, toId, connType){
