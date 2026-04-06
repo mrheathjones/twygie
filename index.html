@@ -1901,7 +1901,7 @@ function fillCard(p){
 
   const myP2=new Set(p.parents||[]);
   const sibs=P.filter(x=>x.id!==p.id&&(x.parents||[]).some(pp=>myP2.has(pp))).map(x=>({
-    p:x, rel:genderedRel('Sibling',x.gender)
+    p:x, rel:genderedRel('Sibling',x.gender), connType:'sibling'
   }));
 
   const spouseNode=p.spouseOf?byId[p.spouseOf]:P.find(x=>x.spouseOf===p.id);
@@ -2085,36 +2085,47 @@ function removePerson(id){
 
 function removeConnFromCard(fromId, toId, connType){
   if(!confirm('Remove this connection?')) return;
-  const from=byId[fromId]; const to=byId[toId]; if(!from||!to) return;
-  if(connType==='labeled'){
-    if(from.customLinks) delete from.customLinks[toId];
-    if(to.customLinks) delete to.customLinks[fromId];
-    // Clear relLabel on both sides
-    delete from.relLabel;
-    delete to.relLabel;
-    // Also remove from YOU node's customLinks if present
-    const you=P.find(p=>p.isYou);
-    if(you){
-      if(you.customLinks&&you.customLinks[toId]) delete you.customLinks[toId];
-      if(you.customLinks&&you.customLinks[fromId]&&fromId!==you.id) delete you.customLinks[fromId];
-    }
-  } else if(connType==='spouse'){
-    if(from.spouseOf===toId) delete from.spouseOf;
-    if(to.spouseOf===fromId) delete to.spouseOf;
-    if(from.relLabel==='Spouse'||from.relLabel==='Wife'||from.relLabel==='Husband'||from.relLabel==='Partner') delete from.relLabel;
-    if(to.relLabel==='Spouse'||to.relLabel==='Wife'||to.relLabel==='Husband'||to.relLabel==='Partner') delete to.relLabel;
-  } else if(connType==='parent'){
-    // Remove toId from from.parents (to is the parent of from)
-    from.parents=(from.parents||[]).filter(pid=>pid!==toId);
-  } else if(connType==='child'){
-    // toId is a child of from — remove from from toId's parents
-    to.parents=(to.parents||[]).filter(pid=>pid!==fromId);
-  } else if(connType==='sibling'){
-    // Siblings share parents — just note but don't disconnect parents
-    alert('To remove a sibling relationship, remove shared parents.');
-    return;
+  // Always get fresh references from P (byId may be stale)
+  const from=P.find(p=>p.id===fromId);
+  const to=P.find(p=>p.id===toId);
+  if(!from||!to){ console.warn('removeConn: node not found',fromId,toId); return; }
+
+  switch(connType){
+    case 'spouse':
+      if(from.spouseOf===toId) delete from.spouseOf;
+      if(to.spouseOf===fromId) delete to.spouseOf;
+      delete from.relLabel; delete to.relLabel;
+      break;
+    case 'parent':
+      // to is the parent of from — remove from from.parents
+      from.parents=(from.parents||[]).filter(pid=>pid!==toId);
+      break;
+    case 'child':
+      // to is the child of from — remove fromId from to.parents
+      to.parents=(to.parents||[]).filter(pid=>pid!==fromId);
+      break;
+    case 'sibling':
+      // Remove from customLinks on both sides (explicit sibling links)
+      if(from.customLinks) delete from.customLinks[toId];
+      if(to.customLinks) delete to.customLinks[fromId];
+      // Also remove shared parents if that's the only connection
+      // (user explicitly removing the sibling relationship)
+      from.parents=(from.parents||[]).filter(pid=>!(to.parents||[]).includes(pid));
+      break;
+    case 'labeled':
+    default:
+      // Remove from customLinks on both sides
+      if(from.customLinks) delete from.customLinks[toId];
+      if(to.customLinks) delete to.customLinks[fromId];
+      delete from.relLabel; delete to.relLabel;
+      // Clean up any YOU → node customLink too
+      const you=P.find(p=>p.isYou);
+      if(you&&you.id!==fromId&&you.id!==toId){
+        if(you.customLinks) { delete you.customLinks[toId]; delete you.customLinks[fromId]; }
+      }
+      break;
   }
-  rebuild([]); render(); scheduleSave();
+  rebuild(); render(); scheduleSave();
   selectNode(fromId);
 }
 
