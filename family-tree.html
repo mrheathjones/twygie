@@ -30,20 +30,25 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-famil
 .br{fill:none;stroke-linecap:round;transition:opacity .3s}
 .br.dim{opacity:.08}.br.lit{opacity:1}
 .nd{cursor:pointer}
-.nd .core{transition:transform .2s ease,opacity .3s;transform-origin:center}
-.nd:hover .core{transform:scale(1.55)}
+.nd .core{transition:filter .2s ease,opacity .3s;transform-origin:center}
 .nd.dim .core,.nd.dim .hi,.nd.dim .lbl{opacity:.15}
-.nd.sel .core{transform:scale(1.7)}
+.nd.sel .core{filter:brightness(1.6)}
 
-@keyframes pa{0%,100%{opacity:.52;transform:scale(1)}50%{opacity:.88;transform:scale(1.2)}}
-@keyframes pb{0%,100%{opacity:.42;transform:scale(1)}50%{opacity:.72;transform:scale(1.14)}}
-@keyframes py{0%,100%{opacity:.58;transform:scale(1)}50%{opacity:1;transform:scale(1.25)}}
-@keyframes pt{0%,100%{opacity:.48;transform:scale(1)}50%{opacity:.82;transform:scale(1.18)}}
+/* Pure opacity pulsate — no transform/translate so nodes stay fixed */
+@keyframes pa{0%,100%{opacity:.38}50%{opacity:.72}}
+@keyframes pb{0%,100%{opacity:.28}50%{opacity:.55}}
+@keyframes py{0%,100%{opacity:.55}50%{opacity:1.0}}
+@keyframes pt{0%,100%{opacity:.35}50%{opacity:.65}}
+
 .gp{transform-origin:center}
 .gp.amber{animation:pa 3.3s ease-in-out infinite}
-.gp.blue{animation:pb 4.2s ease-in-out infinite}
-.gp.you{animation:py 2.7s ease-in-out infinite}
-.gp.teal{animation:pt 3.7s ease-in-out infinite}
+.gp.blue {animation:pb 4.2s ease-in-out infinite}
+.gp.you  {animation:py 2.5s ease-in-out infinite}
+.gp.teal {animation:pt 3.7s ease-in-out infinite}
+
+/* Hover: node group brightens halo + core */
+.nd:hover .gp{animation:none;opacity:.95;filter:brightness(1.6)}
+.nd:hover .core{filter:brightness(1.5)}
 
 .nlbl{font-family:'Outfit',sans-serif;font-size:10.5px;font-weight:400;letter-spacing:.03em;fill:rgba(221,216,204,.52);pointer-events:none;transition:opacity .3s}
 .nlbl.you{font-weight:600;fill:rgba(240,239,235,.82);font-size:11px}
@@ -548,8 +553,8 @@ function col(p){
 }
 function gclass(p){ if(p.isYou) return 'you'; if(p.death) return 'blue'; if((p.birth||0)>=2000) return 'teal'; return 'amber'; }
 function gfilt(p){ if(p.isYou) return 'gf-y'; if(p.death) return 'gf-b'; if((p.birth||0)>=2000) return 'gf-t'; return 'gf-a'; }
-function nr(p){ return p.isYou?11:8; }
-function gr(p){ return p.isYou?26:20; }
+function nr(p){ return p.isYou?13:9; }
+function gr(p){ return p.isYou?38:24; }
 function initials(name){ return (name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase(); }
 
 function orb(a,b){
@@ -593,7 +598,8 @@ function render(){
   document.getElementById('bG').innerHTML='';
   document.getElementById('nG').innerHTML='';
   document.getElementById('defs-clips').innerHTML='';
-  if(P.length>1){ drawTrunk(); drawBranches(); }
+  drawTrunk();
+  drawBranches();
   drawNodes();
 }
 
@@ -628,6 +634,7 @@ function bstyle(dy){
 
 function drawBranches(){
   const bG=document.getElementById('bG');
+  // Draw parent-child lines
   P.forEach(child=>{
     (child.parents||[]).forEach(pid=>{
       const par=byId[pid]; if(!par) return;
@@ -644,6 +651,25 @@ function drawBranches(){
       path.dataset.src=pid; path.dataset.dst=child.id;
       bG.appendChild(path);
     });
+  });
+  // Draw spouse lines (horizontal dashed connector)
+  const drawn=new Set();
+  P.forEach(p=>{
+    if(!p.spouseOf) return;
+    const key=[p.id,p.spouseOf].sort().join('-');
+    if(drawn.has(key)) return;
+    drawn.add(key);
+    const sp=byId[p.spouseOf]; if(!sp) return;
+    const mx=(p.x+sp.x)/2, y=p.y;
+    const path=se('path');
+    path.setAttribute('d',`M ${p.x} ${y} C ${mx} ${y} ${mx} ${y} ${sp.x} ${y}`);
+    path.setAttribute('stroke','rgba(200,168,75,.25)');
+    path.setAttribute('stroke-width','2');
+    path.setAttribute('stroke-dasharray','5,4');
+    path.setAttribute('fill','none');
+    path.setAttribute('class','br');
+    path.dataset.src=p.id; path.dataset.dst=sp.id;
+    bG.appendChild(path);
   });
 }
 
@@ -669,6 +695,16 @@ function drawNodes(){
     G.setAttribute('class','nd');
     G.setAttribute('transform',`translate(${p.x},${p.y})`);
     G.dataset.id=p.id;
+
+    // Extra always-on outer glow for isYou
+    if(p.isYou){
+      const outerGlow=se('circle');
+      outerGlow.setAttribute('r',(GR+14)+'');
+      outerGlow.setAttribute('fill',c);
+      outerGlow.setAttribute('fill-opacity','.07');
+      outerGlow.setAttribute('filter',`url(#${gfilt(p)})`);
+      G.appendChild(outerGlow);
+    }
 
     // Outer glow halo
     const halo=se('circle');
