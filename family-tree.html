@@ -237,6 +237,23 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-famil
 .sp-option-check{width:18px;height:18px;border-radius:50%;border:2px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .2s}
 .sp-option.active .sp-option-check{background:var(--gold);border-color:var(--gold)}
 .sp-save{width:100%;padding:10px;border-radius:10px;background:var(--gold);border:none;color:#04070c;font-family:'Outfit',sans-serif;font-size:.88rem;font-weight:600;cursor:pointer;transition:all .2s;margin-top:8px}
+.sp-save:hover{background:#d4b454}
+/* Collapsible sections */
+.sp-collapse-hdr{display:flex;align-items:center;justify-content:space-between;padding:13px 0 11px;cursor:pointer;border-top:1px solid var(--border);user-select:none}
+.sp-collapse-hdr:first-child{border-top:none}
+.sp-collapse-title{font-size:.65rem;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);font-weight:600}
+.sp-collapse-icon{width:18px;height:18px;display:flex;align-items:center;justify-content:center;color:var(--muted);transition:transform .25s;flex-shrink:0}
+.sp-collapse-icon.open{transform:rotate(180deg)}
+.sp-collapse-body{overflow:hidden;transition:max-height .3s ease,opacity .25s ease;max-height:0;opacity:0}
+.sp-collapse-body.open{max-height:1200px;opacity:1}
+/* Save toast */
+#sp-toast{position:absolute;bottom:76px;left:50%;transform:translateX(-50%) translateY(10px);background:rgba(100,180,100,.18);border:1px solid rgba(100,180,100,.35);color:rgba(160,220,160,.9);padding:8px 18px;border-radius:100px;font-size:.78rem;font-weight:500;pointer-events:none;opacity:0;transition:opacity .25s,transform .25s;white-space:nowrap}
+#sp-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+/* Tree stats strip */
+.sp-stats{display:flex;gap:14px;margin-top:12px}
+.sp-stat{flex:1;padding:10px 12px;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;text-align:center}
+.sp-stat-num{font-size:1.3rem;font-weight:600;color:var(--text);font-family:'Cormorant Garamond',serif;line-height:1}
+.sp-stat-lbl{font-size:.65rem;color:var(--muted);margin-top:3px;text-transform:uppercase;letter-spacing:.08em}
 .sp-color-row{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid var(--border);margin-bottom:8px}
 .sp-color-info{flex:1}
 .sp-color-label{font-size:.85rem;color:var(--text);font-weight:500}
@@ -411,14 +428,15 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-famil
 </div>
 
 <!-- SETTINGS PANEL -->
-<div id="settings-panel">
+<div id="settings-panel" style="position:relative">
   <div class="sp-head">
     <div class="sp-title">Settings</div>
     <button class="sp-close" onclick="closeSettings()">✕</button>
   </div>
   <div class="sp-body">
-    <div class="sp-section">
-      <div class="sp-section-title">Account</div>
+
+    <!-- ACCOUNT -->
+    <div class="sp-section" style="padding-bottom:4px">
       <div class="sp-user">
         <div class="sp-user-avatar" id="sp-avatar"></div>
         <div class="sp-user-info">
@@ -427,160 +445,114 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-famil
         </div>
         <button class="sp-signout" onclick="signOut()">Sign out</button>
       </div>
-    </div>
-
-    <div class="sp-section">
-      <div class="sp-section-title">Default view</div>
-      <div class="sp-option active" id="sp-opt-simple" onclick="setSettingsMode('simple')">
-        <div>
-          <div class="sp-option-label">Tree View</div>
-          <div class="sp-option-sub">Parent-child and spouse lines only</div>
-        </div>
-        <div class="sp-option-check">
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#04070c" stroke-width="3" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg>
-        </div>
-      </div>
-      <div class="sp-option" id="sp-opt-complex" onclick="setSettingsMode('complex')">
-        <div>
-          <div class="sp-option-label">All Twygs</div>
-          <div class="sp-option-sub">All connections including siblings and extended family</div>
-        </div>
-        <div class="sp-option-check">
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#04070c" stroke-width="3" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg>
-        </div>
+      <div class="sp-stats">
+        <div class="sp-stat"><div class="sp-stat-num" id="sp-member-count">0</div><div class="sp-stat-lbl">Members</div></div>
+        <div class="sp-stat"><div class="sp-stat-num" id="sp-gen-count">0</div><div class="sp-stat-lbl">Generations</div></div>
       </div>
     </div>
 
-    <div class="sp-section">
-      <div class="sp-section-title">Tree</div>
-      <div style="font-size:.82rem;color:var(--muted);margin-bottom:12px;line-height:1.6">
-        Your tree has <strong id="sp-member-count" style="color:var(--text)">0</strong> members spanning <strong id="sp-gen-count" style="color:var(--text)">0</strong> generations.
+    <!-- TREE VIEW -->
+    <div>
+      <div class="sp-collapse-hdr" onclick="toggleSection('sec-view')">
+        <span class="sp-collapse-title">Tree View</span>
+        <span class="sp-collapse-icon open" id="icon-sec-view">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+        </span>
+      </div>
+      <div class="sp-collapse-body open" id="sec-view">
+        <div class="sp-option active" id="sp-opt-simple" onclick="setSettingsMode('simple')" style="margin-bottom:8px">
+          <div><div class="sp-option-label">Tree View</div><div class="sp-option-sub">Parent-child, spouse, sibling only</div></div>
+          <div class="sp-option-check"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#04070c" stroke-width="3" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+        </div>
+        <div class="sp-option" id="sp-opt-complex" onclick="setSettingsMode('complex')">
+          <div><div class="sp-option-label">All Twygs</div><div class="sp-option-sub">All connections including extended family</div></div>
+          <div class="sp-option-check"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#04070c" stroke-width="3" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+        </div>
+        <div style="height:12px"></div>
       </div>
     </div>
 
-    <div class="sp-section">
-      <div class="sp-section-title">Node colors</div>
-      <div class="sp-color-row">
-        <div class="sp-color-info"><div class="sp-color-label">You</div></div>
-        <div class="sp-color-swatch"><input type="color" id="ncolor-you" oninput="previewNodeColor('you',this.value)"/><div class="sp-color-preview" id="npreview-you"></div></div>
+    <!-- CONNECTIONS -->
+    <div>
+      <div class="sp-collapse-hdr" onclick="toggleSection('sec-conn')">
+        <span class="sp-collapse-title">Connections</span>
+        <span class="sp-collapse-icon" id="icon-sec-conn">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+        </span>
       </div>
-      <div class="sp-color-row">
-        <div class="sp-color-info"><div class="sp-color-label">Spouse / Partner</div></div>
-        <div class="sp-color-swatch"><input type="color" id="ncolor-spouse" oninput="previewNodeColor('spouse',this.value)"/><div class="sp-color-preview" id="npreview-spouse"></div></div>
-      </div>
-      <div class="sp-color-row">
-        <div class="sp-color-info"><div class="sp-color-label">Parent</div></div>
-        <div class="sp-color-swatch"><input type="color" id="ncolor-parent" oninput="previewNodeColor('parent',this.value)"/><div class="sp-color-preview" id="npreview-parent"></div></div>
-      </div>
-      <div class="sp-color-row">
-        <div class="sp-color-info"><div class="sp-color-label">Child</div></div>
-        <div class="sp-color-swatch"><input type="color" id="ncolor-child" oninput="previewNodeColor('child',this.value)"/><div class="sp-color-preview" id="npreview-child"></div></div>
-      </div>
-      <div class="sp-color-row">
-        <div class="sp-color-info"><div class="sp-color-label">Sibling</div></div>
-        <div class="sp-color-swatch"><input type="color" id="ncolor-sibling" oninput="previewNodeColor('sibling',this.value)"/><div class="sp-color-preview" id="npreview-sibling"></div></div>
-      </div>
-      <div class="sp-color-row">
-        <div class="sp-color-info"><div class="sp-color-label">Grandparent</div></div>
-        <div class="sp-color-swatch"><input type="color" id="ncolor-grandparent" oninput="previewNodeColor('grandparent',this.value)"/><div class="sp-color-preview" id="npreview-grandparent"></div></div>
-      </div>
-      <div class="sp-color-row">
-        <div class="sp-color-info"><div class="sp-color-label">Extended / In-law</div></div>
-        <div class="sp-color-swatch"><input type="color" id="ncolor-extended" oninput="previewNodeColor('extended',this.value)"/><div class="sp-color-preview" id="npreview-extended"></div></div>
-      </div>
-      <div class="sp-color-row">
-        <div class="sp-color-info"><div class="sp-color-label">Deceased</div></div>
-        <div class="sp-color-swatch"><input type="color" id="ncolor-deceased" oninput="previewNodeColor('deceased',this.value)"/><div class="sp-color-preview" id="npreview-deceased"></div></div>
-      </div>
-      <div class="sp-color-row">
-        <div class="sp-color-info"><div class="sp-color-label">Young (born 2000+)</div></div>
-        <div class="sp-color-swatch"><input type="color" id="ncolor-young" oninput="previewNodeColor('young',this.value)"/><div class="sp-color-preview" id="npreview-young"></div></div>
-      </div>
-      <button class="sp-color-reset" onclick="resetNodeColors()">Reset node colors</button>
-    </div>
-
-    <div class="sp-section">
-      <div class="sp-section-title">Line colors</div>
-      <div class="sp-color-row">
-        <div class="sp-color-info">
-          <div class="sp-color-label">Parent / Child</div>
-          <div class="sp-color-sub">Direct family line</div>
+      <div class="sp-collapse-body" id="sec-conn">
+        <div class="sp-option" id="sp-autoconn" onclick="toggleAutoConn()" style="cursor:pointer;margin-bottom:14px">
+          <div><div class="sp-option-label">Auto-assign relationships</div><div class="sp-option-sub">Infer connections to you when adding Twygs (e.g. Wife's Mother → Mother-in-law)</div></div>
+          <div style="position:relative;width:36px;height:20px;flex-shrink:0">
+            <div id="ac-track" style="position:absolute;inset:0;border-radius:100px;background:rgba(200,168,75,.5);transition:background .2s"></div>
+            <div id="ac-thumb" style="position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 4px rgba(0,0,0,.3)"></div>
+          </div>
         </div>
-        <div class="sp-color-swatch" id="swatch-parentChild">
-          <input type="color" id="color-parentChild" oninput="previewLineColor('parentChild',this.value)"/>
-          <div class="sp-color-preview" id="preview-parentChild"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <span style="font-size:.75rem;color:var(--muted)">Custom connection types</span>
+          <button onclick="addCustomLineType()" style="padding:3px 9px;background:rgba(200,168,75,.12);border:1px solid rgba(200,168,75,.3);border-radius:6px;color:var(--gold);font-size:.72rem;cursor:pointer">+ Add</button>
         </div>
-      </div>
-      <div class="sp-color-row">
-        <div class="sp-color-info">
-          <div class="sp-color-label">Spouse / Partner</div>
-          <div class="sp-color-sub">Marriage or partnership</div>
-        </div>
-        <div class="sp-color-swatch" id="swatch-spouse">
-          <input type="color" id="color-spouse" oninput="previewLineColor('spouse',this.value)"/>
-          <div class="sp-color-preview" id="preview-spouse"></div>
-        </div>
-      </div>
-      <div class="sp-color-row">
-        <div class="sp-color-info">
-          <div class="sp-color-label">Sibling</div>
-          <div class="sp-color-sub">Brothers and sisters</div>
-        </div>
-        <div class="sp-color-swatch" id="swatch-sibling">
-          <input type="color" id="color-sibling" oninput="previewLineColor('sibling',this.value)"/>
-          <div class="sp-color-preview" id="preview-sibling"></div>
-        </div>
-      </div>
-      <div class="sp-color-row">
-        <div class="sp-color-info">
-          <div class="sp-color-label">Extended / In-laws</div>
-          <div class="sp-color-sub">Labeled custom connections</div>
-        </div>
-        <div class="sp-color-swatch" id="swatch-labeled">
-          <input type="color" id="color-labeled" oninput="previewLineColor('labeled',this.value)"/>
-          <div class="sp-color-preview" id="preview-labeled"></div>
-        </div>
-      </div>
-      <button class="sp-color-reset" onclick="resetLineColors()">Reset line colors</button>
-    </div>
-
-    <div class="sp-section">
-      <div class="sp-section-title" style="display:flex;align-items:center;justify-content:space-between">
-        Custom connection types
-        <button onclick="addCustomLineType()" style="padding:3px 9px;background:rgba(200,168,75,.12);border:1px solid rgba(200,168,75,.3);border-radius:6px;color:var(--gold);font-size:.72rem;cursor:pointer">+ Add</button>
-      </div>
-      <div style="font-size:.76rem;color:var(--muted);margin-bottom:10px;line-height:1.5">Create named connection types with custom colors for use in Add Connection.</div>
-      <div id="custom-line-list"></div>
-    </div>
-
-    <div class="sp-section">
-      <div class="sp-section-title">Young age threshold</div>
-      <div style="font-size:.82rem;color:var(--muted);margin-bottom:10px;line-height:1.5">
-        Members this age or younger are shown as "young" with the young color.
-      </div>
-      <div style="display:flex;align-items:center;gap:10px">
-        <input class="ei" id="sp-young-age" type="number" min="0" max="30" style="width:80px;padding:7px 10px;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:Outfit,sans-serif;font-size:.88rem;outline:none" placeholder="17"/>
-        <span style="font-size:.84rem;color:var(--muted)">years old and under</span>
+        <div style="font-size:.73rem;color:var(--muted);margin-bottom:8px;line-height:1.5">Named types with custom colors for Add Connection.</div>
+        <div id="custom-line-list"></div>
+        <div style="height:12px"></div>
       </div>
     </div>
 
-    <div class="sp-section">
-      <div class="sp-section-title">Auto-connections</div>
-      <div class="sp-option" id="sp-autoconn" onclick="toggleAutoConn()" style="cursor:pointer">
-        <div>
-          <div class="sp-option-label">Auto-assign relationships</div>
-          <div class="sp-option-sub">Automatically infer connections to you when adding new Twygs (e.g. Wife's Mother → Mother-in-law)</div>
-        </div>
-        <div style="position:relative;width:36px;height:20px;flex-shrink:0">
-          <div id="ac-track" style="position:absolute;inset:0;border-radius:100px;background:rgba(200,168,75,.5);transition:background .2s"></div>
-          <div id="ac-thumb" style="position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 4px rgba(0,0,0,.3)"></div>
-        </div>
+    <!-- APPEARANCE -->
+    <div>
+      <div class="sp-collapse-hdr" onclick="toggleSection('sec-appear')">
+        <span class="sp-collapse-title">Appearance</span>
+        <span class="sp-collapse-icon" id="icon-sec-appear">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+        </span>
+      </div>
+      <div class="sp-collapse-body" id="sec-appear">
+        <div style="font-size:.67rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:8px">Node colors</div>
+        <div class="sp-color-row"><div class="sp-color-info"><div class="sp-color-label">You</div></div><div class="sp-color-swatch"><input type="color" id="ncolor-you" oninput="previewNodeColor('you',this.value)"/><div class="sp-color-preview" id="npreview-you"></div></div></div>
+        <div class="sp-color-row"><div class="sp-color-info"><div class="sp-color-label">Spouse / Partner</div></div><div class="sp-color-swatch"><input type="color" id="ncolor-spouse" oninput="previewNodeColor('spouse',this.value)"/><div class="sp-color-preview" id="npreview-spouse"></div></div></div>
+        <div class="sp-color-row"><div class="sp-color-info"><div class="sp-color-label">Parent</div></div><div class="sp-color-swatch"><input type="color" id="ncolor-parent" oninput="previewNodeColor('parent',this.value)"/><div class="sp-color-preview" id="npreview-parent"></div></div></div>
+        <div class="sp-color-row"><div class="sp-color-info"><div class="sp-color-label">Child</div></div><div class="sp-color-swatch"><input type="color" id="ncolor-child" oninput="previewNodeColor('child',this.value)"/><div class="sp-color-preview" id="npreview-child"></div></div></div>
+        <div class="sp-color-row"><div class="sp-color-info"><div class="sp-color-label">Sibling</div></div><div class="sp-color-swatch"><input type="color" id="ncolor-sibling" oninput="previewNodeColor('sibling',this.value)"/><div class="sp-color-preview" id="npreview-sibling"></div></div></div>
+        <div class="sp-color-row"><div class="sp-color-info"><div class="sp-color-label">Grandparent</div></div><div class="sp-color-swatch"><input type="color" id="ncolor-grandparent" oninput="previewNodeColor('grandparent',this.value)"/><div class="sp-color-preview" id="npreview-grandparent"></div></div></div>
+        <div class="sp-color-row"><div class="sp-color-info"><div class="sp-color-label">Extended / In-law</div></div><div class="sp-color-swatch"><input type="color" id="ncolor-extended" oninput="previewNodeColor('extended',this.value)"/><div class="sp-color-preview" id="npreview-extended"></div></div></div>
+        <div class="sp-color-row"><div class="sp-color-info"><div class="sp-color-label">Deceased</div></div><div class="sp-color-swatch"><input type="color" id="ncolor-deceased" oninput="previewNodeColor('deceased',this.value)"/><div class="sp-color-preview" id="npreview-deceased"></div></div></div>
+        <div class="sp-color-row"><div class="sp-color-info"><div class="sp-color-label">Young</div></div><div class="sp-color-swatch"><input type="color" id="ncolor-young" oninput="previewNodeColor('young',this.value)"/><div class="sp-color-preview" id="npreview-young"></div></div></div>
+        <button class="sp-color-reset" onclick="resetNodeColors()" style="margin-bottom:16px">Reset node colors</button>
+
+        <div style="font-size:.67rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin:4px 0 8px">Line colors</div>
+        <div class="sp-color-row"><div class="sp-color-info"><div class="sp-color-label">Parent / Child</div><div class="sp-color-sub">Direct family line</div></div><div class="sp-color-swatch" id="swatch-parentChild"><input type="color" id="color-parentChild" oninput="previewLineColor('parentChild',this.value)"/><div class="sp-color-preview" id="preview-parentChild"></div></div></div>
+        <div class="sp-color-row"><div class="sp-color-info"><div class="sp-color-label">Spouse / Partner</div><div class="sp-color-sub">Marriage or partnership</div></div><div class="sp-color-swatch" id="swatch-spouse"><input type="color" id="color-spouse" oninput="previewLineColor('spouse',this.value)"/><div class="sp-color-preview" id="preview-spouse"></div></div></div>
+        <div class="sp-color-row"><div class="sp-color-info"><div class="sp-color-label">Sibling</div><div class="sp-color-sub">Brothers and sisters</div></div><div class="sp-color-swatch" id="swatch-sibling"><input type="color" id="color-sibling" oninput="previewLineColor('sibling',this.value)"/><div class="sp-color-preview" id="preview-sibling"></div></div></div>
+        <div class="sp-color-row"><div class="sp-color-info"><div class="sp-color-label">Extended / In-laws</div><div class="sp-color-sub">Labeled custom connections</div></div><div class="sp-color-swatch" id="swatch-labeled"><input type="color" id="color-labeled" oninput="previewLineColor('labeled',this.value)"/><div class="sp-color-preview" id="preview-labeled"></div></div></div>
+        <button class="sp-color-reset" onclick="resetLineColors()">Reset line colors</button>
+        <div style="height:12px"></div>
       </div>
     </div>
 
+    <!-- ADVANCED -->
+    <div>
+      <div class="sp-collapse-hdr" onclick="toggleSection('sec-adv')">
+        <span class="sp-collapse-title">Advanced</span>
+        <span class="sp-collapse-icon" id="icon-sec-adv">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+        </span>
+      </div>
+      <div class="sp-collapse-body" id="sec-adv">
+        <div style="font-size:.78rem;color:var(--muted);margin-bottom:8px;line-height:1.5">"Young" threshold — members this age or under get the young color.</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+          <input class="ei" id="sp-young-age" type="number" min="0" max="30" style="width:80px;padding:7px 10px;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:Outfit,sans-serif;font-size:.88rem;outline:none" placeholder="17"/>
+          <span style="font-size:.84rem;color:var(--muted)">years old and under</span>
+        </div>
+        <div style="height:4px"></div>
+      </div>
+    </div>
+
+    <div style="height:14px"></div>
     <button class="sp-save" onclick="saveSettings()">Save preferences</button>
   </div>
+  <div id="sp-toast">✓ Preferences saved</div>
 </div>
+
 
 <div id="tip"></div>
 
@@ -832,6 +804,15 @@ auth.onAuthStateChanged(async user => {
   hideLoading();
 });
 async function signOut(){ if(!confirm('Sign out?')) return; await auth.signOut(); window.location.href='login.html'; }
+
+function toggleSection(id){
+  const body=document.getElementById(id);
+  const icon=document.getElementById('icon-'+id);
+  if(!body) return;
+  const isOpen=body.classList.contains('open');
+  body.classList.toggle('open',!isOpen);
+  if(icon) icon.classList.toggle('open',!isOpen);
+}
 
 // ─── AUTO-CONNECTIONS ────────────────────────────────────────────────────────
 
