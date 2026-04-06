@@ -172,6 +172,39 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);
   color:rgba(200,100,100,.55);font-family:'Outfit',sans-serif;font-size:.76rem;cursor:pointer;transition:all .2s}
 .delbtn:hover{border-color:rgba(200,100,100,.5);color:rgba(220,120,120,.9)}
 
+/* ── EDIT MODE ── */
+.editbtn{
+  display:inline-flex;align-items:center;gap:5px;
+  margin-top:14px;padding:6px 14px;
+  background:rgba(200,168,75,.1);border:1px solid rgba(200,168,75,.25);
+  border-radius:7px;color:rgba(200,168,75,.8);
+  font-family:'Outfit',sans-serif;font-size:.76rem;cursor:pointer;transition:all .2s}
+.editbtn:hover{background:rgba(200,168,75,.18);border-color:rgba(200,168,75,.4);color:var(--gold)}
+
+.edit-form{padding:4px 0}
+.ef{margin-bottom:11px}
+.el{display:block;font-size:.62rem;text-transform:uppercase;letter-spacing:.11em;
+  color:var(--muted);margin-bottom:4px}
+.ei{width:100%;padding:7px 10px;
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);
+  border-radius:8px;color:var(--text);font-family:'Outfit',sans-serif;font-size:.86rem;
+  outline:none;transition:border-color .2s}
+.ei:focus{border-color:rgba(200,168,75,.45)}
+.ei-row{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+
+.savebtn{
+  width:100%;padding:9px;border-radius:9px;
+  background:var(--gold);border:none;
+  color:#04070c;font-family:'Outfit',sans-serif;font-size:.84rem;font-weight:600;
+  cursor:pointer;transition:all .2s;margin-top:4px}
+.savebtn:hover{background:#d4b454;transform:translateY(-1px)}
+.cancelbtn{
+  width:100%;padding:8px;border-radius:9px;margin-top:7px;
+  background:transparent;border:1px solid var(--border);
+  color:var(--muted);font-family:'Outfit',sans-serif;font-size:.82rem;
+  cursor:pointer;transition:all .2s}
+.cancelbtn:hover{color:var(--text);border-color:rgba(255,255,255,.18)}
+
 #scrim{position:fixed;inset:0;z-index:299;pointer-events:none;
   background:rgba(4,7,12,0);transition:background .32s}
 #scrim.on{background:rgba(4,7,12,.38);pointer-events:all}
@@ -583,7 +616,7 @@ function drawNodes(){
     core.setAttribute('r',R);core.setAttribute('fill',c);core.setAttribute('class','core');
 
     const lbl=se('text');
-    lbl.textContent=p.name.split(' ')[0];
+    lbl.textContent=p.isYou ? 'You' : p.name.split(' ')[0];
     lbl.setAttribute('class',`nlbl lbl${p.isYou?' you':''}`);
     lbl.setAttribute('text-anchor','middle');
     lbl.setAttribute('y',(R+14)+'');
@@ -635,7 +668,7 @@ function fillCard(p){
   const c=col(p);
   const bar=document.getElementById('cbar');
   bar.style.background=c; bar.style.boxShadow=`0 0 12px ${c}`;
-  document.getElementById('cname').textContent=p.name;
+  document.getElementById('cname').textContent=p.isYou?'You':p.name;
   document.getElementById('cyrs').textContent=
     p.birth?(p.death?`${p.birth} – ${p.death}`:`b. ${p.birth}`):'';
   document.getElementById('cplace').textContent=p.place||'';
@@ -659,8 +692,56 @@ function fillCard(p){
     });
     html+=`</div>`;
   }
-  if(!p.isYou) html+=`<button class="delbtn" onclick="removePerson('${p.id}')">Remove from tree</button>`;
+
+  // Edit + delete buttons
+  html+=`<div style="display:flex;gap:8px;margin-top:14px">
+    <button class="editbtn" onclick="editCard('${p.id}')">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      Edit
+    </button>
+    ${!p.isYou?`<button class="delbtn" onclick="removePerson('${p.id}')">Remove</button>`:''}
+  </div>`;
+
   document.getElementById('cbody').innerHTML=html;
+}
+
+function editCard(id){
+  const p=g(id); if(!p)return;
+  let html=`<div class="edit-form">
+    <div class="ef"><label class="el">Full Name</label>
+      <input class="ei" id="ei-name" value="${p.name||''}" placeholder="Full name"/></div>
+    <div class="ei-row">
+      <div class="ef"><label class="el">Birth Year</label>
+        <input class="ei" id="ei-birth" type="number" value="${p.birth||''}" placeholder="e.g. 1985"/></div>
+      <div class="ef"><label class="el">Death Year</label>
+        <input class="ei" id="ei-death" type="number" value="${p.death||''}" placeholder="if applicable"/></div>
+    </div>
+    <div class="ef"><label class="el">Birthplace</label>
+      <input class="ei" id="ei-place" value="${p.place||''}" placeholder="City, Country"/></div>
+    <div class="ef"><label class="el">Story</label>
+      <textarea class="ei" id="ei-note" rows="3" style="resize:vertical" placeholder="A brief memory or note…">${p.note||''}</textarea></div>
+    <button class="savebtn" onclick="saveCard('${id}')">Save changes</button>
+    <button class="cancelbtn" onclick="fillCard(g('${id}'))">Cancel</button>
+  </div>`;
+  document.getElementById('cbody').innerHTML=html;
+  document.getElementById('ei-name').focus();
+}
+
+function saveCard(id){
+  const p=g(id); if(!p)return;
+  const name  = document.getElementById('ei-name').value.trim()||p.name;
+  const birth = parseInt(document.getElementById('ei-birth').value)||null;
+  const death = parseInt(document.getElementById('ei-death').value)||null;
+  const place = document.getElementById('ei-place').value.trim();
+  const note  = document.getElementById('ei-note').value.trim();
+
+  // Update in place
+  p.name=name; p.birth=birth; p.death=death; p.place=place; p.note=note;
+  rebuild(); render();
+  scheduleSave();
+
+  // Re-select to refresh card header + body
+  selectNode(id);
 }
 
 function closeCard(){
