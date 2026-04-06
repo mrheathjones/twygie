@@ -930,34 +930,106 @@ function inferRelToYou(anchorRelToYou, newRelToAnchor, gender) {
  * relToAnchor = the label used (e.g. "Mother")
  * newNodeId = the new/updated node
  */
+// Direct parent/child labels that use parents[] (green lines) not customLinks
+const DIRECT_PARENT_SET=new Set(['Father','Mother','Stepfather','Stepmother','Parent']);
+const DIRECT_CHILD_SET =new Set(['Son','Daughter','Stepson','Stepdaughter','Child']);
+const SPOUSE_SET       =new Set(['Husband','Wife','Partner']);
+
+function applyInferredRel(fromNode, toNode, inferred){
+  // If inferred is a direct parent-child, use parents[] so green line draws
+  if(DIRECT_CHILD_SET.has(inferred)){
+    // fromNode is the parent, toNode is the child
+    if(!(toNode.parents||[]).includes(fromNode.id))
+      toNode.parents=[...(toNode.parents||[]),fromNode.id];
+    toNode.relLabel=inferred;
+    return;
+  }
+  if(DIRECT_PARENT_SET.has(inferred)){
+    // fromNode is the child, toNode is the parent
+    if(!(fromNode.parents||[]).includes(toNode.id))
+      fromNode.parents=[...(fromNode.parents||[]),toNode.id];
+    toNode.relLabel=inferred;
+    return;
+  }
+  if(SPOUSE_SET.has(inferred)){
+    toNode.spouseOf=fromNode.id;
+    toNode.relLabel=inferred;
+    return;
+  }
+  // Default: store as customLink
+  const isSib=['Brother','Sister','Half-brother','Half-sister'].includes(inferred);
+  const ltype=isSib?'sibling':BLOOD_LABELS.has(inferred)?'blood':'labeled';
+  if(!fromNode.customLinks) fromNode.customLinks={};
+  if(!toNode.customLinks) toNode.customLinks={};
+  fromNode.customLinks[toNode.id]={label:inferred,lineType:ltype};
+  toNode.customLinks[fromNode.id]={label:inferred,lineType:ltype};
+  toNode.relLabel=inferred;
+}
+
 function autoAssignToYou(newNodeId, anchorId, relToAnchor){
   if(!autoConnections) return;
   const you=P.find(p=>p.isYou); if(!you) return;
-  // Use P.find() — byId may be stale if rebuild() hasn't been called yet
+  // Use P.find() — byId may be stale before rebuild()
   const newNode=P.find(p=>p.id===newNodeId)||byId[newNodeId]; if(!newNode) return;
   const anchor=P.find(p=>p.id===anchorId)||byId[anchorId]; if(!anchor) return;
-  if(newNodeId===you.id||anchorId===you.id) return; // already directly connected to you
 
-  // Get how anchor relates to isYou — rebuild byId snapshot first so getRelToYou works
-  byId[newNodeId]=newNode; byId[anchorId]=anchor; // ensure byId is current
-  const anchorRelToYou=getRelToYou(anchorId);
-  if(!anchorRelToYou) return;
+  // Ensure byId is current for getRelToYou
+  byId[newNodeId]=newNode; byId[anchorId]=anchor;
 
-  // Infer
-  const inferred=inferRelToYou(anchorRelToYou, relToAnchor, newNode.gender||'');
-  if(!inferred) return;
+  // ── Assign to isYou ───────────────────────────────────────────────────────
+  if(newNodeId!==you.id && anchorId!==you.id){
+    const anchorRelToYou=getRelToYou(anchorId);
+    if(anchorRelToYou){
+      const inferred=inferRelToYou(anchorRelToYou, relToAnchor, newNode.gender||'');
+      if(inferred){
+        // Only assign if no existing connection
+        const alreadyLinked=
+          (you.parents||[]).includes(newNodeId)||
+          (newNode.parents||[]).includes(you.id)||
+          you.spouseOf===newNodeId||newNode.spouseOf===you.id||
+          (you.customLinks&&you.customLinks[newNodeId])||
+          (newNode.customLinks&&newNode.customLinks[you.id]);
+        if(!alreadyLinked) applyInferredRel(you, newNode, inferred);
+      }
+    }
+  }
 
-  // Don't overwrite an existing explicit connection
-  if(you.customLinks&&you.customLinks[newNodeId]) return;
-  if(newNode.customLinks&&newNode.customLinks[you.id]) return;
+  // ── Assign to isYou's spouse ──────────────────────────────────────────────
+  // Find isYou's spouse (if any)
+  const spouse=you.spouseOf?P.find(p=>p.id===you.spouseOf):P.find(p=>p.spouseOf===you.id);
+  if(spouse && newNodeId!==spouse.id && anchorId!==spouse.id){
+    // Get anchor's relationship to the spouse
+    byId[spouse.id]=spouse;
+    const anchorRelToSpouse=getRelToYou_for(anchorId, spouse.id);
+    if(anchorRelToSpouse){
+      const inferredForSpouse=inferRelToYou(anchorRelToSpouse, relToAnchor, newNode.gender||'');
+      if(inferredForSpouse){
+        const alreadyLinked2=
+          (spouse.parents||[]).includes(newNodeId)||
+          (newNode.parents||[]).includes(spouse.id)||
+          spouse.spouseOf===newNodeId||newNode.spouseOf===spouse.id||
+          (spouse.customLinks&&spouse.customLinks[newNodeId])||
+          (newNode.customLinks&&newNode.customLinks[spouse.id]);
+        if(!alreadyLinked2) applyInferredRel(spouse, newNode, inferredForSpouse);
+      }
+    }
+  }
+}
 
-  // Store the inferred connection
-  if(!you.customLinks) you.customLinks={};
-  if(!newNode.customLinks) newNode.customLinks={};
-  const ltype=BLOOD_LABELS.has(inferred)?'blood':'labeled';
-  you.customLinks[newNodeId]={label:inferred,lineType:ltype};
-  newNode.customLinks[you.id]={label:inferred,lineType:ltype};
-  newNode.relLabel=inferred;
+// Generic getRelToYou from any node's perspective (not just isYou)
+function getRelToYou_for(targetId, fromId){
+  const from=P.find(p=>p.id===fromId); if(!from) return '';
+  const t=byId[targetId]||P.find(p=>p.id===targetId); if(!t) return '';
+  if(t.id===from.id) return '';
+  if(from.customLinks&&from.customLinks[targetId]) return from.customLinks[targetId].label||from.customLinks[targetId];
+  if(t.customLinks&&t.customLinks[fromId]) return t.customLinks[fromId].label||t.customLinks[fromId];
+  if(t.relLabel) return t.relLabel;
+  if((t.parents||[]).includes(from.id)) return genderedRel('Child',t.gender);
+  if((from.parents||[]).includes(targetId)) return genderedRel('Parent',t.gender);
+  if(t.spouseOf===from.id||from.spouseOf===targetId) return genderedRel('Spouse',t.gender);
+  const fromP=new Set(from.parents||[]);
+  if(fromP.size&&(t.parents||[]).some(pp=>fromP.has(pp))) return genderedRel('Sibling',t.gender);
+  return '';
 }
 
 function toggleAutoConn(){
