@@ -670,33 +670,98 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-famil
     <div class="mf">
       <label class="ml">Relationship to <span id="rel-to-label">tree</span></label>
       <select class="mi" id="fr" style="appearance:none">
-        <option value="">— No relationship specified —</option>
-        <optgroup label="Children">
-          <option value="Son">Son</option><option value="Daughter">Daughter</option>
+        <option value="">— No relationship (standalone) —</option>
+        <optgroup label="── Children ──">
+          <option value="Son">Son</option>
+          <option value="Daughter">Daughter</option>
+          <option value="Stepson">Stepson</option>
+          <option value="Stepdaughter">Stepdaughter</option>
         </optgroup>
-        <optgroup label="Parents">
-          <option value="Father">Father</option><option value="Mother">Mother</option>
+        <optgroup label="── Parents ──">
+          <option value="Father">Father</option>
+          <option value="Mother">Mother</option>
+          <option value="Stepfather">Stepfather</option>
+          <option value="Stepmother">Stepmother</option>
         </optgroup>
-        <optgroup label="Siblings">
-          <option value="Brother">Brother</option><option value="Sister">Sister</option>
+        <optgroup label="── Siblings ──">
+          <option value="Brother">Brother</option>
+          <option value="Sister">Sister</option>
+          <option value="Half-brother">Half-brother</option>
+          <option value="Half-sister">Half-sister</option>
+          <option value="Stepbrother">Stepbrother</option>
+          <option value="Stepsister">Stepsister</option>
         </optgroup>
-        <optgroup label="Spouse / Partner">
-          <option value="Husband">Husband</option><option value="Wife">Wife</option><option value="Partner">Partner</option>
+        <optgroup label="── Spouse / Partner ──">
+          <option value="Husband">Husband</option>
+          <option value="Wife">Wife</option>
+          <option value="Partner">Partner</option>
         </optgroup>
-        <optgroup label="Grandparents">
-          <option value="Grandfather">Grandfather</option><option value="Grandmother">Grandmother</option>
+        <optgroup label="── Grandparents ──">
+          <option value="Grandfather">Grandfather</option>
+          <option value="Grandmother">Grandmother</option>
+          <option value="Great-grandfather">Great-grandfather</option>
+          <option value="Great-grandmother">Great-grandmother</option>
+          <option value="Great-great-grandfather">Great-great-grandfather</option>
+          <option value="Great-great-grandmother">Great-great-grandmother</option>
         </optgroup>
-        <optgroup label="Grandchildren">
-          <option value="Grandson">Grandson</option><option value="Granddaughter">Granddaughter</option>
+        <optgroup label="── Grandchildren ──">
+          <option value="Grandson">Grandson</option>
+          <option value="Granddaughter">Granddaughter</option>
+          <option value="Great-grandson">Great-grandson</option>
+          <option value="Great-granddaughter">Great-granddaughter</option>
+          <option value="Great-great-grandson">Great-great-grandson</option>
+          <option value="Great-great-granddaughter">Great-great-granddaughter</option>
         </optgroup>
-        <optgroup label="Extended">
-          <option value="Uncle">Uncle</option><option value="Aunt">Aunt</option>
-          <option value="Nephew">Nephew</option><option value="Niece">Niece</option>
-          <option value="Cousin">Cousin</option>
-          <option value="Father-in-law">Father-in-law</option><option value="Mother-in-law">Mother-in-law</option>
-          <option value="Brother-in-law">Brother-in-law</option><option value="Sister-in-law">Sister-in-law</option>
-          <option value="Stepfather">Stepfather</option><option value="Stepmother">Stepmother</option>
-          <option value="Stepson">Stepson</option><option value="Stepdaughter">Stepdaughter</option>
+        <optgroup label="── Aunts &amp; Uncles ──">
+          <option value="Uncle">Uncle</option>
+          <option value="Aunt">Aunt</option>
+          <option value="Great-uncle">Great-uncle</option>
+          <option value="Great-aunt">Great-aunt</option>
+          <option value="Great-grand-uncle">Great-grand-uncle</option>
+          <option value="Great-grand-aunt">Great-grand-aunt</option>
+        </optgroup>
+        <optgroup label="── Nephews &amp; Nieces ──">
+          <option value="Nephew">Nephew</option>
+          <option value="Niece">Niece</option>
+          <option value="Grand-nephew">Grand-nephew</option>
+          <option value="Grand-niece">Grand-niece</option>
+          <option value="Great-grand-nephew">Great-grand-nephew</option>
+          <option value="Great-grand-niece">Great-grand-niece</option>
+        </optgroup>
+        <optgroup label="── First Cousins ──">
+          <option value="First Cousin">First Cousin</option>
+          <option value="First Cousin Once Removed">First Cousin Once Removed</option>
+          <option value="First Cousin Twice Removed">First Cousin Twice Removed</option>
+          <option value="First Cousin Thrice Removed">First Cousin Thrice Removed</option>
+        </optgroup>
+        <optgroup label="── Second Cousins ──">
+          <option value="Second Cousin">Second Cousin</option>
+          <option value="Second Cousin Once Removed">Second Cousin Once Removed</option>
+          <option value="Second Cousin Twice Removed">Second Cousin Twice Removed</option>
+          <option value="Second Cousin Thrice Removed">Second Cousin Thrice Removed</option>
+        </optgroup>
+        <optgroup label="── Third Cousins ──">
+          <option value="Third Cousin">Third Cousin</option>
+          <option value="Third Cousin Once Removed">Third Cousin Once Removed</option>
+          <option value="Third Cousin Twice Removed">Third Cousin Twice Removed</option>
+          <option value="Third Cousin Thrice Removed">Third Cousin Thrice Removed</option>
+        </optgroup>
+        <optgroup label="── In-Laws ──">
+          <option value="Father-in-law">Father-in-law</option>
+          <option value="Mother-in-law">Mother-in-law</option>
+          <option value="Son-in-law">Son-in-law</option>
+          <option value="Daughter-in-law">Daughter-in-law</option>
+          <option value="Brother-in-law">Brother-in-law</option>
+          <option value="Sister-in-law">Sister-in-law</option>
+          <option value="Grandfather-in-law">Grandfather-in-law</option>
+          <option value="Grandmother-in-law">Grandmother-in-law</option>
+        </optgroup>
+        <optgroup label="── Other ──">
+          <option value="Godfather">Godfather</option>
+          <option value="Godmother">Godmother</option>
+          <option value="Godchild">Godchild</option>
+          <option value="Guardian">Guardian</option>
+          <option value="Family Friend">Family Friend</option>
           <option value="Other">Other</option>
         </optgroup>
       </select>
@@ -785,7 +850,10 @@ function inferRelToYou(anchorRelToYou, newRelToAnchor, gender) {
   const isChild    =s=>['son','daughter','child','stepson','stepdaughter'].includes(s);
   const isSibling  =s=>['brother','sister','sibling','half-brother','half-sister'].includes(s);
   const isGrandpar =s=>['grandfather','grandmother','grandparent'].includes(s);
-  const isGrandchild=s=>['grandson','granddaughter','grandchild'].includes(s);
+  const isGrandchild =s=>['grandson','granddaughter','grandchild'].includes(s);
+  const isGreatGrandpar=s=>s.startsWith('great-grand')&&(s.includes('father')||s.includes('mother')||s.includes('parent'));
+  const isGreatGrandchild=s=>s.startsWith('great-grand')&&(s.includes('son')||s.includes('daughter')||s.includes('child'));
+  const isCousin     =s=>s.includes('cousin');
   const isUncleAunt=s=>['uncle','aunt'].includes(s);
   const isNieceNeph=s=>['nephew','niece'].includes(s);
 
@@ -825,6 +893,38 @@ function inferRelToYou(anchorRelToYou, newRelToAnchor, gender) {
     if(isParent(r))    return g('Great-grandfather','Great-grandmother','Great-grandparent');
     if(isChild(r))     return g('Uncle','Aunt','Aunt/Uncle'); // grandparent's child (not your parent)
     if(isSpouse(r))    return g('Grandfather-in-law','Grandmother-in-law','Grandparent-in-law');
+    if(isGrandchild(r)) return 'First Cousin';
+  }
+  // ── Great-grandparent's relatives ─────────────────────────────────────────
+  if(isGreatGrandpar(a)){
+    if(isSibling(r))   return g('Great-grand-uncle','Great-grand-aunt','Great-grand-aunt/Uncle');
+    if(isParent(r))    return g('Great-great-grandfather','Great-great-grandmother','Great-great-grandparent');
+    if(isChild(r))     return g('Great-uncle','Great-aunt','Great-aunt/Uncle');
+    if(isGrandchild(r)) return 'First Cousin Once Removed'; // approx
+  }
+  // ── Uncle/Aunt's relatives (expanded) ────────────────────────────────────
+  if(isUncleAunt(a)||a==='great-uncle'||a==='great-aunt'){
+    const isGreat=a.startsWith('great');
+    if(isChild(r))     return isGreat?'First Cousin Once Removed':'First Cousin';
+    if(isGrandchild(r))return isGreat?'First Cousin Twice Removed':'First Cousin Once Removed';
+    if(isSpouse(r))    return m?'Uncle-by-marriage':f?'Aunt-by-marriage':'Relative-by-marriage';
+    if(isSibling(r))   return a.startsWith('great')?g('Great-grand-uncle','Great-grand-aunt','Great-grand-aunt/Uncle'):g('Great-uncle','Great-aunt','Great-aunt/Uncle');
+  }
+  // ── Cousin's relatives ────────────────────────────────────────────────────
+  if(isCousin(a)){
+    if(isChild(r)){
+      if(a==='first cousin') return 'First Cousin Once Removed';
+      if(a==='second cousin') return 'Second Cousin Once Removed';
+      if(a==='first cousin once removed') return 'First Cousin Twice Removed';
+      if(a==='second cousin once removed') return 'Second Cousin Twice Removed';
+      return a+' Once Removed'; // generic fallback
+    }
+    if(isSpouse(r)) return null; // cousin's spouse = cousin-in-law, skip
+  }
+  // ── Nephew/Niece's relatives ──────────────────────────────────────────────
+  if(isNieceNeph(a)){
+    if(isChild(r))    return g('Grand-nephew','Grand-niece','Grand-niece/Nephew');
+    if(isSpouse(r))   return null;
   }
   // ── Uncle/Aunt's relatives ─────────────────────────────────────────────────
   if(isUncleAunt(a)){
@@ -1404,7 +1504,35 @@ function brRgba(key, o){
   return `rgba(${r},${g},${b},${o})`;
 }
 
-const BLOOD_LABELS=new Set(['Father','Mother','Son','Daughter','Brother','Sister','Grandfather','Grandmother','Grandson','Granddaughter','Half-brother','Half-sister','Uncle','Aunt','Nephew','Niece','Cousin','Stepfather','Stepmother','Stepson','Stepdaughter','Parent','Child','Sibling','Grandparent','Grandchild']);
+const BLOOD_LABELS=new Set([
+  // Direct line — ascending
+  'Father','Mother','Parent','Stepfather','Stepmother','Stepparent',
+  'Grandfather','Grandmother','Grandparent',
+  'Great-grandfather','Great-grandmother','Great-grandparent',
+  'Great-great-grandfather','Great-great-grandmother','Great-great-grandparent',
+  // Direct line — descending
+  'Son','Daughter','Child','Stepson','Stepdaughter','Stepchild',
+  'Grandson','Granddaughter','Grandchild',
+  'Great-grandson','Great-granddaughter','Great-grandchild',
+  'Great-great-grandson','Great-great-granddaughter','Great-great-grandchild',
+  // Siblings
+  'Brother','Sister','Sibling','Half-brother','Half-sister','Stepbrother','Stepsister',
+  // Aunts/Uncles
+  'Uncle','Aunt',
+  'Great-uncle','Great-aunt',
+  'Great-grand-uncle','Great-grand-aunt',
+  // Nephews/Nieces
+  'Nephew','Niece',
+  'Grand-nephew','Grand-niece',
+  'Great-grand-nephew','Great-grand-niece',
+  // Cousins (all degrees and removes — blood by consanguinity)
+  'Cousin','First Cousin',
+  'First Cousin Once Removed','First Cousin Twice Removed','First Cousin Thrice Removed',
+  'Second Cousin',
+  'Second Cousin Once Removed','Second Cousin Twice Removed','Second Cousin Thrice Removed',
+  'Third Cousin',
+  'Third Cousin Once Removed','Third Cousin Twice Removed','Third Cousin Thrice Removed',
+]);
 
 function drawBranches(){
   const bG=document.getElementById('bG');
@@ -1995,15 +2123,71 @@ let connForId=null, connSelectedId=null;
 
 function buildConnRelOptions(name){
   const n=name||'them';
+  function og(label,type,pairs){
+    return `<optgroup label="${label}">${pairs.map(([lbl,text])=>`<option value="${type}-${lbl}">${text||lbl+' of '+n}</option>`).join('')}</optgroup>`;
+  }
   return [
-    ['They are a parent','parent',[['Father',`Father of ${n}`],['Mother',`Mother of ${n}`],['Grandfather',`Grandfather of ${n}`],['Grandmother',`Grandmother of ${n}`],['Stepfather',`Stepfather of ${n}`],['Stepmother',`Stepmother of ${n}`],['Parent',`Parent of ${n}`]]],
-    ['They are a child','child',[['Son',`Son of ${n}`],['Daughter',`Daughter of ${n}`],['Grandson',`Grandson of ${n}`],['Granddaughter',`Granddaughter of ${n}`],['Stepson',`Stepson of ${n}`],['Stepdaughter',`Stepdaughter of ${n}`],['Child',`Child of ${n}`]]],
-    ['They are a sibling','sibling',[['Brother',`Brother of ${n}`],['Sister',`Sister of ${n}`],['Half-brother',`Half-brother of ${n}`],['Half-sister',`Half-sister of ${n}`]]],
-    ['They are a spouse','spouse',[['Husband',`Husband of ${n}`],['Wife',`Wife of ${n}`],['Partner',`Partner of ${n}`]]],
-    ['They are extended family','labeled',[['Uncle',`Uncle of ${n}`],['Aunt',`Aunt of ${n}`],['Nephew',`Nephew of ${n}`],['Niece',`Niece of ${n}`],['Cousin',`Cousin of ${n}`],['Father-in-law',`Father-in-law of ${n}`],['Mother-in-law',`Mother-in-law of ${n}`],['Brother-in-law',`Brother-in-law of ${n}`],['Sister-in-law',`Sister-in-law of ${n}`],['Godfather',`Godfather of ${n}`],['Godmother',`Godmother of ${n}`],['Godchild',`Godchild of ${n}`],['Other',`Other connection to ${n}`]]],
-  ].map(([group,type,opts])=>
-    `<optgroup label="${group}">${opts.map(([lbl,text])=>`<option value="${type}-${lbl}">${text}</option>`).join('')}</optgroup>`
-  ).join('');
+    og('── They are a parent ──','parent',[
+      ['Father',`Father of ${n}`],['Mother',`Mother of ${n}`],
+      ['Stepfather',`Stepfather of ${n}`],['Stepmother',`Stepmother of ${n}`],
+    ]),
+    og('── They are a grandparent ──','parent',[
+      ['Grandfather',`Grandfather of ${n}`],['Grandmother',`Grandmother of ${n}`],
+      ['Great-grandfather',`Great-grandfather of ${n}`],['Great-grandmother',`Great-grandmother of ${n}`],
+      ['Great-great-grandfather',`Great-great-grandfather of ${n}`],['Great-great-grandmother',`Great-great-grandmother of ${n}`],
+    ]),
+    og('── They are a child ──','child',[
+      ['Son',`Son of ${n}`],['Daughter',`Daughter of ${n}`],
+      ['Stepson',`Stepson of ${n}`],['Stepdaughter',`Stepdaughter of ${n}`],
+    ]),
+    og('── They are a grandchild ──','child',[
+      ['Grandson',`Grandson of ${n}`],['Granddaughter',`Granddaughter of ${n}`],
+      ['Great-grandson',`Great-grandson of ${n}`],['Great-granddaughter',`Great-granddaughter of ${n}`],
+      ['Great-great-grandson',`Great-great-grandson of ${n}`],['Great-great-granddaughter',`Great-great-granddaughter of ${n}`],
+    ]),
+    og('── They are a sibling ──','sibling',[
+      ['Brother',`Brother of ${n}`],['Sister',`Sister of ${n}`],
+      ['Half-brother',`Half-brother of ${n}`],['Half-sister',`Half-sister of ${n}`],
+      ['Stepbrother',`Stepbrother of ${n}`],['Stepsister',`Stepsister of ${n}`],
+    ]),
+    og('── They are a spouse ──','spouse',[
+      ['Husband',`Husband of ${n}`],['Wife',`Wife of ${n}`],['Partner',`Partner of ${n}`],
+    ]),
+    og('── Aunts &amp; Uncles ──','labeled',[
+      ['Uncle',`Uncle of ${n}`],['Aunt',`Aunt of ${n}`],
+      ['Great-uncle',`Great-uncle of ${n}`],['Great-aunt',`Great-aunt of ${n}`],
+      ['Great-grand-uncle',`Great-grand-uncle of ${n}`],['Great-grand-aunt',`Great-grand-aunt of ${n}`],
+    ]),
+    og('── Nephews &amp; Nieces ──','labeled',[
+      ['Nephew',`Nephew of ${n}`],['Niece',`Niece of ${n}`],
+      ['Grand-nephew',`Grand-nephew of ${n}`],['Grand-niece',`Grand-niece of ${n}`],
+      ['Great-grand-nephew',`Great-grand-nephew of ${n}`],['Great-grand-niece',`Great-grand-niece of ${n}`],
+    ]),
+    og('── First Cousins ──','labeled',[
+      ['First Cousin',`First Cousin of ${n}`],
+      ['First Cousin Once Removed',`First Cousin Once Removed of ${n}`],
+      ['First Cousin Twice Removed',`First Cousin Twice Removed of ${n}`],
+      ['First Cousin Thrice Removed',`First Cousin Thrice Removed of ${n}`],
+    ]),
+    og('── Second &amp; Third Cousins ──','labeled',[
+      ['Second Cousin',`Second Cousin of ${n}`],
+      ['Second Cousin Once Removed',`Second Cousin Once Removed of ${n}`],
+      ['Second Cousin Twice Removed',`Second Cousin Twice Removed of ${n}`],
+      ['Third Cousin',`Third Cousin of ${n}`],
+      ['Third Cousin Once Removed',`Third Cousin Once Removed of ${n}`],
+      ['Third Cousin Twice Removed',`Third Cousin Twice Removed of ${n}`],
+    ]),
+    og('── In-Laws ──','labeled',[
+      ['Father-in-law',`Father-in-law of ${n}`],['Mother-in-law',`Mother-in-law of ${n}`],
+      ['Son-in-law',`Son-in-law of ${n}`],['Daughter-in-law',`Daughter-in-law of ${n}`],
+      ['Brother-in-law',`Brother-in-law of ${n}`],['Sister-in-law',`Sister-in-law of ${n}`],
+      ['Grandfather-in-law',`Grandfather-in-law of ${n}`],['Grandmother-in-law',`Grandmother-in-law of ${n}`],
+    ]),
+    og('── Other ──','labeled',[
+      ['Godfather',`Godfather of ${n}`],['Godmother',`Godmother of ${n}`],['Godchild',`Godchild of ${n}`],
+      ['Guardian',`Guardian of ${n}`],['Family Friend',`Family Friend of ${n}`],['Other',`Other connection to ${n}`],
+    ]),
+  ].join('');
 }
 
 function openConnModal(id){
@@ -2273,8 +2457,8 @@ function handleModalPhoto(event){
   reader.readAsDataURL(file);
 }
 
-const CHILD_RELS=['Son','Daughter','Grandson','Granddaughter','Stepson','Stepdaughter','Nephew','Niece'];
-const PARENT_RELS=['Father','Mother','Grandfather','Grandmother','Stepfather','Stepmother','Father-in-law','Mother-in-law','Uncle','Aunt'];
+const CHILD_RELS=['Son','Daughter','Grandson','Granddaughter','Great-grandson','Great-granddaughter','Great-great-grandson','Great-great-granddaughter','Stepson','Stepdaughter','Nephew','Niece','Grand-nephew','Grand-niece'];
+const PARENT_RELS=['Father','Mother','Grandfather','Grandmother','Great-grandfather','Great-grandmother','Great-great-grandfather','Great-great-grandmother','Stepfather','Stepmother','Father-in-law','Mother-in-law','Uncle','Aunt','Great-uncle','Great-aunt'];
 const SPOUSE_RELS=['Husband','Wife','Partner'];
 const SIBLING_RELS=['Brother','Sister','Brother-in-law','Sister-in-law','Cousin'];
 
