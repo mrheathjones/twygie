@@ -1036,18 +1036,85 @@ function autoAssignToYou(newNodeId, anchorId, relToAnchor){
 }
 
 // Generic getRelToYou from any node's perspective (not just isYou)
+// Returns: how TARGET appears to FROM (FROM's perspective)
 function getRelToYou_for(targetId, fromId){
   const from=P.find(p=>p.id===fromId); if(!from) return '';
   const t=byId[targetId]||P.find(p=>p.id===targetId); if(!t) return '';
   if(t.id===from.id) return '';
-  if(from.customLinks&&from.customLinks[targetId]) return from.customLinks[targetId].label||from.customLinks[targetId];
-  if(t.customLinks&&t.customLinks[fromId]) return t.customLinks[fromId].label||t.customLinks[fromId];
-  if(t.relLabel) return t.relLabel;
-  if((t.parents||[]).includes(from.id)) return genderedRel('Child',t.gender);
-  if((from.parents||[]).includes(targetId)) return genderedRel('Parent',t.gender);
+
+  // ── 1. Direct structural (always correct) ────────────────────────────────
+  if((t.parents||[]).includes(from.id)) return genderedRel('Child',t.gender);    // t is from's child
+  if((from.parents||[]).includes(targetId)) return genderedRel('Parent',t.gender); // t is from's parent
   if(t.spouseOf===from.id||from.spouseOf===targetId) return genderedRel('Spouse',t.gender);
   const fromP=new Set(from.parents||[]);
   if(fromP.size&&(t.parents||[]).some(pp=>fromP.has(pp))) return genderedRel('Sibling',t.gender);
+
+  // ── 2. One-hop structural: target is child's spouse (Son/Daughter-in-law) ─
+  const fromChildren=P.filter(x=>(x.parents||[]).includes(from.id));
+  for(const child of fromChildren){
+    if(t.spouseOf===child.id||child.spouseOf===targetId){
+      return genderedRel('Spouse',t.gender)+'-in-law'; // e.g. "Son-in-law" or "Daughter-in-law"
+    }
+  }
+
+  // ── 3. One-hop: target is from's grandchild (child's child) ─────────────
+  for(const child of fromChildren){
+    if((t.parents||[]).includes(child.id)) return genderedRel('Grandchild',t.gender);
+  }
+
+  // ── 4. One-hop: target is from's grandparent (parent's parent) ───────────
+  for(const pid of (from.parents||[])){
+    const par=byId[pid]||P.find(p=>p.id===pid); if(!par) continue;
+    if((par.parents||[]).includes(targetId)) return genderedRel('Grandparent',t.gender);
+  }
+
+  // ── 5. One-hop: target is from's spouse's parent (Parent-in-law) ────────
+  const fromSpouseId=from.spouseOf||(P.find(p=>p.spouseOf===from.id)||{}).id;
+  if(fromSpouseId&&fromSpouseId!==targetId){
+    const sp=byId[fromSpouseId]||P.find(p=>p.id===fromSpouseId);
+    if(sp){
+      if((sp.parents||[]).includes(targetId)) return genderedRel('Parent',t.gender)+'-in-law';
+      // Spouse's sibling = Sibling-in-law
+      const spP=new Set(sp.parents||[]);
+      if(spP.size&&(t.parents||[]).some(pp=>spP.has(pp))&&targetId!==fromSpouseId)
+        return genderedRel('Sibling',t.gender)+'-in-law';
+      // Spouse's child (not shared) = step-child
+      if((t.parents||[]).includes(fromSpouseId)&&!(t.parents||[]).includes(from.id))
+        return genderedRel('Child',t.gender); // treat as child for auto-assign purposes
+      // Spouse's grandchild = grandchild
+      const spChildren=P.filter(x=>(x.parents||[]).includes(fromSpouseId));
+      for(const sc of spChildren){
+        if((t.parents||[]).includes(sc.id)) return genderedRel('Grandchild',t.gender);
+      }
+    }
+  }
+
+  // ── 6. Two-hop: grandchild through spouse (spouse's child's child) ───────
+  if(fromSpouseId&&fromSpouseId!==targetId){
+    const sp=byId[fromSpouseId]||P.find(p=>p.id===fromSpouseId);
+    if(sp){
+      const spChildren=P.filter(x=>(x.parents||[]).includes(fromSpouseId));
+      for(const child of spChildren){
+        if((t.parents||[]).includes(child.id)) return genderedRel('Grandchild',t.gender);
+        // grandchild's spouse = grandson/daughter-in-law
+        if(t.spouseOf===child.id||child.spouseOf===targetId)
+          return genderedRel('Spouse',t.gender)+'-in-law';
+      }
+    }
+  }
+
+  // ── 7. Explicit customLinks (from's stored label for target) ─────────────
+  if(from.customLinks&&from.customLinks[targetId]){
+    const v=from.customLinks[targetId];
+    return typeof v==='string'?v:v.label;
+  }
+
+  // ── 8. Last resort: target's stored label for from (may be inverse) ──────
+  if(t.customLinks&&t.customLinks[fromId]){
+    const v=t.customLinks[fromId];
+    return typeof v==='string'?v:v.label;
+  }
+  if(t.relLabel) return t.relLabel;
   return '';
 }
 
