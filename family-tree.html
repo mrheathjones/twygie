@@ -45,19 +45,19 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-famil
 @keyframes pb{0%,100%{opacity:.25}50%{opacity:.52}}
 @keyframes py{0%,100%{opacity:.50}50%{opacity:1.0}}
 @keyframes pt{0%,100%{opacity:.32}50%{opacity:.62}}
-/* Young: fast sparkle pulse with slight scale bounce */
+/* Young: fast double-flash pulse — opacity only, no scale/transform */
 @keyframes pyoung{
-  0%{opacity:.22;transform:scale(.88)}
-  30%{opacity:.9;transform:scale(1.18)}
-  60%{opacity:.35;transform:scale(.95)}
-  80%{opacity:.75;transform:scale(1.1)}
-  100%{opacity:.22;transform:scale(.88)}
+  0%{opacity:.15}
+  25%{opacity:.85}
+  50%{opacity:.25}
+  75%{opacity:.72}
+  100%{opacity:.15}
 }
-/* Extra outer ring for young nodes */
+/* Extra outer ring for young nodes — opacity ripple only */
 @keyframes pyoung-outer{
-  0%{opacity:.08;transform:scale(1)}
-  40%{opacity:.28;transform:scale(1.4)}
-  100%{opacity:.08;transform:scale(1)}
+  0%{opacity:.04}
+  45%{opacity:.22}
+  100%{opacity:.04}
 }
 .gp{transform-origin:center}
 .gp.amber{animation:pa 3.4s ease-in-out infinite}
@@ -656,6 +656,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-famil
     <div class="mf">
       <label class="ml">Relationship to <span id="rel-to-label">tree</span></label>
       <select class="mi" id="fr" style="appearance:none">
+        <option value="">— No relationship specified —</option>
         <optgroup label="Children">
           <option value="Son">Son</option><option value="Daughter">Daughter</option>
         </optgroup>
@@ -2149,6 +2150,24 @@ function toggleDeathDate(){
   if(thumb) thumb.style.transform=cb.checked?'translateX(15px)':'translateX(0)';
 }
 
+function refreshModalRelOptions(){
+  const fr=document.getElementById('fr'); if(!fr) return;
+  // Remove any existing custom optgroup
+  const existing=fr.querySelector('optgroup[data-custom]');
+  if(existing) fr.removeChild(existing);
+  // Add custom types if any exist
+  if(customLineTypes&&customLineTypes.length){
+    const og=document.createElement('optgroup');
+    og.label='Custom'; og.dataset.custom='1';
+    customLineTypes.forEach(t=>{
+      const o=document.createElement('option');
+      o.value='custom-'+t.name; o.textContent=t.name;
+      og.appendChild(o);
+    });
+    fr.appendChild(og);
+  }
+}
+
 function openModal(forId){
   addFor=forId;
   const fp=forId?byId[forId]:null;
@@ -2160,6 +2179,7 @@ function openModal(forId){
   modalPhoto=null;
   const prev=document.getElementById('modal-photo-preview'); if(prev) prev.innerHTML='<span>+</span>';
   const fi=document.getElementById('modal-photo-file'); if(fi) fi.value='';
+  refreshModalRelOptions();
   document.getElementById('mbg').classList.add('open');
 }
 function closeModal(){ document.getElementById('mbg').classList.remove('open'); }
@@ -2186,6 +2206,12 @@ function submitMember(){
   const rel=document.getElementById('fr').value;
 
   // Infer base rel category
+  if(!rel){ // No relationship — just add as standalone node
+    P.push({id:`u${nxt++}`,name,firstName:first,lastName:last,gender,dob,birth,dod,death,city,state,note,parents:[],customLinks:{},x:600+Math.random()*100-50,y:400+Math.random()*100-50});
+    if(modalPhoto){ P[P.length-1].photo=modalPhoto; }
+    rebuild([]); closeModal(); render(); scheduleSave();
+    setTimeout(()=>selectNode(P[P.length-1].id),90); return;
+  }
   const baseRel=CHILD_RELS.includes(rel)?'Child':PARENT_RELS.includes(rel)?'Parent':SPOUSE_RELS.includes(rel)?'Spouse':SIBLING_RELS.includes(rel)?'Sibling':'Other';
 
   const id=`u${nxt++}`;
@@ -2200,8 +2226,35 @@ function submitMember(){
 
   if(addFor){
     const target=byId[addFor];
-    if(baseRel==='Child') np.parents=[addFor];
-    else if(baseRel==='Parent'){ np.parents=[]; if(target) target.parents=[...(target.parents||[]),id]; }
+    if(baseRel==='Child'){
+      const directChildSet=new Set(['Son','Daughter','Stepson','Stepdaughter','Child']);
+      if(directChildSet.has(rel)){
+        np.parents=[addFor];
+      } else {
+        // Grandchild, nephew, etc — customLink only
+        np.parents=[];
+        if(!np.customLinks) np.customLinks={};
+        if(!target.customLinks) target.customLinks={};
+        const ltype4=BLOOD_LABELS.has(rel)?'blood':'labeled';
+        np.customLinks[addFor]={label:rel,lineType:ltype4};
+        target.customLinks[id]={label:rel,lineType:ltype4};
+      }
+    }
+    else if(baseRel==='Parent'){
+      np.parents=[];
+      const directParentLabelsSet=new Set(['Father','Mother','Stepfather','Stepmother','Parent']);
+      if(directParentLabelsSet.has(rel)){
+        // Direct parent — add to target's parents array
+        if(target) target.parents=[...(target.parents||[]),id];
+      } else {
+        // Grandparent, uncle, etc — store as customLink only
+        if(!np.customLinks) np.customLinks={};
+        if(!target.customLinks) target.customLinks={};
+        const ltype=BLOOD_LABELS.has(rel)?'blood':'labeled';
+        np.customLinks[addFor]={label:rel,lineType:ltype};
+        target.customLinks[id]={label:rel,lineType:ltype};
+      }
+    }
     else if(baseRel==='Sibling'){
       // Only store customLink — do NOT copy parents (avoids false grandparent lines)
       np.parents=[];
@@ -2212,6 +2265,16 @@ function submitMember(){
       target.customLinks[id]={label:sibLabel,lineType:'sibling'};
     }
         else if(baseRel==='Spouse'){ np.spouseOf=addFor; if(target) target.spouseOf=id; }
+    else if(rel&&rel.startsWith('custom-')){
+      // Custom relationship type — store as customLink
+      const customLabel=rel.slice(7); // remove 'custom-' prefix
+      np.parents=[];
+      if(!np.customLinks) np.customLinks={};
+      if(!target.customLinks) target.customLinks={};
+      np.customLinks[addFor]={label:customLabel,lineType:'labeled'};
+      target.customLinks[id]={label:customLabel,lineType:'labeled'};
+      np.relLabel=customLabel;
+    }
     else np.parents=[addFor];
   }
 
