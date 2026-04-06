@@ -547,7 +547,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-famil
     </div>
 
     <div style="height:14px"></div>
-    <button class="sp-save" onclick="saveSettings()">Save preferences</button>
+    <button class="sp-save" id="sp-save-btn" onclick="saveSettings()">Save preferences</button>
   </div>
   <div id="sp-toast">✓ Preferences saved</div>
 </div>
@@ -1131,33 +1131,49 @@ async function loadSettings(){
 }
 
 async function saveSettings(){
+  // Show saving state immediately (before async)
+  const saveBtn=document.getElementById('sp-save-btn');
+  if(saveBtn){
+    saveBtn.textContent='Saving…';
+    saveBtn.style.background='rgba(200,168,75,.5)';
+    saveBtn.disabled=true;
+  }
   try{
     youngAge=parseInt(document.getElementById('sp-young-age')?.value)||17;
-    await settingsDoc().set({ defaultView:settingsMode, lineColors, nodeColors, customLineTypes, youngAge, autoConnections, updatedAt:firebase.firestore.FieldValue.serverTimestamp() });
+    await settingsDoc().set({
+      defaultView:settingsMode, lineColors, nodeColors,
+      customLineTypes, youngAge, autoConnections,
+      updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
     treeMode=settingsMode;
     setTreeMode(settingsMode);
     render();
-    // Animate save button green, then close after 1.4s
-    const saveBtn=document.querySelector('.sp-save');
+    // Show success on button
     if(saveBtn){
-      const orig=saveBtn.textContent;
-      saveBtn.textContent='✓ Saved!';
-      saveBtn.style.background='rgba(80,180,80,.9)';
+      saveBtn.textContent='✓  Saved!';
+      saveBtn.style.background='#4caf7d';
       saveBtn.style.color='#fff';
-      saveBtn.style.transform='scale(1.02)';
+      saveBtn.disabled=false;
       setTimeout(()=>{
-        saveBtn.textContent=orig;
+        saveBtn.textContent='Save preferences';
         saveBtn.style.background='';
         saveBtn.style.color='';
-        saveBtn.style.transform='';
         closeSettings();
         flashSaved();
-      },1400);
+      },1600);
     } else {
       closeSettings();
       flashSaved();
     }
-  }catch(e){ alert('Could not save settings.'); }
+  }catch(e){
+    console.error('Settings save failed:',e);
+    if(saveBtn){
+      saveBtn.textContent='Save preferences';
+      saveBtn.style.background='';
+      saveBtn.disabled=false;
+    }
+    alert('Could not save: '+e.message);
+  }
 }
 
 function setSettingsMode(mode){
