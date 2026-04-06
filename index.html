@@ -968,52 +968,36 @@ function applyInferredRel(fromNode, toNode, inferred){
 
 function autoAssignToYou(newNodeId, anchorId, relToAnchor){
   if(!autoConnections) return;
-  const you=P.find(p=>p.isYou); if(!you) return;
-  // Use P.find() — byId may be stale before rebuild()
   const newNode=P.find(p=>p.id===newNodeId)||byId[newNodeId]; if(!newNode) return;
   const anchor=P.find(p=>p.id===anchorId)||byId[anchorId]; if(!anchor) return;
 
-  // Ensure byId is current for getRelToYou
+  // Ensure byId is current for relationship lookups
   byId[newNodeId]=newNode; byId[anchorId]=anchor;
+  P.forEach(p=>{ byId[p.id]=p; });
 
-  // ── Assign to isYou ───────────────────────────────────────────────────────
-  if(newNodeId!==you.id && anchorId!==you.id){
-    const anchorRelToYou=getRelToYou(anchorId);
-    if(anchorRelToYou){
-      const inferred=inferRelToYou(anchorRelToYou, relToAnchor, newNode.gender||'');
-      if(inferred){
-        // Only assign if no existing connection
-        const alreadyLinked=
-          (you.parents||[]).includes(newNodeId)||
-          (newNode.parents||[]).includes(you.id)||
-          you.spouseOf===newNodeId||newNode.spouseOf===you.id||
-          (you.customLinks&&you.customLinks[newNodeId])||
-          (newNode.customLinks&&newNode.customLinks[you.id]);
-        if(!alreadyLinked) applyInferredRel(you, newNode, inferred);
-      }
-    }
-  }
+  // ── Enumerate ALL existing nodes and infer a relationship ─────────────────
+  P.forEach(existing=>{
+    if(existing.id===newNodeId||existing.id===anchorId) return; // skip self + anchor
 
-  // ── Assign to isYou's spouse ──────────────────────────────────────────────
-  // Find isYou's spouse (if any)
-  const spouse=you.spouseOf?P.find(p=>p.id===you.spouseOf):P.find(p=>p.spouseOf===you.id);
-  if(spouse && newNodeId!==spouse.id && anchorId!==spouse.id){
-    // Get anchor's relationship to the spouse
-    byId[spouse.id]=spouse;
-    const anchorRelToSpouse=getRelToYou_for(anchorId, spouse.id);
-    if(anchorRelToSpouse){
-      const inferredForSpouse=inferRelToYou(anchorRelToSpouse, relToAnchor, newNode.gender||'');
-      if(inferredForSpouse){
-        const alreadyLinked2=
-          (spouse.parents||[]).includes(newNodeId)||
-          (newNode.parents||[]).includes(spouse.id)||
-          spouse.spouseOf===newNodeId||newNode.spouseOf===spouse.id||
-          (spouse.customLinks&&spouse.customLinks[newNodeId])||
-          (newNode.customLinks&&newNode.customLinks[spouse.id]);
-        if(!alreadyLinked2) applyInferredRel(spouse, newNode, inferredForSpouse);
-      }
-    }
-  }
+    // Get how anchor relates to this existing node
+    const anchorRelToExisting=getRelToYou_for(anchorId, existing.id);
+    if(!anchorRelToExisting) return;
+
+    // Infer new node's relationship to this existing node
+    const inferred=inferRelToYou(anchorRelToExisting, relToAnchor, newNode.gender||'');
+    if(!inferred) return;
+
+    // Skip if a connection already exists between existing and new node
+    const alreadyLinked=
+      (existing.parents||[]).includes(newNodeId)||
+      (newNode.parents||[]).includes(existing.id)||
+      existing.spouseOf===newNodeId||newNode.spouseOf===existing.id||
+      (existing.customLinks&&existing.customLinks[newNodeId])||
+      (newNode.customLinks&&newNode.customLinks[existing.id]);
+    if(alreadyLinked) return;
+
+    applyInferredRel(existing, newNode, inferred);
+  });
 }
 
 // Generic getRelToYou from any node's perspective (not just isYou)
