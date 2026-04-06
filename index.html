@@ -564,6 +564,20 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-famil
       </div>
     </div>
 
+    <div class="sp-section">
+      <div class="sp-section-title">Auto-connections</div>
+      <div class="sp-option" id="sp-autoconn" onclick="toggleAutoConn()" style="cursor:pointer">
+        <div>
+          <div class="sp-option-label">Auto-assign relationships</div>
+          <div class="sp-option-sub">Automatically infer connections to you when adding new Twygs (e.g. Wife's Mother → Mother-in-law)</div>
+        </div>
+        <div style="position:relative;width:36px;height:20px;flex-shrink:0">
+          <div id="ac-track" style="position:absolute;inset:0;border-radius:100px;background:rgba(200,168,75,.5);transition:background .2s"></div>
+          <div id="ac-thumb" style="position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 4px rgba(0,0,0,.3)"></div>
+        </div>
+      </div>
+    </div>
+
     <button class="sp-save" onclick="saveSettings()">Save preferences</button>
   </div>
 </div>
@@ -754,6 +768,125 @@ auth.onAuthStateChanged(async user => {
 });
 async function signOut(){ if(!confirm('Sign out?')) return; await auth.signOut(); window.location.href='login.html'; }
 
+// ─── AUTO-CONNECTIONS ────────────────────────────────────────────────────────
+
+/**
+ * Kinship composition table — infers isYou's relationship to a new node
+ * given: how the anchor relates to isYou, and how the new node relates to anchor
+ */
+function inferRelToYou(anchorRelToYou, newRelToAnchor, gender) {
+  const m=gender==='male', f=gender==='female';
+  const g=(male,female,neutral)=>m?male:f?female:neutral;
+  const a=anchorRelToYou.toLowerCase();
+  const r=newRelToAnchor.toLowerCase();
+
+  const isSpouse   =s=>['wife','husband','partner','spouse'].includes(s);
+  const isParent   =s=>['father','mother','parent','stepfather','stepmother'].includes(s);
+  const isChild    =s=>['son','daughter','child','stepson','stepdaughter'].includes(s);
+  const isSibling  =s=>['brother','sister','sibling','half-brother','half-sister'].includes(s);
+  const isGrandpar =s=>['grandfather','grandmother','grandparent'].includes(s);
+  const isGrandchild=s=>['grandson','granddaughter','grandchild'].includes(s);
+  const isUncleAunt=s=>['uncle','aunt'].includes(s);
+  const isNieceNeph=s=>['nephew','niece'].includes(s);
+
+  // ── Spouse's relatives ─────────────────────────────────────────────────────
+  if(isSpouse(a)){
+    if(isParent(r))    return g('Father-in-law','Mother-in-law','Parent-in-law');
+    if(isSibling(r))   return g('Brother-in-law','Sister-in-law','Sibling-in-law');
+    if(isGrandpar(r))  return g('Grandfather-in-law','Grandmother-in-law','Grandparent-in-law');
+    if(isChild(r))     return g('Stepson','Stepdaughter','Stepchild');
+    if(isGrandchild(r))return g('Step-grandson','Step-granddaughter','Step-grandchild');
+    if(isUncleAunt(r)) return g('Uncle-in-law','Aunt-in-law','Relative-in-law');
+  }
+  // ── Child's relatives ──────────────────────────────────────────────────────
+  if(isChild(a)){
+    if(isSpouse(r))    return g('Son-in-law','Daughter-in-law','Child-in-law');
+    if(isChild(r))     return g('Grandson','Granddaughter','Grandchild');
+    if(isGrandchild(r))return g('Great-grandson','Great-granddaughter','Great-grandchild');
+    if(isSibling(r))   return null; // sibling of child = another child, already handled
+  }
+  // ── Parent's relatives ─────────────────────────────────────────────────────
+  if(isParent(a)){
+    if(isSibling(r))   return g('Uncle','Aunt','Aunt/Uncle');
+    if(isParent(r))    return g('Grandfather','Grandmother','Grandparent');
+    if(isSpouse(r))    return g('Stepfather','Stepmother','Stepparent');
+    if(isGrandpar(r))  return g('Great-grandfather','Great-grandmother','Great-grandparent');
+    if(isNieceNeph(r)) return 'Cousin'; // parent's niece/nephew = your cousin
+  }
+  // ── Sibling's relatives ────────────────────────────────────────────────────
+  if(isSibling(a)){
+    if(isChild(r))     return g('Nephew','Niece','Niece/Nephew');
+    if(isSpouse(r))    return g('Brother-in-law','Sister-in-law','Sibling-in-law');
+    if(isGrandchild(r))return g('Grand-nephew','Grand-niece','Grand-niece/Nephew');
+  }
+  // ── Grandparent's relatives ────────────────────────────────────────────────
+  if(isGrandpar(a)){
+    if(isSibling(r))   return g('Great-uncle','Great-aunt','Great-aunt/Uncle');
+    if(isParent(r))    return g('Great-grandfather','Great-grandmother','Great-grandparent');
+    if(isChild(r))     return g('Uncle','Aunt','Aunt/Uncle'); // grandparent's child (not your parent)
+    if(isSpouse(r))    return g('Grandfather-in-law','Grandmother-in-law','Grandparent-in-law');
+  }
+  // ── Uncle/Aunt's relatives ─────────────────────────────────────────────────
+  if(isUncleAunt(a)){
+    if(isChild(r))     return 'Cousin';
+    if(isSpouse(r))    return a==='uncle'?g('Uncle','Aunt-by-marriage','Relative-by-marriage'):g('Uncle-by-marriage','Aunt','Relative-by-marriage');
+  }
+  // ── In-law relatives ───────────────────────────────────────────────────────
+  if(a.includes('-in-law')){
+    const base=a.replace('-in-law','');
+    if(isSpouse(r)||isChild(r)) return null; // getting complex, skip
+    if(isSibling(r))   return g('Brother-in-law','Sister-in-law','Sibling-in-law');
+    if(isParent(r))    return g('Grandfather-in-law','Grandmother-in-law','Grandparent-in-law');
+  }
+  return null; // can't infer
+}
+
+/**
+ * After adding/connecting a node, auto-assign its relationship to isYou
+ * anchorId = the node the new node was connected to
+ * relToAnchor = the label used (e.g. "Mother")
+ * newNodeId = the new/updated node
+ */
+function autoAssignToYou(newNodeId, anchorId, relToAnchor){
+  if(!autoConnections) return;
+  const you=P.find(p=>p.isYou); if(!you) return;
+  const newNode=byId[newNodeId]; if(!newNode) return;
+  if(newNodeId===you.id||anchorId===you.id) return; // already directly connected to you
+
+  // Get how anchor relates to isYou
+  const anchorRelToYou=getRelToYou(anchorId);
+  if(!anchorRelToYou) return;
+
+  // Infer
+  const inferred=inferRelToYou(anchorRelToYou, relToAnchor, newNode.gender||'');
+  if(!inferred) return;
+
+  // Don't overwrite an existing explicit connection
+  if(you.customLinks&&you.customLinks[newNodeId]) return;
+  if(newNode.customLinks&&newNode.customLinks[you.id]) return;
+
+  // Store the inferred connection
+  if(!you.customLinks) you.customLinks={};
+  if(!newNode.customLinks) newNode.customLinks={};
+  const ltype=BLOOD_LABELS.has(inferred)?'blood':'labeled';
+  you.customLinks[newNodeId]={label:inferred,lineType:ltype};
+  newNode.customLinks[you.id]={label:inferred,lineType:ltype};
+  newNode.relLabel=inferred;
+}
+
+function toggleAutoConn(){
+  autoConnections=!autoConnections;
+  syncAutoConnToggle();
+}
+function syncAutoConnToggle(){
+  const track=document.getElementById('ac-track');
+  const thumb=document.getElementById('ac-thumb');
+  const opt=document.getElementById('sp-autoconn');
+  if(track) track.style.background=autoConnections?'rgba(200,168,75,.7)':'rgba(255,255,255,.12)';
+  if(thumb) thumb.style.transform=autoConnections?'translateX(18px)':'translateX(0)';
+  if(opt) opt.classList.toggle('active',autoConnections);
+}
+
 // ─── SETTINGS ─────────────────────────────────────────────────────────────────
 function rgbToHex([r,g,b]){ return '#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join(''); }
 
@@ -909,6 +1042,7 @@ async function loadSettings(){
       if(d.nodeColors) nodeColors={...DEFAULT_NODE_COLORS,...d.nodeColors};
       if(d.customLineTypes) customLineTypes=d.customLineTypes;
       if(d.youngAge!=null) youngAge=parseInt(d.youngAge)||17;
+      if(d.autoConnections!=null) autoConnections=!!d.autoConnections;
     }
   }catch(e){}
 }
@@ -916,7 +1050,7 @@ async function loadSettings(){
 async function saveSettings(){
   try{
     youngAge=parseInt(document.getElementById('sp-young-age')?.value)||17;
-    await settingsDoc().set({ defaultView:settingsMode, lineColors, nodeColors, customLineTypes, youngAge, updatedAt:firebase.firestore.FieldValue.serverTimestamp() });
+    await settingsDoc().set({ defaultView:settingsMode, lineColors, nodeColors, customLineTypes, youngAge, autoConnections, updatedAt:firebase.firestore.FieldValue.serverTimestamp() });
     treeMode=settingsMode;
     setTreeMode(settingsMode);
     render();
@@ -961,6 +1095,7 @@ function openSettings(){
   syncCustomConnOptions();
   const yaInput=document.getElementById('sp-young-age');
   if(yaInput) yaInput.value=youngAge;
+  syncAutoConnToggle();
   document.getElementById('settings-panel').classList.add('open');
   document.getElementById('scrim').classList.add('on');
 }
@@ -1007,6 +1142,7 @@ function g(id){ return byId[id]; }
 let nxt=Date.now();
 let treeMode='complex'; // 'simple' | 'complex'
 let youngAge=17; // 'young' if age <= this
+let autoConnections=true; // auto-infer relationships to isYou
 function setTreeMode(mode){
   treeMode=mode;
   const tBtn=document.getElementById('btn-tree');
@@ -1973,6 +2109,9 @@ function saveConnection(){
     other.relLabel=label;
   }
 
+  // Auto-assign inferred relationship to isYou
+  autoAssignToYou(connSelectedId, connForId, label);
+  autoAssignToYou(connForId, connSelectedId, label);
   rebuild([]); render(); scheduleSave();
   closeConnModal();
   selectNode(connForId);
@@ -2278,7 +2417,10 @@ function submitMember(){
     else np.parents=[addFor];
   }
 
-  P.push(np); rebuild([id]); closeModal(); render(); scheduleSave();
+  P.push(np);
+  // Auto-assign relationship to isYou if addFor is set
+  if(addFor && rel) autoAssignToYou(id, addFor, rel);
+  rebuild([id]); closeModal(); render(); scheduleSave();
   setTimeout(()=>selectNode(id),90);
 }
 </script>
