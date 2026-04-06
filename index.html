@@ -342,9 +342,9 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-famil
   <div class="lr"><div class="ld" id="ln-extended" style="background:#e8c87a"></div>Extended</div>
   <div style="height:1px;background:var(--border);margin:8px 0"></div>
   <div style="font-size:.6rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:6px">Lines</div>
-  <div class="lr"><div id="leg-parentChild" style="width:18px;height:2px;background:#64b464;border-radius:1px"></div>Parent / Child</div>
+  <div class="lr"><div id="leg-parentChild" style="width:18px;height:3px;background:#64b464;border-radius:2px"></div>Parent / Child</div>
+  <div class="lr"><div id="leg-sibling" style="width:18px;height:3px;background:#dc8c3c;border-radius:2px" id="leg-sibling"></div>Sibling</div>
   <div class="lr"><div id="leg-spouse" style="width:18px;height:0;border-top:2px dashed #648cdc"></div>Spouse</div>
-  <div class="lr"><div id="leg-sibling" style="width:18px;height:0;border-top:2px dashed #dc8c3c"></div>Sibling</div>
   <div class="lr"><div id="leg-labeled" style="width:18px;height:0;border-top:2px dashed #a064dc"></div>Extended</div>
 </div>
 
@@ -766,13 +766,17 @@ function syncNodeLegend(){
 }
 
 function syncLegend(){
-  const map={parentChild:'solid',spouse:'dashed',sibling:'dashed',labeled:'dashed'};
+  // Blood lines (solid+bold): parentChild, sibling. Non-blood (dashed): spouse, labeled
+  const bloodKeys=['parentChild','sibling'];
   ['parentChild','spouse','sibling','labeled'].forEach(key=>{
     const el=document.getElementById(`leg-${key}`);
     if(!el) return;
     const c=lineColors[key]||DEFAULT_LINE_COLORS[key];
-    if(key==='parentChild'){ el.style.background=c; el.style.borderTop='none'; }
-    else { el.style.background='transparent'; el.style.borderTop=`2px dashed ${c}`; }
+    if(bloodKeys.includes(key)){
+      el.style.background=c; el.style.borderTop='none'; el.style.height='3px'; el.style.borderRadius='2px';
+    } else {
+      el.style.background='transparent'; el.style.height='0'; el.style.borderTop=`2px dashed ${c}`;
+    }
   });
 }
 
@@ -1133,11 +1137,12 @@ function render(){
 }
 
 function bstyle(dy){
+  // Blood (parent-child) lines — solid, bold weight by distance
   const a=Math.abs(dy);
-  if(a>280) return {w:9,o:.62};
-  if(a>180) return {w:6.5,o:.52};
-  if(a>100) return {w:4.5,o:.44};
-  return {w:3,o:.36};
+  if(a>280) return {w:10,o:.65};
+  if(a>180) return {w:7.5,o:.58};
+  if(a>100) return {w:5,o:.50};
+  return {w:3.5,o:.42};
 }
 
 // ─── BRANCH COLOR THEME (user-customizable) ────────────────────────────────
@@ -1234,7 +1239,7 @@ function drawBranches(){
     path.setAttribute('d',`M ${p.x} ${p.y} L ${sp.x} ${sp.y}`);
     path.setAttribute('stroke', brRgba('spouse', .45));
     path.setAttribute('stroke-width','2');
-    path.setAttribute('stroke-dasharray','6,4');
+    path.setAttribute('stroke-dasharray','8,5');
     path.setAttribute('fill','none');
     path.setAttribute('class','br');
     path.dataset.src=p.id; path.dataset.dst=sp.id;
@@ -1256,9 +1261,9 @@ function drawBranches(){
         const mx=(p.x+sib.x)/2, my=(p.y+sib.y)/2-20;
         const path=se('path');
         path.setAttribute('d',`M ${p.x} ${p.y} Q ${mx} ${my} ${sib.x} ${sib.y}`);
-        path.setAttribute('stroke', brRgba('sibling', .45));
-        path.setAttribute('stroke-width','1.5');
-        path.setAttribute('stroke-dasharray','3,5');
+        path.setAttribute('stroke', brRgba('sibling', .65));
+        path.setAttribute('stroke-width','3.5'); // solid bold blood line
+        path.setAttribute('stroke-dasharray','none');
         path.setAttribute('fill','none');
         path.setAttribute('class','br');
         path.dataset.src=p.id; path.dataset.dst=sib.id;
@@ -1267,783 +1272,52 @@ function drawBranches(){
     });
   }
 
-  // ── Custom links (sibling / labeled) — ALWAYS shown in both modes ──
-  const connDrawn=new Set();
+  // ── Sibling customLinks — shown in BOTH Tree View and All Twygs ──
+  const sibConnDrawn=new Set();
   P.forEach(p=>{
     Object.entries(p.customLinks||{}).forEach(([tid,v])=>{
-      const key=[p.id,tid].sort().join('|');
-      if(connDrawn.has(key)) return;
-      connDrawn.add(key);
-      const other=byId[tid]; if(!other) return;
       const lineType=typeof v==='string'?'labeled':v.lineType||'labeled';
-      const colorKey=lineType==='sibling'?'sibling':'labeled';
-      const mx=(p.x+other.x)/2, my=(p.y+other.y)/2-30;
+      if(lineType!=='sibling') return; // only siblings here
+      const key=[p.id,tid].sort().join('|');
+      if(sibConnDrawn.has(key)) return;
+      sibConnDrawn.add(key);
+      const other=byId[tid]; if(!other) return;
+      const mx=(p.x+other.x)/2, my=(p.y+other.y)/2-18;
       const path=se('path');
       path.setAttribute('d',`M ${p.x} ${p.y} Q ${mx} ${my} ${other.x} ${other.y}`);
-      const customType2=customLineTypes.find(t=>t.name===(typeof v==='string'?v:v.label));
-      const strokeC=customType2?customType2.color:null;
-      path.setAttribute('stroke', strokeC?hexToAlpha(strokeC,.68):brRgba(colorKey, .68));
-      path.setAttribute('stroke-width','2.5');
-      path.setAttribute('stroke-dasharray',lineType==='sibling'?'5,5':'7,5');
+      path.setAttribute('stroke', brRgba('sibling', .72));
+      path.setAttribute('stroke-width','3.5'); // solid bold blood line
       path.setAttribute('fill','none');
+      path.setAttribute('stroke-linecap','round');
       path.setAttribute('class','br');
       path.dataset.src=p.id; path.dataset.dst=tid;
       bG.appendChild(path);
     });
   });
-}
+
+  // ── Labeled/extended customLinks — ONLY in All Twygs mode ──
+  if(!simple){
+    const connDrawn=new Set();
+    P.forEach(p=>{
+      Object.entries(p.customLinks||{}).forEach(([tid,v])=>{
+        const lineType=typeof v==='string'?'labeled':v.lineType||'labeled';
+        if(lineType==='sibling') return; // siblings handled above
+        const key=[p.id,tid].sort().join('|');
+        if(connDrawn.has(key)) return;
+        connDrawn.add(key);
+        const other=byId[tid]; if(!other) return;
+        const mx=(p.x+other.x)/2, my=(p.y+other.y)/2-30;
+        const path=se('path');
+        path.setAttribute('d',`M ${p.x} ${p.y} Q ${mx} ${my} ${other.x} ${other.y}`);
+        path.setAttribute('stroke', brRgba('labeled', .68));
+        path.setAttribute('stroke-width','2');
+        path.setAttribute('stroke-dasharray','7,5'); // dashed non-blood
+        path.setAttribute('fill','none');
+        path.setAttribute('class','br');
+        path.dataset.src=p.id; path.dataset.dst=tid;
+        bG.appendChild(path);
+      });
+    });
+  }
 
 function drawNodes(){
-  const nG=document.getElementById('nG');
-  const defs=document.getElementById('defs-clips');
-  P.forEach(p=>{
-    const R=nr(p), GR=gr(p), c=col(p);
-    const delay=((p.x*.04+p.y*.02)%3.5).toFixed(2);
-
-    if(p.photo){
-      const cp=se('clipPath'); cp.setAttribute('id',`cp-${p.id}`);
-      const ci=se('circle'); ci.setAttribute('r',String(R)); cp.appendChild(ci);
-      defs.appendChild(cp);
-    }
-
-    const G=se('g');
-    G.setAttribute('class','nd');
-    G.setAttribute('transform',`translate(${p.x},${p.y})`);
-    G.dataset.id=p.id;
-
-    // Extra wide glow for isYou
-    if(p.isYou){
-      const outerGlow=se('circle');
-      outerGlow.setAttribute('r',String(GR+16));
-      outerGlow.setAttribute('fill',c);
-      outerGlow.setAttribute('fill-opacity','.06');
-      outerGlow.setAttribute('filter',`url(#${gfilt(p)})`);
-      G.appendChild(outerGlow);
-    }
-
-    // Pulsing halo
-    const halo=se('circle');
-    halo.setAttribute('r',String(GR));
-    halo.setAttribute('fill',c);
-    halo.setAttribute('fill-opacity','.22');
-    halo.setAttribute('filter',`url(#${gfilt(p)})`);
-    halo.setAttribute('class',`gp hi ${gclass(p)}`);
-    halo.style.animationDelay=`-${delay}s`;
-
-    // Soft inner ring
-    const ring=se('circle');
-    ring.setAttribute('r',String(R+4));
-    ring.setAttribute('fill',c);
-    ring.setAttribute('fill-opacity','.28');
-
-    // Core
-    const core=se('circle');
-    core.setAttribute('r',String(R));
-    core.setAttribute('fill',p.photo?'rgba(0,0,0,.35)':c);
-    core.setAttribute('class','core');
-
-    G.append(halo,ring,core);
-
-    // Photo
-    if(p.photo){
-      const img=se('image');
-      img.setAttribute('href',p.photo);
-      img.setAttribute('x',String(-R)); img.setAttribute('y',String(-R));
-      img.setAttribute('width',String(R*2)); img.setAttribute('height',String(R*2));
-      img.setAttribute('clip-path',`url(#cp-${p.id})`);
-      img.setAttribute('preserveAspectRatio','xMidYMid slice');
-      img.setAttribute('class','core');
-      G.appendChild(img);
-    }
-
-    // Label
-    const lbl=se('text');
-    lbl.textContent=p.isYou?'You':(p.firstName||fullName(p).split(' ')[0]);
-    lbl.setAttribute('class',`nlbl${p.isYou?' you':''}`);
-    lbl.setAttribute('text-anchor','middle');
-    lbl.setAttribute('y',String(R+15));
-    G.appendChild(lbl);
-
-    // Events
-    G.addEventListener('mousedown',e=>onNodeMouseDown(e,p.id));
-    G.addEventListener('touchstart',e=>onNodeTouchStart(e,p.id),{passive:true});
-    G.addEventListener('mouseenter',e=>showTip(e,p));
-    G.addEventListener('mouseleave',hideTip);
-    nG.appendChild(G);
-  });
-}
-
-// ─── NODE DRAG ────────────────────────────────────────────────────────────────
-let nodeDrag=null;
-
-function onNodeMouseDown(e,id){
-  e.stopPropagation();
-  const p=byId[id]; if(!p) return;
-  nodeDrag={id,startX:e.clientX,startY:e.clientY,origX:p.x,origY:p.y,moved:false};
-}
-
-function onNodeTouchStart(e,id){
-  if(e.touches.length!==1) return;
-  const p=byId[id]; if(!p) return;
-  nodeDrag={id,startX:e.touches[0].clientX,startY:e.touches[0].clientY,origX:p.x,origY:p.y,moved:false,touch:true};
-}
-
-document.addEventListener('mousemove',e=>{
-  if(nodeDrag){
-    const dx=e.clientX-nodeDrag.startX, dy=e.clientY-nodeDrag.startY;
-    if(!nodeDrag.moved&&Math.hypot(dx,dy)>6) nodeDrag.moved=true;
-    if(nodeDrag.moved){
-      hideTip();
-      const p=byId[nodeDrag.id]; if(!p) return;
-      p.x=nodeDrag.origX+dx/scale; p.y=nodeDrag.origY+dy/scale;
-      render();
-      // Update branch dims if card open
-      if(selId) highlightConnected(selId);
-    }
-    return;
-  }
-  if(drag){ tx=e.clientX-dsx; ty=e.clientY-dsy; applyT(); }
-});
-
-document.addEventListener('mouseup',e=>{
-  if(nodeDrag){
-    if(!nodeDrag.moved) selectNode(nodeDrag.id);
-    else scheduleSave();
-    nodeDrag=null; return;
-  }
-  drag=false; document.getElementById('wrap').style.cursor='';
-});
-
-document.addEventListener('touchmove',e=>{
-  if(nodeDrag&&nodeDrag.touch&&e.touches.length===1){
-    const dx=e.touches[0].clientX-nodeDrag.startX, dy=e.touches[0].clientY-nodeDrag.startY;
-    if(!nodeDrag.moved&&Math.hypot(dx,dy)>8) nodeDrag.moved=true;
-    if(nodeDrag.moved){
-      const p=byId[nodeDrag.id]; if(!p) return;
-      p.x=nodeDrag.origX+dx/scale; p.y=nodeDrag.origY+dy/scale;
-      render();
-    }
-  }
-},{passive:true});
-
-document.addEventListener('touchend',()=>{
-  if(nodeDrag){
-    if(!nodeDrag.moved) selectNode(nodeDrag.id);
-    else scheduleSave();
-    nodeDrag=null;
-  }
-  tpan=false;
-});
-
-// ─── SELECTION ────────────────────────────────────────────────────────────────
-let selId=null;
-
-function highlightConnected(id){
-  const p=byId[id]; if(!p) return;
-  const conn=new Set([id]);
-  (p.parents||[]).forEach(pid=>conn.add(pid));
-  P.filter(x=>(x.parents||[]).includes(id)).forEach(x=>conn.add(x.id));
-  const myP=new Set(p.parents||[]);
-  P.filter(x=>x.id!==id&&(x.parents||[]).some(pp=>myP.has(pp))).forEach(x=>conn.add(x.id));
-  if(p.spouseOf) conn.add(p.spouseOf);
-  const sp=P.find(x=>x.spouseOf===id); if(sp) conn.add(sp.id);
-  // Include labeled connections (customLinks)
-  Object.keys(p.customLinks||{}).forEach(tid=>conn.add(tid));
-  P.filter(x=>x.customLinks&&x.customLinks[id]).forEach(x=>conn.add(x.id));
-
-  document.querySelectorAll('.nd').forEach(n=>{
-    n.classList.toggle('dim',!conn.has(n.dataset.id));
-    n.classList.toggle('sel',n.dataset.id===id);
-  });
-  document.querySelectorAll('.br').forEach(b=>{
-    const lit=conn.has(b.dataset.src)&&conn.has(b.dataset.dst);
-    b.classList.toggle('dim',!lit); b.classList.toggle('lit',lit);
-  });
-}
-
-function selectNode(id){
-  selId=id; hideTip();
-  highlightConnected(id);
-  zoomTo(byId[id]);
-  fillCard(byId[id]);
-  document.getElementById('card').classList.add('open');
-  document.getElementById('scrim').classList.add('on');
-}
-
-function zoomTo(p){
-  if(!p) return;
-  const s=2.1;
-  tx=window.innerWidth/2-p.x*s;
-  ty=window.innerHeight/2-p.y*s;
-  scale=s; applyT(true);
-}
-
-function fillCard(p){
-  if(!p) return;
-  const c=col(p);
-  document.getElementById('cbar').style.cssText=`background:${c};box-shadow:0 0 10px ${c}`;
-  const av=document.getElementById('cavatar');
-  av.style.borderColor=c;
-  av.innerHTML=p.photo?`<img src="${p.photo}"/>`:`<span style="color:${c}">${initials(p)}</span>`;
-  document.getElementById('cname').textContent=p.isYou?'You':fullName(p);
-  document.getElementById('cdob').textContent=dobDisplay(p);
-  document.getElementById('cplace').textContent=placeDisplay(p);
-
-  const rel=getRelToYou(p.id);
-  const relBadge=document.getElementById('crel-badge');
-  relBadge.innerHTML=(!p.isYou&&rel)?`<span class="crel-badge">${rel}</span>`:'';
-
-  // Connections
-  const parentsArr=(p.parents||[]).map(pid=>{
-    const par=byId[pid]; if(!par) return null;
-    // Label is always from the PERSPECTIVE of person p (who is the child)
-    const lbl=genderedRel('Parent',par.gender);
-    return {p:par,rel:lbl,connType:'parent'};
-  }).filter(Boolean);
-
-  const children=P.filter(x=>(x.parents||[]).includes(p.id)).map(x=>({
-    p:x, rel: x.relLabel?genderedRel(x.relLabel,x.gender):genderedRel('Child',x.gender)
-  }));
-
-  const myP2=new Set(p.parents||[]);
-  const sibs=P.filter(x=>x.id!==p.id&&(x.parents||[]).some(pp=>myP2.has(pp))).map(x=>({
-    p:x, rel:genderedRel('Sibling',x.gender)
-  }));
-
-  const spouseNode=p.spouseOf?byId[p.spouseOf]:P.find(x=>x.spouseOf===p.id);
-  const spouses=spouseNode?[{p:spouseNode,rel:genderedRel('Spouse',spouseNode.gender),connType:'spouse'}]:[];
-  // Include labeled connections (in-laws, etc.)
-  const labeled=Object.entries(p.customLinks||{}).map(([tid,v])=>({p:byId[tid],rel:typeof v==='string'?v:v.label,targetId:tid,connType:typeof v==='string'?'labeled':v.lineType||'labeled'})).filter(x=>x.p);
-  const conns=[...spouses,...parentsArr,...children,...sibs,...labeled];
-
-  let html='';
-  if(p.note) html+=`<div class="csec">Story</div><p class="cbio">${p.note}</p>`;
-  if(conns.length){
-    html+=`<div class="csec">Connections</div><div class="frow">`;
-    conns.forEach(({p:cp,rel,targetId,connType})=>{
-      const cc=col(cp);
-      const chipPhoto=cp.photo
-        ?`<div class="fchip-photo"><img src="${cp.photo}"/></div>`
-        :`<div class="fdot" style="background:${cc};box-shadow:0 0 5px ${cc}"></div>`;
-      html+=`<div class="fchip" style="position:relative">
-        <div style="flex:1;display:flex;align-items:center;gap:8px;cursor:pointer" onclick="selectNode('${cp.id}')">
-          ${chipPhoto}
-          <div class="fi2"><div class="fn2">${fullName(cp)}</div><div class="frel">${rel}</div></div>
-          <div class="fyr">${dobDisplay(cp).replace('b. ','')}</div>
-        </div>
-        <button onclick="removeConnFromCard('${p.id}','${cp.id}','${connType||'labeled'}');event.stopPropagation()" title="Remove this connection" style="background:transparent;border:none;cursor:pointer;color:rgba(200,100,100,.35);font-size:16px;padding:0 4px;line-height:1;flex-shrink:0;transition:color .2s" onmouseover="this.style.color='rgba(220,120,120,.9)'" onmouseout="this.style.color='rgba(200,100,100,.35)'">×</button>
-      </div>`;
-    });
-    html+=`</div>`;
-  }
-
-  html+=`<div class="card-actions">
-    <button class="btn-sm btn-edit" onclick="editCard('${p.id}')">
-      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-      Edit
-    </button>
-    <button class="btn-sm btn-twyg" onclick="closeCard();openModal('${p.id}')">
-      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
-      Add a Twyg
-    </button>
-    <button class="btn-sm btn-conn" onclick="openConnModal('${p.id}')">
-      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-      Add Connection
-    </button>
-    ${!p.isYou?`<button class="btn-sm btn-del" onclick="removePerson('${p.id}')">Remove</button>`:''}
-  </div>`;
-
-  document.getElementById('cbody').innerHTML=html;
-}
-
-// ─── EDIT CARD ────────────────────────────────────────────────────────────────
-function stateSelectOpts(current){
-  const states=['Alabama','Alaska','Arizona','Arkansas','California','Colorado','Connecticut','Delaware','Florida','Georgia','Hawaii','Idaho','Illinois','Indiana','Iowa','Kansas','Kentucky','Louisiana','Maine','Maryland','Massachusetts','Michigan','Minnesota','Mississippi','Missouri','Montana','Nebraska','Nevada','New Hampshire','New Jersey','New Mexico','New York','North Carolina','North Dakota','Ohio','Oklahoma','Oregon','Pennsylvania','Rhode Island','South Carolina','South Dakota','Tennessee','Texas','Utah','Vermont','Virginia','Washington','West Virginia','Wisconsin','Wyoming','Washington D.C.','Puerto Rico','Other / International'];
-  return '<option value="">Select state…</option>'+states.map(s=>`<option value="${s}"${s===current?' selected':''}>${s}</option>`).join('');
-}
-
-function editCard(id){
-  const p=byId[id]; if(!p) return;
-  const months=['','January','February','March','April','May','June','July','August','September','October','November','December'];
-  const mOpts=months.map((m,i)=>m?`<option value="${i}" ${p.dob&&p.dob.month==i?'selected':''}>${m}</option>`:'<option value="">Month</option>').join('');
-  const photoPreview=p.photo?`<img src="${p.photo}"/>`:`<span style="font-size:.65rem;color:var(--muted)">None</span>`;
-  const gOpts=['','male','female','nonbinary'].map(v=>`<option value="${v}" ${p.gender===v?'selected':''}>${{'':"Prefer not to say",male:'Male',female:'Female',nonbinary:'Non-binary'}[v]}</option>`).join('');
-
-  document.getElementById('cbody').innerHTML=`<div class="edit-form">
-    <div class="ef ef-row c2">
-      <div><label class="el">First Name</label><input class="ei" id="ei-first" value="${(p.firstName||'').replace(/"/g,'&quot;')}" placeholder="First"/></div>
-      <div><label class="el">Last Name</label><input class="ei" id="ei-last" value="${(p.lastName||'').replace(/"/g,'&quot;')}" placeholder="Last"/></div>
-    </div>
-    <div class="ef"><label class="el">Gender</label>
-      <select class="ei" style="appearance:none"  id="ei-gender">${gOpts}</select>
-    </div>
-    <div class="ef"><label class="el">Date of Birth</label>
-      <div class="ef-row c3">
-        <select class="ei" id="ei-dob-month" style="appearance:none">${mOpts}</select>
-        <input class="ei" id="ei-dob-day" type="number" value="${p.dob&&p.dob.day||''}" placeholder="Day" min="1" max="31"/>
-        <input class="ei" id="ei-dob-year" type="number" value="${p.dob&&p.dob.year||p.birth||''}" placeholder="Year"/>
-      </div>
-    </div>
-    <div class="ef ef-row c2">
-      <div><label class="el">City</label><input class="ei" id="ei-city" value="${(p.city||'').replace(/"/g,'&quot;')}" placeholder="City"/></div>
-      <div><label class="el">State</label><select class="ei" id="ei-state" style="appearance:none">${stateSelectOpts(p.state||"")}</select></div>
-    </div>
-    <div class="ef"><label class="el">Photo</label>
-      <div class="photo-upload">
-        <div class="photo-preview" id="edit-photo-preview">${photoPreview}</div>
-        <label class="photo-btn" for="photo-file-input">${p.photo?'Change photo':'Upload photo'}</label>
-        <input type="file" id="photo-file-input" accept="image/*" onchange="handlePhotoUpload(event,'${id}')"/>
-        ${p.photo?`<button onclick="removePhoto('${id}')" style="padding:5px 9px;background:transparent;border:1px solid rgba(180,80,80,.3);border-radius:6px;color:rgba(200,100,100,.6);font-size:.72rem;cursor:pointer;white-space:nowrap;flex-shrink:0">✕</button>`:''}
-      </div>
-    </div>
-    <div class="ef"><label class="el">Story</label>
-      <textarea class="ei" id="ei-note" rows="3" style="resize:vertical" placeholder="A brief memory or note…">${p.note||''}</textarea></div>
-    <button class="savebtn" onclick="saveCard('${id}')">Save changes</button>
-    <button class="cancelbtn" onclick="fillCard(byId['${id}'])">Cancel</button>
-  </div>`;
-  document.getElementById('ei-first').focus();
-}
-
-function handlePhotoUpload(event,id){
-  const file=event.target.files[0]; if(!file) return;
-  const reader=new FileReader();
-  reader.onload=e=>{
-    const p=byId[id]; if(!p) return;
-    p.photo=e.target.result;
-    const prev=document.getElementById('edit-photo-preview');
-    if(prev) prev.innerHTML=`<img src="${p.photo}"/>`;
-    render(); scheduleSave();
-  };
-  reader.readAsDataURL(file);
-}
-function removePhoto(id){ const p=byId[id]; if(!p) return; delete p.photo; render(); scheduleSave(); editCard(id); }
-
-function saveCard(id){
-  const p=byId[id]; if(!p) return;
-  const first=document.getElementById('ei-first').value.trim();
-  const last=document.getElementById('ei-last').value.trim();
-  p.firstName=first; p.lastName=last;
-  p.name=[first,last].filter(Boolean).join(' ')||p.name;
-  p.gender=document.getElementById('ei-gender').value;
-  p.dob={
-    month:document.getElementById('ei-dob-month').value,
-    day:document.getElementById('ei-dob-day').value,
-    year:document.getElementById('ei-dob-year').value
-  };
-  p.birth=parseInt(p.dob.year)||p.birth||null;
-  p.city=document.getElementById('ei-city').value.trim();
-  p.state=document.getElementById('ei-state').value||'';
-  p.note=document.getElementById('ei-note').value.trim();
-  rebuild([]); render(); scheduleSave(); selectNode(id);
-}
-
-function closeCard(){
-  document.getElementById('card').classList.remove('open');
-  if(!document.getElementById('members-panel').classList.contains('open'))
-    document.getElementById('scrim').classList.remove('on');
-  selId=null;
-  document.querySelectorAll('.nd').forEach(n=>n.classList.remove('dim','sel'));
-  document.querySelectorAll('.br').forEach(b=>b.classList.remove('dim','lit'));
-  resetView();
-}
-
-function removePerson(id){
-  if(!confirm('Remove this person from the tree?')) return;
-  const rm=new Set();
-  function collect(pid){ rm.add(pid); P.filter(x=>(x.parents||[]).includes(pid)).forEach(x=>collect(x.id)); }
-  collect(id);
-  P=P.filter(p=>!rm.has(p.id));
-  P.forEach(p=>{ if(p.spouseOf&&rm.has(p.spouseOf)) delete p.spouseOf; });
-  rebuild([]); closeCard(); render(); scheduleSave();
-}
-
-function removeConnFromCard(fromId, toId, connType){
-  if(!confirm('Remove this connection?')) return;
-  const from=byId[fromId]; const to=byId[toId]; if(!from||!to) return;
-  if(connType==='labeled'){
-    if(from.customLinks) delete from.customLinks[toId];
-    if(to.customLinks) delete to.customLinks[fromId];
-    // Clear relLabel on both sides
-    delete from.relLabel;
-    delete to.relLabel;
-    // Also remove from YOU node's customLinks if present
-    const you=P.find(p=>p.isYou);
-    if(you){
-      if(you.customLinks&&you.customLinks[toId]) delete you.customLinks[toId];
-      if(you.customLinks&&you.customLinks[fromId]&&fromId!==you.id) delete you.customLinks[fromId];
-    }
-  } else if(connType==='spouse'){
-    if(from.spouseOf===toId) delete from.spouseOf;
-    if(to.spouseOf===fromId) delete to.spouseOf;
-    if(from.relLabel==='Spouse'||from.relLabel==='Wife'||from.relLabel==='Husband'||from.relLabel==='Partner') delete from.relLabel;
-    if(to.relLabel==='Spouse'||to.relLabel==='Wife'||to.relLabel==='Husband'||to.relLabel==='Partner') delete to.relLabel;
-  } else if(connType==='parent'){
-    // Remove toId from from.parents (to is the parent of from)
-    from.parents=(from.parents||[]).filter(pid=>pid!==toId);
-  } else if(connType==='child'){
-    // toId is a child of from — remove from from toId's parents
-    to.parents=(to.parents||[]).filter(pid=>pid!==fromId);
-  } else if(connType==='sibling'){
-    // Siblings share parents — just note but don't disconnect parents
-    alert('To remove a sibling relationship, remove shared parents.');
-    return;
-  }
-  rebuild([]); render(); scheduleSave();
-  selectNode(fromId);
-}
-
-function deleteConnection(fromId, toId){
-  const from=byId[fromId]; const to=byId[toId]; if(!from||!to) return;
-  if(from.customLinks) delete from.customLinks[toId];
-  if(to.customLinks) delete to.customLinks[fromId];
-  if(to.relLabel) delete to.relLabel;
-  rebuild(); render(); scheduleSave();
-  selectNode(fromId);
-}
-
-// ─── ADD CONNECTION MODAL ────────────────────────────────────────────────────
-let connForId=null, connSelectedId=null;
-
-function buildConnRelOptions(name){
-  const n=name||'them';
-  return [
-    ['They are a parent','parent',[['Father',`Father of ${n}`],['Mother',`Mother of ${n}`],['Grandfather',`Grandfather of ${n}`],['Grandmother',`Grandmother of ${n}`],['Stepfather',`Stepfather of ${n}`],['Stepmother',`Stepmother of ${n}`],['Parent',`Parent of ${n}`]]],
-    ['They are a child','child',[['Son',`Son of ${n}`],['Daughter',`Daughter of ${n}`],['Grandson',`Grandson of ${n}`],['Granddaughter',`Granddaughter of ${n}`],['Stepson',`Stepson of ${n}`],['Stepdaughter',`Stepdaughter of ${n}`],['Child',`Child of ${n}`]]],
-    ['They are a sibling','sibling',[['Brother',`Brother of ${n}`],['Sister',`Sister of ${n}`],['Half-brother',`Half-brother of ${n}`],['Half-sister',`Half-sister of ${n}`]]],
-    ['They are a spouse','spouse',[['Husband',`Husband of ${n}`],['Wife',`Wife of ${n}`],['Partner',`Partner of ${n}`]]],
-    ['They are extended family','labeled',[['Uncle',`Uncle of ${n}`],['Aunt',`Aunt of ${n}`],['Nephew',`Nephew of ${n}`],['Niece',`Niece of ${n}`],['Cousin',`Cousin of ${n}`],['Father-in-law',`Father-in-law of ${n}`],['Mother-in-law',`Mother-in-law of ${n}`],['Brother-in-law',`Brother-in-law of ${n}`],['Sister-in-law',`Sister-in-law of ${n}`],['Godfather',`Godfather of ${n}`],['Godmother',`Godmother of ${n}`],['Godchild',`Godchild of ${n}`],['Other',`Other connection to ${n}`]]],
-  ].map(([group,type,opts])=>
-    `<optgroup label="${group}">${opts.map(([lbl,text])=>`<option value="${type}-${lbl}">${text}</option>`).join('')}</optgroup>`
-  ).join('');
-}
-
-function openConnModal(id){
-  connForId=id; connSelectedId=null;
-  const p=byId[id];
-  const firstName=p.firstName||fullName(p).split(' ')[0];
-  document.getElementById('conn-sub').textContent=`Link another member's relationship to ${fullName(p)}`;
-  document.getElementById('conn-rel').innerHTML=buildConnRelOptions(firstName);
-  document.getElementById('conn-search').value='';
-  renderConnList('');
-  document.getElementById('conn-bg').classList.add('open');
-}
-function closeConnModal(){ document.getElementById('conn-bg').classList.remove('open'); connForId=null; connSelectedId=null; }
-
-function filterConnList(){ renderConnList(document.getElementById('conn-search').value||''); }
-
-function renderConnList(query){
-  const q=query.toLowerCase();
-  const list=P.filter(p=>p.id!==connForId&&(!q||fullName(p).toLowerCase().includes(q)));
-  document.getElementById('conn-list').innerHTML=list.map(p=>`
-    <div class="conn-item${connSelectedId===p.id?' selected':''}" onclick="selectConnNode('${p.id}')">
-      <div class="conn-item-dot" style="background:${col(p)}"></div>
-      <div>
-        <div class="conn-item-name">${fullName(p)}</div>
-        <div class="conn-item-sub">${getRelToYou(p.id)||dobDisplay(p)}</div>
-      </div>
-    </div>`).join('');
-}
-
-function selectConnNode(id){
-  connSelectedId=id;
-  document.querySelectorAll('.conn-item').forEach(el=>el.classList.remove('selected'));
-  document.querySelectorAll('.conn-item').forEach(el=>{
-    if(el.querySelector('.conn-item-name').textContent===fullName(byId[id])) el.classList.add('selected');
-  });
-}
-
-function saveConnection(){
-  if(!connForId||!connSelectedId){ alert('Please select a member.'); return; }
-  const target=byId[connForId];   // the node the card is about
-  const other=byId[connSelectedId]; // the node we're connecting to it
-  const rel=document.getElementById('conn-rel').value;
-
-  const dashIdx=rel.indexOf('-');
-  const type=rel.slice(0,dashIdx);
-  const label=rel.slice(dashIdx+1);
-
-  const mGender={'father':'male','grandfather':'male','stepfather':'male','son':'male','grandson':'male','stepson':'male','brother':'male','half-brother':'male','husband':'male','uncle':'male','nephew':'male','brother-in-law':'male','godfather':'male'};
-  const fGender={'mother':'female','grandmother':'female','stepmother':'female','daughter':'female','granddaughter':'female','stepdaughter':'female','sister':'female','half-sister':'female','wife':'female','aunt':'female','niece':'female','sister-in-law':'female','godmother':'female'};
-  const lkey=label.toLowerCase();
-  if(!other.gender){ if(mGender[lkey]) other.gender='male'; else if(fGender[lkey]) other.gender='female'; }
-
-  if(type==='parent'){
-    if(!(target.parents||[]).includes(other.id)) target.parents=[...(target.parents||[]),other.id];
-    if(!other.relLabel) other.relLabel='Parent';
-    other.relLabel=label;
-  } else if(type==='child'){
-    if(!(other.parents||[]).includes(target.id)) other.parents=[...(other.parents||[]),target.id];
-    if(!other.relLabel) other.relLabel='Child';
-    other.relLabel=label;
-  } else if(type==='sibling'){
-    (target.parents||[]).forEach(pid=>{ if(!(other.parents||[]).includes(pid)) other.parents=[...(other.parents||[]),pid]; });
-    if(!target.customLinks) target.customLinks={};
-    if(!other.customLinks) other.customLinks={};
-    const sLbl=label||'Sibling';
-    target.customLinks[other.id]={label:sLbl,lineType:'sibling'};
-    other.customLinks[target.id]={label:sLbl,lineType:'sibling'};
-    if(!other.relLabel) other.relLabel=sLbl;
-  } else if(type==='spouse'){
-    other.spouseOf=target.id;
-    if(!other.gender&&label.toLowerCase()==='husband') other.gender='male';
-    if(!other.gender&&label==='wife') other.gender='female';
-    if(!other.relLabel) other.relLabel='Spouse';
-    other.relLabel=label;
-  } else if(type==='labeled'){
-    // Store as a direct key on each node — simpler than arrays, survives Firestore round-trips
-    if(!target.customLinks) target.customLinks={};
-    if(!other.customLinks) other.customLinks={};
-    target.customLinks[other.id]={label,lineType:'labeled'};
-    other.customLinks[target.id]={label,lineType:'labeled'};
-    other.relLabel=label;
-  }
-
-  rebuild([]); render(); scheduleSave();
-  closeConnModal();
-  selectNode(connForId);
-}
-
-// ─── MEMBERS PANEL ────────────────────────────────────────────────────────────
-function openMembersPanel(){
-  renderMembersList();
-  document.getElementById('members-panel').classList.add('open');
-  document.getElementById('scrim').classList.add('on');
-}
-function closeMembersPanel(){
-  document.getElementById('members-panel').classList.remove('open');
-  if(!selId) document.getElementById('scrim').classList.remove('on');
-}
-
-function renderMembersList(){
-  const query=(document.getElementById('mp-search-input').value||'').toLowerCase();
-  const youNode=P.find(p=>p.isYou);
-  const gen={};
-  if(youNode){
-    const q=[{id:youNode.id,gv:0}]; const vis=new Set();
-    while(q.length){ const {id,gv}=q.shift(); if(vis.has(id)) continue; vis.add(id); gen[id]=gv;
-      const p=byId[id]; if(!p) continue;
-      (p.parents||[]).forEach(pid=>{ if(!vis.has(pid)) q.push({id:pid,gv:gv-1}); });
-      P.filter(x=>(x.parents||[]).includes(id)).forEach(c=>{ if(!vis.has(c.id)) q.push({id:c.id,gv:gv+1}); });
-    }
-  }
-  P.forEach(p=>{ if(gen[p.id]===undefined) gen[p.id]=0; });
-
-  const genLabels={'-4':'Great-Great-Grandparents','-3':'Great-Grandparents','-2':'Grandparents','-1':'Parents','0':'Your Generation','1':'Children','2':'Grandchildren','3':'Great-Grandchildren'};
-  const filtered=P.filter(p=>!query||fullName(p).toLowerCase().includes(query));
-  const byGen2={};
-  filtered.forEach(p=>{ const gv=gen[p.id]||0; if(!byGen2[gv]) byGen2[gv]=[]; byGen2[gv].push(p); });
-  const gens=Object.keys(byGen2).map(Number).sort((a,b)=>a-b);
-
-  let html='';
-  gens.forEach(gv=>{
-    const label=genLabels[gv]||(gv<0?`${Math.abs(gv)} generations up`:`${gv} generations down`);
-    html+=`<div class="mp-gen">${label}</div>`;
-    byGen2[gv].sort((a,b)=>fullName(a).localeCompare(fullName(b))).forEach(p=>{
-      const c=col(p), rel=getRelToYou(p.id);
-      html+=`<div class="mp-item" onclick="closeMembersPanel();selectNode('${p.id}')">
-        <div class="mp-photo" style="color:${c}">${p.photo?`<img src="${p.photo}"/>`:`<span>${initials(p)}</span>`}</div>
-        <div class="mp-info">
-          <div class="mp-name">${fullName(p)}${p.isYou?' (You)':''}</div>
-          <div class="mp-sub">${rel||''}${dobDisplay(p)?` · ${dobDisplay(p)}`:''}</div>
-        </div>
-        <div class="mp-dot" style="background:${c};box-shadow:0 0 5px ${c}"></div>
-      </div>`;
-    });
-  });
-  if(!filtered.length) html=`<div style="text-align:center;padding:30px;color:var(--muted);font-size:.84rem">No members found</div>`;
-  document.getElementById('mp-list').innerHTML=html;
-}
-
-// ─── TOOLTIP ─────────────────────────────────────────────────────────────────
-function calcAge(p){
-  const birthYear=parseInt(p.dob&&p.dob.year)||p.birth||null;
-  if(!birthYear) return null;
-  const deathYear=parseInt(p.dod&&p.dod.year)||p.death||null;
-  const endYear=deathYear||(new Date().getFullYear());
-  return endYear-birthYear;
-}
-
-function showTip(e,p){
-  if(selId||nodeDrag) return;
-  const t=document.getElementById('tip');
-  const photoHtml=p.photo?`<div class="tip-photo"><img src="${p.photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/></div>`:'';
-  const rel=getRelToYou(p.id);
-  const age=calcAge(p);
-  const ageStr=age?(p.death||(p.dod&&p.dod.year)?` · ${age} yrs`:(` · Age ${age}`)):'';
-  t.innerHTML=`${photoHtml}<span>${fullName(p)}${rel?' · '+rel:''}${ageStr}</span>`;
-  t.style.left=(e.clientX+14)+'px'; t.style.top=(e.clientY-12)+'px';
-  t.classList.add('show');
-}
-function hideTip(){ document.getElementById('tip').classList.remove('show'); }
-
-// ─── SCRIM CLICK ─────────────────────────────────────────────────────────────
-function handleScrimClick(e){
-  if(document.getElementById('settings-panel').classList.contains('open')){ closeSettings(); return; }
-  if(document.getElementById('members-panel').classList.contains('open')){ closeMembersPanel(); return; }
-  closeCard();
-}
-
-// ─── TRANSFORM ────────────────────────────────────────────────────────────────
-let tx=0, ty=0, scale=1;
-function applyT(anim=false){
-  const tg=document.getElementById('tg');
-  if(anim){ tg.classList.add('anim'); setTimeout(()=>tg.classList.remove('anim'),700); }
-  tg.style.transform=`translate(${tx}px,${ty}px) scale(${scale})`;
-}
-function resetView(){
-  if(!P.length) return;
-  const xs=P.map(p=>p.x), ys=P.map(p=>p.y);
-  const x0=Math.min(...xs)-90, x1=Math.max(...xs)+90;
-  const y0=Math.min(...ys)-70, y1=Math.max(...ys)+100;
-  const W=window.innerWidth, H=window.innerHeight;
-  scale=Math.min(1,W/(x1-x0),(H-80)/(y1-y0))*.88;
-  tx=(W-(x1-x0)*scale)/2-x0*scale;
-  ty=(H-(y1-y0)*scale)/2-y0*scale+18;
-  applyT(true);
-}
-function zoomBy(f){
-  const cx=window.innerWidth/2, cy=window.innerHeight/2;
-  tx=cx-(cx-tx)*f; ty=cy-(cy-ty)*f;
-  scale=Math.max(.12,Math.min(6,scale*f)); applyT();
-}
-
-// ─── PAN ─────────────────────────────────────────────────────────────────────
-let drag=false, dsx=0, dsy=0;
-const wrap=document.getElementById('wrap');
-
-wrap.addEventListener('mousedown',e=>{
-  if(e.target.closest('.nd')) return;
-  drag=true; dsx=e.clientX-tx; dsy=e.clientY-ty;
-  wrap.style.cursor='grabbing'; hideTip();
-});
-
-wrap.addEventListener('wheel',e=>{
-  e.preventDefault();
-  const f=e.deltaY<0?1.11:.9;
-  const r=wrap.getBoundingClientRect();
-  const mx=e.clientX-r.left, my=e.clientY-r.top;
-  tx=mx-(mx-tx)*f; ty=my-(my-ty)*f;
-  scale=Math.max(.12,Math.min(6,scale*f)); applyT();
-},{passive:false});
-
-let ltD=0, tpan=false, tdsx=0, tdsy=0;
-wrap.addEventListener('touchstart',e=>{
-  if(e.target.closest('.nd')) return;
-  if(e.touches.length===1){ tpan=true; tdsx=e.touches[0].clientX-tx; tdsy=e.touches[0].clientY-ty; }
-  else if(e.touches.length===2){ tpan=false; ltD=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY); }
-},{passive:true});
-wrap.addEventListener('touchmove',e=>{
-  if(nodeDrag) return;
-  if(e.touches.length===1&&tpan){ tx=e.touches[0].clientX-tdsx; ty=e.touches[0].clientY-tdsy; applyT(); }
-  else if(e.touches.length===2){
-    const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
-    const f=d/ltD; ltD=d;
-    const cx=(e.touches[0].clientX+e.touches[1].clientX)/2;
-    const cy2=(e.touches[0].clientY+e.touches[1].clientY)/2;
-    tx=cx-(cx-tx)*f; ty=cy2-(cy2-ty)*f;
-    scale=Math.max(.12,Math.min(6,scale*f)); applyT();
-  }
-},{passive:true});
-
-// ─── ADD MEMBER ───────────────────────────────────────────────────────────────
-let addFor=null;
-let modalPhoto=null;
-function handleModalPhoto(event){
-  const file=event.target.files[0]; if(!file) return;
-  const reader=new FileReader();
-  reader.onload=e=>{
-    modalPhoto=e.target.result;
-    const prev=document.getElementById('modal-photo-preview');
-    if(prev) prev.innerHTML=`<img src="${modalPhoto}" style="width:100%;height:100%;object-fit:cover"/>`;
-  };
-  reader.readAsDataURL(file);
-}
-
-const CHILD_RELS=['Son','Daughter','Grandson','Granddaughter','Stepson','Stepdaughter','Nephew','Niece'];
-const PARENT_RELS=['Father','Mother','Grandfather','Grandmother','Stepfather','Stepmother','Father-in-law','Mother-in-law','Uncle','Aunt'];
-const SPOUSE_RELS=['Husband','Wife','Partner'];
-const SIBLING_RELS=['Brother','Sister','Brother-in-law','Sister-in-law','Cousin'];
-
-function toggleDeathDate(){
-  const cb=document.getElementById('f-deceased');
-  const fields=document.getElementById('f-death-fields');
-  const track=document.getElementById('f-deceased-track');
-  const thumb=document.getElementById('f-deceased-thumb');
-  if(!fields||!cb) return;
-  fields.style.display=cb.checked?'block':'none';
-  if(track) track.style.background=cb.checked?'rgba(200,168,75,.5)':'rgba(255,255,255,.12)';
-  if(thumb) thumb.style.transform=cb.checked?'translateX(15px)':'translateX(0)';
-}
-
-function openModal(forId){
-  addFor=forId;
-  const fp=forId?byId[forId]:null;
-  document.getElementById('msub').textContent=fp?`Connected to ${fullName(fp)}`:'Add someone to your tree';
-  document.getElementById('rel-to-label').textContent=fp?(fp.firstName||fullName(fp)):'the tree';
-  ['fn-first','fn-last','fdob-day','fdob-year','fcity','fstory','fdod-day','fdod-year'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
-  ['fdob-month','fgender','fr','fstate','fdod-month'].forEach(id=>{const e=document.getElementById(id);if(e)e.selectedIndex=0;});
-  const dec=document.getElementById('f-deceased'); if(dec){dec.checked=false; toggleDeathDate();}
-  modalPhoto=null;
-  const prev=document.getElementById('modal-photo-preview'); if(prev) prev.innerHTML='<span>+</span>';
-  const fi=document.getElementById('modal-photo-file'); if(fi) fi.value='';
-  document.getElementById('mbg').classList.add('open');
-}
-function closeModal(){ document.getElementById('mbg').classList.remove('open'); }
-
-function submitMember(){
-  const first=document.getElementById('fn-first').value.trim();
-  const last=document.getElementById('fn-last').value.trim();
-  const name=[first,last].filter(Boolean).join(' ');
-  if(!name){ document.getElementById('fn-first').focus(); return; }
-
-  const gender=document.getElementById('fgender').value;
-  const dob={
-    month:document.getElementById('fdob-month').value,
-    day:document.getElementById('fdob-day').value,
-    year:document.getElementById('fdob-year').value
-  };
-  const birth=parseInt(dob.year)||null;
-  const deceased=document.getElementById('f-deceased')?.checked;
-  const dod=deceased?{month:document.getElementById('fdod-month')?.value||'',day:document.getElementById('fdod-day')?.value||'',year:document.getElementById('fdod-year')?.value||''}:null;
-  const death=dod?parseInt(dod.year)||null:null;
-  const city=document.getElementById('fcity').value.trim();
-  const state=document.getElementById('fstate').value||'';
-  const note=document.getElementById('fstory').value.trim();
-  const rel=document.getElementById('fr').value;
-
-  // Infer base rel category
-  const baseRel=CHILD_RELS.includes(rel)?'Child':PARENT_RELS.includes(rel)?'Parent':SPOUSE_RELS.includes(rel)?'Spouse':SIBLING_RELS.includes(rel)?'Sibling':'Other';
-
-  const id=`u${nxt++}`;
-  const np={id,name,firstName:first,lastName:last,gender,dob,birth,dod,death,city,state,note,parents:[],relLabel:baseRel,x:600,y:400};
-  if(modalPhoto) np.photo=modalPhoto;
-
-  // Infer gender from relationship label
-  if(!np.gender){
-    if(['Son','Grandson','Stepson','Nephew','Brother','Brother-in-law','Uncle','Father','Grandfather','Stepfather','Father-in-law','Husband'].includes(rel)) np.gender='male';
-    if(['Daughter','Granddaughter','Stepdaughter','Niece','Sister','Sister-in-law','Aunt','Mother','Grandmother','Stepmother','Mother-in-law','Wife'].includes(rel)) np.gender='female';
-  }
-
-  if(addFor){
-    const target=byId[addFor];
-    if(baseRel==='Child') np.parents=[addFor];
-    else if(baseRel==='Parent'){ np.parents=[]; if(target) target.parents=[...(target.parents||[]),id]; }
-    else if(baseRel==='Sibling'){
-      np.parents=[...(target?.parents||[])];
-      // Also store as customLink so the line always draws even without shared parents
-      if(!np.customLinks) np.customLinks={};
-      if(!target.customLinks) target.customLinks={};
-      const sibLabel=genderedRel('Sibling',np.gender)||'Sibling';
-      np.customLinks[addFor]={label:sibLabel,lineType:'sibling'};
-      target.customLinks[id]={label:sibLabel,lineType:'sibling'};
-    }
-    else if(baseRel==='Spouse'){ np.spouseOf=addFor; if(target) target.spouseOf=id; }
-    else np.parents=[addFor];
-  }
-
-  P.push(np); rebuild([id]); closeModal(); render(); scheduleSave();
-  setTimeout(()=>selectNode(id),90);
-}
-</script>
-</body>
-</html>
