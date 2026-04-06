@@ -1267,14 +1267,16 @@ function drawBranches(){
     bG.appendChild(path);
   });
 
-  // ── Sibling + blood customLinks (BLOOD: solid, bold) — shown in BOTH modes ──
+  // ── Sibling customLinks (solid) — Tree View; Blood extended (solid) + labeled (dashed) — All Twygs ──
   const sibDrawn=new Set();
   P.forEach(p=>{
     Object.entries(p.customLinks||{}).forEach(([tid,v])=>{
       const lineType=typeof v==='string'?
         (BLOOD_LABELS.has(v)?'blood':'labeled') :
         v.lineType||'labeled';
+      // Siblings: show in both modes. Blood extended (grandparent etc): All Twygs only
       if(lineType!=='sibling'&&lineType!=='blood') return;
+      if(lineType==='blood'&&simple) return;
       const key=[p.id,tid].sort().join('|');
       if(sibDrawn.has(key)) return;
       sibDrawn.add(key);
@@ -1294,6 +1296,7 @@ function drawBranches(){
     });
   });
 
+  // ── Auto-detected sibling lines (All Twygs only) ──
   if(simple) return; // Tree View ends here — All Twygs continues below
 
   // ── Auto-detected sibling lines from shared parents (BLOOD: solid bold, All Twygs only) ──
