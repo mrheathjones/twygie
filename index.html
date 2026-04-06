@@ -1891,7 +1891,7 @@ function renderConnList(query){
     <div class="conn-item${connSelectedId===p.id?' selected':''}" onclick="selectConnNode('${p.id}')">
       <div class="conn-item-dot" style="background:${col(p)}"></div>
       <div>
-        <div class="conn-item-name">${fullName(p)}</div>
+        <div class="conn-item-name">${fullName(p)}${p.isYou?' <span style="font-size:.72rem;color:var(--gold);font-weight:500">(You)</span>':''}</div>
         <div class="conn-item-sub">${getRelToYou(p.id)||dobDisplay(p)}</div>
       </div>
     </div>`).join('');
