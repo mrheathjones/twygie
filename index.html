@@ -334,10 +334,12 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-famil
 
 <div id="leg">
   <div style="font-size:.6rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:6px">Nodes</div>
-  <div class="lr"><div class="ld" style="background:#f0efeb;box-shadow:0 0 5px #f0efeb"></div>You</div>
-  <div class="lr"><div class="ld" style="background:#f0b845;box-shadow:0 0 5px #f0b845"></div>Living</div>
-  <div class="lr"><div class="ld" style="background:#6b9ec2;box-shadow:0 0 5px #6b9ec2"></div>Deceased</div>
-  <div class="lr"><div class="ld" style="background:#4ecdb4;box-shadow:0 0 5px #4ecdb4"></div>Young</div>
+  <div class="lr"><div class="ld" id="ln-you"     style="background:#f0efeb"></div>You</div>
+  <div class="lr"><div class="ld" id="ln-spouse"  style="background:#e8a838"></div>Spouse</div>
+  <div class="lr"><div class="ld" id="ln-parent"  style="background:#7ab8e8"></div>Parent</div>
+  <div class="lr"><div class="ld" id="ln-child"   style="background:#6ecb8a"></div>Child</div>
+  <div class="lr"><div class="ld" id="ln-sibling" style="background:#e87a5a"></div>Sibling</div>
+  <div class="lr"><div class="ld" id="ln-extended" style="background:#e8c87a"></div>Extended</div>
   <div style="height:1px;background:var(--border);margin:8px 0"></div>
   <div style="font-size:.6rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:6px">Lines</div>
   <div class="lr"><div id="leg-parentChild" style="width:18px;height:2px;background:#64b464;border-radius:1px"></div>Parent / Child</div>
@@ -437,6 +439,47 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-famil
     </div>
 
     <div class="sp-section">
+      <div class="sp-section-title">Node colors</div>
+      <div class="sp-color-row">
+        <div class="sp-color-info"><div class="sp-color-label">You</div></div>
+        <div class="sp-color-swatch"><input type="color" id="ncolor-you" oninput="previewNodeColor('you',this.value)"/><div class="sp-color-preview" id="npreview-you"></div></div>
+      </div>
+      <div class="sp-color-row">
+        <div class="sp-color-info"><div class="sp-color-label">Spouse / Partner</div></div>
+        <div class="sp-color-swatch"><input type="color" id="ncolor-spouse" oninput="previewNodeColor('spouse',this.value)"/><div class="sp-color-preview" id="npreview-spouse"></div></div>
+      </div>
+      <div class="sp-color-row">
+        <div class="sp-color-info"><div class="sp-color-label">Parent</div></div>
+        <div class="sp-color-swatch"><input type="color" id="ncolor-parent" oninput="previewNodeColor('parent',this.value)"/><div class="sp-color-preview" id="npreview-parent"></div></div>
+      </div>
+      <div class="sp-color-row">
+        <div class="sp-color-info"><div class="sp-color-label">Child</div></div>
+        <div class="sp-color-swatch"><input type="color" id="ncolor-child" oninput="previewNodeColor('child',this.value)"/><div class="sp-color-preview" id="npreview-child"></div></div>
+      </div>
+      <div class="sp-color-row">
+        <div class="sp-color-info"><div class="sp-color-label">Sibling</div></div>
+        <div class="sp-color-swatch"><input type="color" id="ncolor-sibling" oninput="previewNodeColor('sibling',this.value)"/><div class="sp-color-preview" id="npreview-sibling"></div></div>
+      </div>
+      <div class="sp-color-row">
+        <div class="sp-color-info"><div class="sp-color-label">Grandparent</div></div>
+        <div class="sp-color-swatch"><input type="color" id="ncolor-grandparent" oninput="previewNodeColor('grandparent',this.value)"/><div class="sp-color-preview" id="npreview-grandparent"></div></div>
+      </div>
+      <div class="sp-color-row">
+        <div class="sp-color-info"><div class="sp-color-label">Extended / In-law</div></div>
+        <div class="sp-color-swatch"><input type="color" id="ncolor-extended" oninput="previewNodeColor('extended',this.value)"/><div class="sp-color-preview" id="npreview-extended"></div></div>
+      </div>
+      <div class="sp-color-row">
+        <div class="sp-color-info"><div class="sp-color-label">Deceased</div></div>
+        <div class="sp-color-swatch"><input type="color" id="ncolor-deceased" oninput="previewNodeColor('deceased',this.value)"/><div class="sp-color-preview" id="npreview-deceased"></div></div>
+      </div>
+      <div class="sp-color-row">
+        <div class="sp-color-info"><div class="sp-color-label">Young (born 2000+)</div></div>
+        <div class="sp-color-swatch"><input type="color" id="ncolor-young" oninput="previewNodeColor('young',this.value)"/><div class="sp-color-preview" id="npreview-young"></div></div>
+      </div>
+      <button class="sp-color-reset" onclick="resetNodeColors()">Reset node colors</button>
+    </div>
+
+    <div class="sp-section">
       <div class="sp-section-title">Line colors</div>
       <div class="sp-color-row">
         <div class="sp-color-info">
@@ -478,7 +521,16 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-famil
           <div class="sp-color-preview" id="preview-labeled"></div>
         </div>
       </div>
-      <button class="sp-color-reset" onclick="resetLineColors()">Reset to defaults</button>
+      <button class="sp-color-reset" onclick="resetLineColors()">Reset line colors</button>
+    </div>
+
+    <div class="sp-section">
+      <div class="sp-section-title" style="display:flex;align-items:center;justify-content:space-between">
+        Custom connection types
+        <button onclick="addCustomLineType()" style="padding:3px 9px;background:rgba(200,168,75,.12);border:1px solid rgba(200,168,75,.3);border-radius:6px;color:var(--gold);font-size:.72rem;cursor:pointer">+ Add</button>
+      </div>
+      <div style="font-size:.76rem;color:var(--muted);margin-bottom:10px;line-height:1.5">Create named connection types with custom colors for use in Add Connection.</div>
+      <div id="custom-line-list"></div>
     </div>
 
     <button class="sp-save" onclick="saveSettings()">Save preferences</button>
@@ -680,6 +732,39 @@ function previewLineColor(key, hex){
   render(); // live preview
 }
 
+function previewNodeColor(key, hex){
+  nodeColors[key]=hex;
+  const prev=document.getElementById(`npreview-${key}`);
+  if(prev) prev.style.background=hex;
+  syncNodeLegend();
+  render();
+}
+
+function syncNodeColorPickers(){
+  Object.keys(DEFAULT_NODE_COLORS).forEach(key=>{
+    const input=document.getElementById(`ncolor-${key}`);
+    const prev=document.getElementById(`npreview-${key}`);
+    const c=nodeColors[key]||DEFAULT_NODE_COLORS[key];
+    if(input) input.value=c;
+    if(prev) prev.style.background=c;
+  });
+}
+
+function resetNodeColors(){
+  nodeColors={...DEFAULT_NODE_COLORS};
+  syncNodeColorPickers();
+  syncNodeLegend();
+  render();
+}
+
+function syncNodeLegend(){
+  const legMap={you:'ln-you',spouse:'ln-spouse',parent:'ln-parent',child:'ln-child',sibling:'ln-sibling',extended:'ln-extended'};
+  Object.entries(legMap).forEach(([key,elId])=>{
+    const el=document.getElementById(elId);
+    if(el){ const c=nodeColors[key]||DEFAULT_NODE_COLORS[key]; el.style.background=c; el.style.boxShadow=`0 0 5px ${c}`; }
+  });
+}
+
 function syncLegend(){
   const map={parentChild:'solid',spouse:'dashed',sibling:'dashed',labeled:'dashed'};
   ['parentChild','spouse','sibling','labeled'].forEach(key=>{
@@ -705,6 +790,66 @@ function resetLineColors(){
   syncColorPickers();
   render();
 }
+
+// ── Custom connection line types ──────────────────────────────────────────────
+let customLineTypes = []; // [{id, name, color}]
+
+function renderCustomLineList(){
+  const list=document.getElementById('custom-line-list');
+  if(!list) return;
+  if(!customLineTypes.length){
+    list.innerHTML='<div style="font-size:.78rem;color:var(--muted);padding:8px 0">No custom types yet.</div>';
+    return;
+  }
+  list.innerHTML=customLineTypes.map((t,i)=>`
+    <div class="sp-color-row" style="margin-bottom:8px">
+      <div class="sp-color-info">
+        <input class="ei" value="${t.name}" oninput="customLineTypes[${i}].name=this.value;syncCustomConnOptions()"
+          style="padding:5px 8px;font-size:.82rem;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:6px;color:var(--text);outline:none;width:100%"/>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;margin-left:8px">
+        <div class="sp-color-swatch" style="width:30px;height:30px">
+          <input type="color" value="${t.color}" oninput="customLineTypes[${i}].color=this.value;syncCustomConnOptions();render()"/>
+          <div class="sp-color-preview" style="background:${t.color}"></div>
+        </div>
+        <button onclick="removeCustomLineType(${i})" style="background:transparent;border:none;color:rgba(200,100,100,.6);cursor:pointer;font-size:16px;padding:0 2px">×</button>
+      </div>
+    </div>`).join('');
+}
+
+function addCustomLineType(){
+  const id='cl_'+Date.now();
+  customLineTypes.push({id,name:'New type',color:'#c8a84b'});
+  renderCustomLineList();
+  syncCustomConnOptions();
+}
+
+function removeCustomLineType(i){
+  customLineTypes.splice(i,1);
+  renderCustomLineList();
+  syncCustomConnOptions();
+}
+
+function syncCustomConnOptions(){
+  // Add custom line types to the Add Connection modal dropdown
+  const existing=document.getElementById('conn-rel');
+  if(!existing) return;
+  // Remove old custom optgroup if present
+  const oldGrp=existing.querySelector('optgroup[data-custom]');
+  if(oldGrp) oldGrp.remove();
+  if(!customLineTypes.length) return;
+  // Re-build optgroup
+  const grp=document.createElement('optgroup');
+  grp.label='Custom connection types';
+  grp.setAttribute('data-custom','1');
+  customLineTypes.forEach(t=>{
+    const opt=document.createElement('option');
+    opt.value=`labeled-${t.name}`;
+    opt.textContent=t.name;
+    grp.appendChild(opt);
+  });
+  existing.appendChild(grp);
+}
 let settingsMode = 'simple'; // local setting, loaded from Firestore
 
 function settingsDoc(){ return db.collection('userSettings').doc(currentUser.uid); }
@@ -720,13 +865,15 @@ async function loadSettings(){
         document.getElementById('mode-btn').textContent=treeMode==='simple'?'All Twygs':'Tree view';
       }
       if(d.lineColors) lineColors={...DEFAULT_LINE_COLORS,...d.lineColors};
+      if(d.nodeColors) nodeColors={...DEFAULT_NODE_COLORS,...d.nodeColors};
+      if(d.customLineTypes) customLineTypes=d.customLineTypes;
     }
   }catch(e){}
 }
 
 async function saveSettings(){
   try{
-    await settingsDoc().set({ defaultView:settingsMode, lineColors, updatedAt:firebase.firestore.FieldValue.serverTimestamp() });
+    await settingsDoc().set({ defaultView:settingsMode, lineColors, nodeColors, customLineTypes, updatedAt:firebase.firestore.FieldValue.serverTimestamp() });
     treeMode=settingsMode;
     document.getElementById('mode-btn').textContent=treeMode==='simple'?'All Twygs':'Tree view';
     render();
@@ -766,6 +913,9 @@ function openSettings(){
   document.getElementById('sp-member-count').textContent=P.length;
   document.getElementById('sp-gen-count').textContent=genSet.size||1;
   syncColorPickers();
+  syncNodeColorPickers();
+  renderCustomLineList();
+  syncCustomConnOptions();
   document.getElementById('settings-panel').classList.add('open');
   document.getElementById('scrim').classList.add('on');
 }
@@ -800,7 +950,14 @@ function hideLoading(){ const e=document.getElementById('loading'); e.classList.
 
 // ─── DATA ─────────────────────────────────────────────────────────────────────
 let P=[], byId={};
-function rebuild(){ byId={}; P.forEach(p=>{ if(!p.dob) p.dob={}; if(!p.customLinks) p.customLinks={}; byId[p.id]=p; }); autoLayout(); updateCount(); }
+function migrateCustomLinks(p){
+  if(!p.customLinks) return;
+  Object.keys(p.customLinks).forEach(tid=>{
+    const v=p.customLinks[tid];
+    if(typeof v==='string') p.customLinks[tid]={label:v,lineType:'labeled'};
+  });
+}
+function rebuild(newIds=[]){ byId={}; P.forEach(p=>{ if(!p.dob) p.dob={}; if(!p.customLinks) p.customLinks={}; migrateCustomLinks(p); byId[p.id]=p; }); autoLayoutNew(newIds); updateCount(); }
 function g(id){ return byId[id]; }
 let nxt=Date.now();
 let treeMode='complex'; // 'simple' | 'complex'
@@ -814,7 +971,7 @@ function fullName(p){ return p.name||[(p.firstName||''),(p.lastName||'')].filter
 
 // ─── AUTO LAYOUT ──────────────────────────────────────────────────────────────
 // CONVENTION: parents ABOVE (smaller y), children BELOW (larger y)
-function autoLayout(){
+function autoLayoutNew(newIds=[]){
   if(!P.length) return;
   const youNode=P.find(p=>p.isYou)||P[0];
   const gen={};
@@ -861,19 +1018,21 @@ function autoLayout(){
     });
 
     const n=people.length, totalW=(n-1)*spacing, startX=centerX-totalW/2;
-    people.forEach((p,i)=>{ p.x=startX+i*spacing; p.y=y; });
+    people.forEach((p,i)=>{
+      // Only set position if node is new or has no position yet
+      if(newIds.includes(p.id)||p.x===undefined||p.x===null){
+        p.x=startX+i*spacing; p.y=y;
+      }
+    });
   });
 }
 
 // ─── VISUAL HELPERS ───────────────────────────────────────────────────────────
 function col(p){
-  if(p.isYou) return '#f0efeb';
-  if(p.death||(p.dod&&p.dod.year)) return '#6b9ec2';
-  const birthYear=parseInt(p.dob&&p.dob.year)||p.birth||0;
-  if(birthYear>=2000) return '#4ecdb4';
-  return '#f0b845';
+  const cat=relCategory(p);
+  return nodeColors[cat]||nodeColors.default||'#f0b845';
 }
-function gclass(p){ if(p.isYou) return 'you'; if(p.death||(p.dod&&p.dod.year)) return 'blue'; const by=parseInt(p.dob&&p.dob.year)||p.birth||0; if(by>=2000) return 'teal'; return 'amber'; }
+function gclass(p){ const cat=relCategory(p); const map={you:'you',deceased:'blue',young:'teal'}; return map[cat]||'amber'; }
 function gfilt(p){ if(p.isYou) return 'gf-y'; if(p.death) return 'gf-b'; if((p.dob&&p.dob.year>=2000)||(p.birth>=2000)) return 'gf-t'; return 'gf-a'; }
 function nr(p){ return p.isYou?13:9; }
 function gr(p){ return p.isYou?40:26; }
@@ -920,9 +1079,15 @@ function genderedRel(baseRel, gender){
 function getRelToYou(id){
   const you=P.find(p=>p.isYou); if(!you||id===you.id) return '';
   const p=byId[id]; if(!p) return '';
-  // Check explicit custom links first
-  if(you.customLinks&&you.customLinks[id]) return you.customLinks[id];
-  if(p.customLinks&&p.customLinks[you.id]) return p.customLinks[you.id];
+  // Check structural relationships FIRST (these are always correct)
+  if((p.parents||[]).includes(you.id)) return genderedRel('Child',p.gender);
+  if((you.parents||[]).includes(id)) return genderedRel('Parent',p.gender);
+  if(p.spouseOf===you.id||you.spouseOf===id) return genderedRel('Spouse',p.gender);
+  // Then check explicit custom links
+  const ycl=you.customLinks&&you.customLinks[id];
+  if(ycl) return typeof ycl==='string'?ycl:ycl.label;
+  const pcl=p.customLinks&&p.customLinks[you.id];
+  if(pcl) return typeof pcl==='string'?pcl:pcl.label;
   // Use stored relLabel — already specific ('Sister','Brother') just return as-is
   if(p.relLabel){
     // If it's already a specific label (not generic), return directly
@@ -933,10 +1098,7 @@ function getRelToYou(id){
     if(specific.includes(p.relLabel)) return p.relLabel;
     return genderedRel(p.relLabel,p.gender)||p.relLabel;
   }
-  // Infer from tree structure
-  if((p.parents||[]).includes(you.id)) return genderedRel('Child',p.gender);
-  if((you.parents||[]).includes(id)) return genderedRel('Parent',p.gender);
-  if(p.spouseOf===you.id||you.spouseOf===id) return genderedRel('Spouse',p.gender);
+  // Infer from tree structure (sibling check)
   const myP=new Set(you.parents||[]);
   if(myP.size&&(p.parents||[]).some(pp=>myP.has(pp))) return genderedRel('Sibling',p.gender);
   const grandIds=new Set();
@@ -963,7 +1125,7 @@ function se(t){ return document.createElementNS(NS,t); }
 // ─── RENDER ───────────────────────────────────────────────────────────────────
 function render(){
   document.getElementById('bG').innerHTML='';
-  setTimeout(syncLegend,0);
+  setTimeout(()=>{ syncLegend(); syncNodeLegend(); },0);
   document.getElementById('nG').innerHTML='';
   document.getElementById('defs-clips').innerHTML='';
   drawBranches();
@@ -979,6 +1141,42 @@ function bstyle(dy){
 }
 
 // ─── BRANCH COLOR THEME (user-customizable) ────────────────────────────────
+const DEFAULT_NODE_COLORS = {
+  you:         '#f0efeb',
+  spouse:      '#e8a838',
+  parent:      '#7ab8e8',
+  child:       '#6ecb8a',
+  sibling:     '#e87a5a',
+  grandparent: '#b89ae8',
+  extended:    '#e8c87a',
+  deceased:    '#6b9ec2',
+  young:       '#4ecdb4',
+  default:     '#f0b845',
+};
+let nodeColors = {...DEFAULT_NODE_COLORS};
+
+function relCategory(p){
+  if(p.isYou) return 'you';
+  if(p.death||(p.dod&&p.dod.year)) return 'deceased';
+  const birthYear=parseInt(p.dob&&p.dob.year)||p.birth||0;
+  if(birthYear>=2000) return 'young';
+  const you=byId&&Object.values(byId).find(x=>x.isYou);
+  if(!you) return 'default';
+  if((p.parents||[]).includes(you.id)) return 'child';
+  if((you.parents||[]).includes(p.id)) return 'parent';
+  if(p.spouseOf===you.id||you.spouseOf===p.id) return 'spouse';
+  const myP=new Set(you.parents||[]);
+  if(myP.size&&(p.parents||[]).some(pp=>myP.has(pp))) return 'sibling';
+  const ycl=you.customLinks&&you.customLinks[p.id];
+  if(ycl){ const lt=typeof ycl==='string'?'labeled':ycl.lineType; if(lt==='sibling') return 'sibling'; return 'extended'; }
+  const pcl=p.customLinks&&p.customLinks[you.id];
+  if(pcl) return 'extended';
+  const grandIds=new Set();
+  (you.parents||[]).forEach(pid=>{ const par=byId[pid]; if(par)(par.parents||[]).forEach(gid=>grandIds.add(gid)); });
+  if(grandIds.has(p.id)) return 'grandparent';
+  return 'default';
+}
+
 const DEFAULT_LINE_COLORS = {
   parentChild: '#64b464',
   spouse:      '#648cdc',
@@ -987,6 +1185,9 @@ const DEFAULT_LINE_COLORS = {
 };
 let lineColors = {...DEFAULT_LINE_COLORS};
 
+function hexToAlpha(hex, a){
+  const [r,g,b]=hexToRgb(hex); return `rgba(${r},${g},${b},${a})`;
+}
 function hexToRgb(hex){
   const r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
   return [r,g,b];
@@ -1066,20 +1267,24 @@ function drawBranches(){
     });
   }
 
-  // ── Labeled connections (purple — ALWAYS shown, both simple + complex) ──
+  // ── Custom links (sibling / labeled) — ALWAYS shown in both modes ──
   const connDrawn=new Set();
   P.forEach(p=>{
-    Object.keys(p.customLinks||{}).forEach(tid=>{
+    Object.entries(p.customLinks||{}).forEach(([tid,v])=>{
       const key=[p.id,tid].sort().join('|');
       if(connDrawn.has(key)) return;
       connDrawn.add(key);
       const other=byId[tid]; if(!other) return;
+      const lineType=typeof v==='string'?'labeled':v.lineType||'labeled';
+      const colorKey=lineType==='sibling'?'sibling':'labeled';
       const mx=(p.x+other.x)/2, my=(p.y+other.y)/2-30;
       const path=se('path');
       path.setAttribute('d',`M ${p.x} ${p.y} Q ${mx} ${my} ${other.x} ${other.y}`);
-      path.setAttribute('stroke', brRgba('labeled', .68));
+      const customType2=customLineTypes.find(t=>t.name===(typeof v==='string'?v:v.label));
+      const strokeC=customType2?customType2.color:null;
+      path.setAttribute('stroke', strokeC?hexToAlpha(strokeC,.68):brRgba(colorKey, .68));
       path.setAttribute('stroke-width','2.5');
-      path.setAttribute('stroke-dasharray','7,5');
+      path.setAttribute('stroke-dasharray',lineType==='sibling'?'5,5':'7,5');
       path.setAttribute('fill','none');
       path.setAttribute('class','br');
       path.dataset.src=p.id; path.dataset.dst=tid;
@@ -1291,10 +1496,8 @@ function fillCard(p){
   // Connections
   const parentsArr=(p.parents||[]).map(pid=>{
     const par=byId[pid]; if(!par) return null;
-    const youNode=P.find(x=>x.isYou);
-    let lbl='Parent';
-    if(par.isYou) lbl=genderedRel('Parent',par.gender)||'Parent';
-    else lbl=par.relLabel?genderedRel(par.relLabel,par.gender):genderedRel('Parent',par.gender);
+    // Label is always from the PERSPECTIVE of person p (who is the child)
+    const lbl=genderedRel('Parent',par.gender);
     return {p:par,rel:lbl,connType:'parent'};
   }).filter(Boolean);
 
@@ -1310,7 +1513,7 @@ function fillCard(p){
   const spouseNode=p.spouseOf?byId[p.spouseOf]:P.find(x=>x.spouseOf===p.id);
   const spouses=spouseNode?[{p:spouseNode,rel:genderedRel('Spouse',spouseNode.gender),connType:'spouse'}]:[];
   // Include labeled connections (in-laws, etc.)
-  const labeled=Object.entries(p.customLinks||{}).map(([tid,lbl])=>({p:byId[tid],rel:lbl,targetId:tid,connType:'labeled'})).filter(x=>x.p);
+  const labeled=Object.entries(p.customLinks||{}).map(([tid,v])=>({p:byId[tid],rel:typeof v==='string'?v:v.label,targetId:tid,connType:typeof v==='string'?'labeled':v.lineType||'labeled'})).filter(x=>x.p);
   const conns=[...spouses,...parentsArr,...children,...sibs,...labeled];
 
   let html='';
@@ -1431,7 +1634,7 @@ function saveCard(id){
   p.city=document.getElementById('ei-city').value.trim();
   p.state=document.getElementById('ei-state').value||'';
   p.note=document.getElementById('ei-note').value.trim();
-  rebuild(); render(); scheduleSave(); selectNode(id);
+  rebuild([]); render(); scheduleSave(); selectNode(id);
 }
 
 function closeCard(){
@@ -1451,7 +1654,7 @@ function removePerson(id){
   collect(id);
   P=P.filter(p=>!rm.has(p.id));
   P.forEach(p=>{ if(p.spouseOf&&rm.has(p.spouseOf)) delete p.spouseOf; });
-  rebuild(); closeCard(); render(); scheduleSave();
+  rebuild([]); closeCard(); render(); scheduleSave();
 }
 
 function removeConnFromCard(fromId, toId, connType){
@@ -1485,7 +1688,7 @@ function removeConnFromCard(fromId, toId, connType){
     alert('To remove a sibling relationship, remove shared parents.');
     return;
   }
-  rebuild(); render(); scheduleSave();
+  rebuild([]); render(); scheduleSave();
   selectNode(fromId);
 }
 
@@ -1577,8 +1780,8 @@ function saveConnection(){
     if(!target.customLinks) target.customLinks={};
     if(!other.customLinks) other.customLinks={};
     const sLbl=label||'Sibling';
-    target.customLinks[other.id]=sLbl;
-    other.customLinks[target.id]=sLbl;
+    target.customLinks[other.id]={label:sLbl,lineType:'sibling'};
+    other.customLinks[target.id]={label:sLbl,lineType:'sibling'};
     if(!other.relLabel) other.relLabel=sLbl;
   } else if(type==='spouse'){
     other.spouseOf=target.id;
@@ -1590,12 +1793,12 @@ function saveConnection(){
     // Store as a direct key on each node — simpler than arrays, survives Firestore round-trips
     if(!target.customLinks) target.customLinks={};
     if(!other.customLinks) other.customLinks={};
-    target.customLinks[other.id]=label;
-    other.customLinks[target.id]=label;
+    target.customLinks[other.id]={label,lineType:'labeled'};
+    other.customLinks[target.id]={label,lineType:'labeled'};
     other.relLabel=label;
   }
 
-  rebuild(); render(); scheduleSave();
+  rebuild([]); render(); scheduleSave();
   closeConnModal();
   selectNode(connForId);
 }
@@ -1831,14 +2034,14 @@ function submitMember(){
       if(!np.customLinks) np.customLinks={};
       if(!target.customLinks) target.customLinks={};
       const sibLabel=genderedRel('Sibling',np.gender)||'Sibling';
-      np.customLinks[addFor]=sibLabel;
-      target.customLinks[id]=sibLabel;
+      np.customLinks[addFor]={label:sibLabel,lineType:'sibling'};
+      target.customLinks[id]={label:sibLabel,lineType:'sibling'};
     }
     else if(baseRel==='Spouse'){ np.spouseOf=addFor; if(target) target.spouseOf=id; }
     else np.parents=[addFor];
   }
 
-  P.push(np); rebuild(); closeModal(); render(); scheduleSave();
+  P.push(np); rebuild([id]); closeModal(); render(); scheduleSave();
   setTimeout(()=>selectNode(id),90);
 }
 </script>
