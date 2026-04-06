@@ -1,0 +1,8 @@
+{
+  "cleanUrls": true,
+  "routes": [
+    { "src": "/", "dest": "/login.html" },
+    { "src": "/app", "dest": "/family-tree.html" },
+    { "src": "/login", "dest": "/login.html" }
+  ]
+}

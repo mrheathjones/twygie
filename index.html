@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sign In — Twygie</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --bg:#04070c;
+  --card:rgba(7,13,24,0.78);
+  --border:rgba(255,255,255,0.09);
+  --text:#ddd8cc;
+  --muted:rgba(221,216,204,0.45);
+  --gold:#c8a84b;
+  --err:#e07070;
+}
+
+html,body{
+  width:100%;height:100%;min-height:100vh;
+  overflow:hidden;
+  background:var(--bg);
+  font-family:'Outfit',sans-serif;
+  color:var(--text);
+  display:flex;align-items:center;justify-content:center;
+}
+
+/* atmospheric background */
+#atm{
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(ellipse 60% 75% at 50% 55%, rgba(52,26,6,.68) 0%, transparent 100%),
+    radial-gradient(ellipse 30% 35% at 50% 90%, rgba(18,8,2,.85) 0%, transparent 100%);
+}
+
+/* subtle tree silhouette behind card */
+#bg-tree{
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+  display:flex;align-items:center;justify-content:center;
+  opacity:.06;
+}
+#bg-tree svg{width:min(520px,90vw);height:auto}
+
+/* card */
+.card{
+  position:relative;z-index:1;
+  width:min(420px,92vw);
+  background:var(--card);
+  backdrop-filter:blur(32px) saturate(1.3);
+  -webkit-backdrop-filter:blur(32px) saturate(1.3);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:22px;
+  padding:38px 36px 32px;
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.04) inset,
+    0 30px 70px rgba(0,0,0,.6),
+    0 2px 8px rgba(0,0,0,.3);
+}
+
+/* logo */
+.logo{
+  display:flex;align-items:center;gap:10px;justify-content:center;
+  margin-bottom:8px;
+}
+.logo-icon{
+  width:36px;height:36px;border-radius:10px;
+  background:rgba(200,168,75,.12);border:1px solid rgba(200,168,75,.25);
+  display:flex;align-items:center;justify-content:center;
+}
+.logo-text{
+  font-family:'Cormorant Garamond',serif;
+  font-size:1.4rem;font-weight:600;letter-spacing:.06em;
+  color:var(--gold);
+}
+
+.tagline{
+  text-align:center;font-size:.82rem;color:var(--muted);
+  margin-bottom:28px;letter-spacing:.02em;
+}
+
+/* mode toggle */
+.mode-tabs{
+  display:flex;border-radius:10px;overflow:hidden;
+  background:rgba(255,255,255,.04);border:1px solid var(--border);
+  margin-bottom:22px;
+}
+.tab{
+  flex:1;padding:8px;text-align:center;font-size:.82rem;cursor:pointer;
+  color:var(--muted);transition:all .2s;border:none;background:transparent;
+  font-family:'Outfit',sans-serif;
+}
+.tab.active{
+  background:rgba(200,168,75,.14);color:var(--gold);
+  font-weight:500;
+}
+
+/* form */
+.field{margin-bottom:12px}
+.fi{
+  width:100%;padding:11px 14px;
+  background:rgba(255,255,255,.05);
+  border:1px solid var(--border);
+  border-radius:10px;
+  color:var(--text);
+  font-family:'Outfit',sans-serif;font-size:.9rem;
+  outline:none;transition:border-color .2s, background .2s;
+  -webkit-appearance:none;
+}
+.fi:focus{border-color:rgba(200,168,75,.5);background:rgba(255,255,255,.07)}
+.fi::placeholder{color:var(--muted)}
+.fi[type="password"]{letter-spacing:.08em}
+
+.forgot{
+  display:block;text-align:right;font-size:.76rem;
+  color:var(--muted);text-decoration:none;margin-top:-6px;margin-bottom:14px;
+  transition:color .2s;cursor:pointer;
+}
+.forgot:hover{color:var(--gold)}
+
+/* main cta */
+.cta{
+  width:100%;padding:12px;border-radius:10px;
+  background:var(--gold);border:none;
+  color:#04070c;font-family:'Outfit',sans-serif;
+  font-size:.92rem;font-weight:600;letter-spacing:.02em;
+  cursor:pointer;transition:all .2s;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  position:relative;overflow:hidden;
+}
+.cta:hover{background:#d4b454;transform:translateY(-1px);box-shadow:0 6px 20px rgba(200,168,75,.3)}
+.cta:active{transform:translateY(0)}
+.cta:disabled{opacity:.55;cursor:not-allowed;transform:none}
+
+/* spinner */
+.spin{
+  width:16px;height:16px;border-radius:50%;
+  border:2px solid rgba(4,7,12,.25);
+  border-top-color:rgba(4,7,12,.75);
+  animation:spin .7s linear infinite;display:none;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading .spin{display:block}
+.loading .btn-label{display:none}
+
+/* divider */
+.divider{
+  display:flex;align-items:center;gap:12px;
+  margin:18px 0;font-size:.75rem;color:var(--muted);
+}
+.divider::before,.divider::after{
+  content:'';flex:1;height:1px;background:var(--border);
+}
+
+/* social buttons */
+.social-btn{
+  width:100%;padding:11px 14px;border-radius:10px;
+  background:rgba(255,255,255,.05);border:1px solid var(--border);
+  color:var(--text);font-family:'Outfit',sans-serif;
+  font-size:.88rem;font-weight:400;
+  cursor:pointer;transition:all .2s;
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  margin-bottom:10px;
+}
+.social-btn:hover{background:rgba(255,255,255,.09);border-color:rgba(255,255,255,.16)}
+.social-btn:disabled{opacity:.5;cursor:not-allowed}
+.social-btn svg{width:18px;height:18px;flex-shrink:0}
+
+.social-btn.apple-btn{margin-bottom:0}
+
+/* error */
+.err-msg{
+  padding:10px 12px;border-radius:8px;
+  background:rgba(224,112,112,.1);border:1px solid rgba(224,112,112,.2);
+  color:var(--err);font-size:.82rem;line-height:1.4;
+  margin-bottom:14px;display:none;
+}
+.err-msg.show{display:block}
+
+/* footer */
+.card-footer{
+  text-align:center;margin-top:20px;
+  font-size:.8rem;color:var(--muted);
+}
+.card-footer a{color:var(--gold);text-decoration:none;cursor:pointer}
+.card-footer a:hover{text-decoration:underline}
+
+/* reset password view */
+#reset-view{display:none}
+#reset-view.show{display:block}
+#main-view{display:block}
+#main-view.hide{display:none}
+
+.back-link{
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:.8rem;color:var(--muted);cursor:pointer;
+  margin-bottom:18px;transition:color .2s;
+  background:none;border:none;font-family:'Outfit',sans-serif;
+}
+.back-link:hover{color:var(--text)}
+
+.reset-sent{
+  text-align:center;padding:20px 0;
+}
+.reset-sent .check{
+  width:48px;height:48px;border-radius:50%;
+  background:rgba(200,168,75,.12);border:1px solid rgba(200,168,75,.25);
+  display:flex;align-items:center;justify-content:center;
+  margin:0 auto 14px;
+}
+.reset-sent p{font-size:.88rem;color:var(--muted);line-height:1.6}
+</style>
+</head>
+<body>
+
+<div id="atm"></div>
+
+<!-- ghost tree in background -->
+<div id="bg-tree">
+  <svg viewBox="0 0 600 700" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <!-- trunk -->
+    <path d="M300 680 C300 640 295 600 292 560 C289 520 290 490 300 460" stroke="white" stroke-width="28" stroke-linecap="round"/>
+    <path d="M300 460 C290 420 270 390 240 360 C210 330 185 310 160 290" stroke="white" stroke-width="18" stroke-linecap="round"/>
+    <path d="M300 460 C310 420 330 390 360 360 C390 330 415 310 440 290" stroke="white" stroke-width="18" stroke-linecap="round"/>
+    <path d="M240 360 C220 330 195 310 170 285 C145 260 130 240 120 215" stroke="white" stroke-width="11" stroke-linecap="round"/>
+    <path d="M360 360 C380 330 405 310 430 285 C455 260 470 240 480 215" stroke="white" stroke-width="11" stroke-linecap="round"/>
+    <path d="M240 360 C235 330 230 300 245 270" stroke="white" stroke-width="8" stroke-linecap="round"/>
+    <path d="M360 360 C365 330 370 300 355 270" stroke="white" stroke-width="8" stroke-linecap="round"/>
+    <path d="M300 460 C305 430 320 400 310 370" stroke="white" stroke-width="14" stroke-linecap="round"/>
+    <!-- branches upper -->
+    <path d="M120 215 C105 190 100 165 110 140" stroke="white" stroke-width="7" stroke-linecap="round"/>
+    <path d="M120 215 C130 188 145 168 140 140" stroke="white" stroke-width="6" stroke-linecap="round"/>
+    <path d="M480 215 C495 190 500 165 490 140" stroke="white" stroke-width="7" stroke-linecap="round"/>
+    <path d="M480 215 C470 188 455 168 460 140" stroke="white" stroke-width="6" stroke-linecap="round"/>
+    <path d="M245 270 C235 245 230 220 245 195" stroke="white" stroke-width="6" stroke-linecap="round"/>
+    <path d="M355 270 C365 245 370 220 355 195" stroke="white" stroke-width="6" stroke-linecap="round"/>
+    <!-- nodes as circles -->
+    <circle cx="300" cy="460" r="10" fill="white"/>
+    <circle cx="160" cy="290" r="8" fill="white"/>
+    <circle cx="440" cy="290" r="8" fill="white"/>
+    <circle cx="120" cy="215" r="7" fill="white"/>
+    <circle cx="480" cy="215" r="7" fill="white"/>
+    <circle cx="110" cy="140" r="6" fill="white"/>
+    <circle cx="140" cy="140" r="6" fill="white"/>
+    <circle cx="490" cy="140" r="6" fill="white"/>
+    <circle cx="460" cy="140" r="6" fill="white"/>
+    <circle cx="245" cy="195" r="6" fill="white"/>
+    <circle cx="355" cy="195" r="6" fill="white"/>
+    <circle cx="245" cy="270" r="7" fill="white"/>
+    <circle cx="355" cy="270" r="7" fill="white"/>
+  </svg>
+</div>
+
+<div class="card">
+
+  <!-- MAIN VIEW -->
+  <div id="main-view">
+    <div class="logo">
+      <div class="logo-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c8a84b" stroke-width="2.2" stroke-linecap="round">
+          <path d="M12 22V10"/><path d="M12 10C12 6 8 3.5 4 4.5"/><path d="M12 10C12 6 16 3.5 20 4.5"/>
+          <path d="M12 16C12 13 9 11 5 12"/><path d="M12 16C12 13 15 11 19 12"/>
+        </svg>
+      </div>
+      <span class="logo-text">Twygie</span>
+    </div>
+    <p class="tagline">Your family story, beautifully preserved.</p>
+
+    <div class="mode-tabs">
+      <button class="tab active" id="tab-in"  onclick="setMode('in')">Sign in</button>
+      <button class="tab"        id="tab-up"  onclick="setMode('up')">Create account</button>
+    </div>
+
+    <div class="err-msg" id="err-msg"></div>
+
+    <div class="field">
+      <input class="fi" id="email" type="email" placeholder="Email address" autocomplete="email"/>
+    </div>
+    <div class="field">
+      <input class="fi" id="pass" type="password" placeholder="Password" autocomplete="current-password"/>
+    </div>
+    <a class="forgot" id="forgot-link" onclick="showReset()">Forgot password?</a>
+
+    <button class="cta" id="email-btn" onclick="submitEmail()">
+      <span class="btn-label" id="cta-label">Sign in</span>
+      <div class="spin" id="cta-spin"></div>
+    </button>
+
+    <div class="divider">or continue with</div>
+
+    <button class="social-btn" id="google-btn" onclick="signInGoogle()">
+      <!-- Google logo -->
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+      </svg>
+      Continue with Google
+    </button>
+
+    <button class="social-btn apple-btn" id="apple-btn" onclick="signInApple()">
+      <!-- Apple logo -->
+      <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zm3.378-3.066c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.56-1.702z"/>
+      </svg>
+      Continue with Apple
+    </button>
+
+    <p class="card-footer">
+      By continuing you agree to our <a href="#">Terms</a> and <a href="#">Privacy Policy</a>
+    </p>
+  </div>
+
+  <!-- RESET PASSWORD VIEW -->
+  <div id="reset-view">
+    <button class="back-link" onclick="showMain()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+      Back to sign in
+    </button>
+    <h2 style="font-family:'Cormorant Garamond',serif;font-size:1.5rem;font-weight:600;margin-bottom:6px">Reset password</h2>
+    <p style="font-size:.84rem;color:var(--muted);margin-bottom:20px">We'll send a reset link to your email.</p>
+
+    <div class="err-msg" id="reset-err"></div>
+
+    <div id="reset-form">
+      <div class="field">
+        <input class="fi" id="reset-email" type="email" placeholder="Email address"/>
+      </div>
+      <button class="cta" id="reset-btn" onclick="sendReset()">
+        <span class="btn-label">Send reset link</span>
+        <div class="spin"></div>
+      </button>
+    </div>
+
+    <div class="reset-sent" id="reset-sent" style="display:none">
+      <div class="check">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#c8a84b" stroke-width="2.5" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg>
+      </div>
+      <p>Check your inbox. A reset link is on its way.</p>
+    </div>
+  </div>
+
+</div><!-- /card -->
+
+<!-- ── Firebase SDK ── -->
+<!-- Replace with your project's SDK scripts from the Firebase console -->
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+
+<script>
+// ══════════════════════════════════════════════════════════════════════════════
+//  FIREBASE CONFIG
+//  1. Go to https://console.firebase.google.com and create a project
+//  2. Add a Web App (</> icon on project overview)
+//  3. Copy your config object here
+//  4. In Authentication > Sign-in method, enable: Email/Password, Google, Apple
+// ══════════════════════════════════════════════════════════════════════════════
+const firebaseConfig = {
+  apiKey:            "YOUR_API_KEY",
+  authDomain:        "YOUR_PROJECT.firebaseapp.com",
+  projectId:         "YOUR_PROJECT_ID",
+  storageBucket:     "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId:             "YOUR_APP_ID"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+
+// If already signed in, go straight to the app
+auth.onAuthStateChanged(user => {
+  if (user) goToApp();
+});
+
+// ── Mode (sign-in vs sign-up) ────────────────────────────────────────────────
+let mode = 'in'; // 'in' | 'up'
+
+function setMode(m) {
+  mode = m;
+  document.getElementById('tab-in').classList.toggle('active', m === 'in');
+  document.getElementById('tab-up').classList.toggle('active', m === 'up');
+  document.getElementById('cta-label').textContent = m === 'in' ? 'Sign in' : 'Create account';
+  document.getElementById('forgot-link').style.display = m === 'in' ? 'block' : 'none';
+  document.getElementById('pass').autocomplete = m === 'in' ? 'current-password' : 'new-password';
+  clearErr();
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function goToApp() { window.location.href = 'family-tree.html'; }
+
+function showErr(msg, target='err-msg') {
+  const el = document.getElementById(target);
+  el.textContent = msg; el.classList.add('show');
+}
+function clearErr(target='err-msg') {
+  document.getElementById(target).classList.remove('show');
+}
+
+function setLoading(btnId, on) {
+  const btn = document.getElementById(btnId);
+  btn.classList.toggle('loading', on);
+  btn.disabled = on;
+}
+function setSocialLoading(on) {
+  document.getElementById('google-btn').disabled = on;
+  document.getElementById('apple-btn').disabled  = on;
+  document.getElementById('email-btn').disabled  = on;
+}
+
+function friendlyError(err) {
+  const map = {
+    'auth/user-not-found':       'No account found with this email.',
+    'auth/wrong-password':       'Incorrect password. Try again.',
+    'auth/invalid-credential':   'Incorrect email or password.',
+    'auth/email-already-in-use': 'An account with this email already exists.',
+    'auth/weak-password':        'Password must be at least 6 characters.',
+    'auth/invalid-email':        'Please enter a valid email address.',
+    'auth/too-many-requests':    'Too many attempts. Please try again later.',
+    'auth/popup-closed-by-user': null, // silent
+    'auth/cancelled-popup-request': null,
+  };
+  return map[err.code] || err.message || 'Something went wrong. Please try again.';
+}
+
+// ── Email auth ───────────────────────────────────────────────────────────────
+async function submitEmail() {
+  clearErr();
+  const email = document.getElementById('email').value.trim();
+  const pass  = document.getElementById('pass').value;
+
+  if (!email) { showErr('Please enter your email address.'); return; }
+  if (!pass)  { showErr('Please enter your password.'); return; }
+
+  setLoading('email-btn', true);
+  setSocialLoading(true);
+
+  try {
+    if (mode === 'in') {
+      await auth.signInWithEmailAndPassword(email, pass);
+    } else {
+      await auth.createUserWithEmailAndPassword(email, pass);
+    }
+    goToApp();
+  } catch(err) {
+    const msg = friendlyError(err);
+    if (msg) showErr(msg);
+    setLoading('email-btn', false);
+    setSocialLoading(false);
+  }
+}
+
+// allow Enter key to submit
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.getElementById('main-view').style.display !== 'none') {
+    submitEmail();
+  }
+});
+
+// ── Google ───────────────────────────────────────────────────────────────────
+async function signInGoogle() {
+  clearErr();
+  setSocialLoading(true);
+  try {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    await auth.signInWithPopup(provider);
+    goToApp();
+  } catch(err) {
+    const msg = friendlyError(err);
+    if (msg) showErr(msg);
+    setSocialLoading(false);
+  }
+}
+
+// ── Apple ────────────────────────────────────────────────────────────────────
+async function signInApple() {
+  clearErr();
+  setSocialLoading(true);
+  try {
+    const provider = new firebase.auth.OAuthProvider('apple.com');
+    provider.addScope('email');
+    provider.addScope('name');
+    await auth.signInWithPopup(provider);
+    goToApp();
+  } catch(err) {
+    const msg = friendlyError(err);
+    if (msg) showErr(msg);
+    setSocialLoading(false);
+  }
+}
+
+// ── Password reset ───────────────────────────────────────────────────────────
+function showReset() {
+  document.getElementById('main-view').classList.add('hide');
+  document.getElementById('reset-view').classList.add('show');
+  const e = document.getElementById('email').value;
+  if (e) document.getElementById('reset-email').value = e;
+}
+function showMain() {
+  document.getElementById('reset-view').classList.remove('show');
+  document.getElementById('main-view').classList.remove('hide');
+}
+
+async function sendReset() {
+  clearErr('reset-err');
+  const email = document.getElementById('reset-email').value.trim();
+  if (!email) { showErr('Please enter your email address.', 'reset-err'); return; }
+
+  setLoading('reset-btn', true);
+  try {
+    await auth.sendPasswordResetEmail(email);
+    document.getElementById('reset-form').style.display = 'none';
+    document.getElementById('reset-sent').style.display = 'block';
+  } catch(err) {
+    const msg = friendlyError(err);
+    if (msg) showErr(msg, 'reset-err');
+  }
+  setLoading('reset-btn', false);
+}
+</script>
+</body>
+</html>
