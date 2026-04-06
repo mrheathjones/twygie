@@ -245,6 +245,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-famil
     <strong id="mcnum">0</strong>&nbsp;members
   </div>
   <div class="hbtns">
+    <button class="hbtn" id="mode-btn" onclick="toggleTreeMode()" title="Toggle Simple/Complex view">Simple view</button>
     <div id="save-ind">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg>
       Saved
@@ -329,27 +330,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-famil
     <input class="conn-search" id="conn-search" placeholder="Search members…" oninput="filterConnList()"/>
     <div class="conn-list" id="conn-list"></div>
     <div class="conn-rel-label">Relationship</div>
-    <select class="mi" id="conn-rel" style="width:100%">
-      <optgroup label="They are a parent">
-        <option value="parent-father">Father of [name]</option>
-        <option value="parent-mother">Mother of [name]</option>
-        <option value="parent-parent">Parent of [name]</option>
-      </optgroup>
-      <optgroup label="They are a child">
-        <option value="child-son">Son of [name]</option>
-        <option value="child-daughter">Daughter of [name]</option>
-        <option value="child-child">Child of [name]</option>
-      </optgroup>
-      <optgroup label="They are a sibling">
-        <option value="sibling-brother">Brother of [name]</option>
-        <option value="sibling-sister">Sister of [name]</option>
-      </optgroup>
-      <optgroup label="They are a spouse">
-        <option value="spouse-husband">Husband of [name]</option>
-        <option value="spouse-wife">Wife of [name]</option>
-        <option value="spouse-partner">Partner of [name]</option>
-      </optgroup>
-    </select>
+    <select class="mi" id="conn-rel" style="width:100%"></select>
     <div class="conn-foot">
       <button class="mcan" onclick="closeConnModal()">Cancel</button>
       <button class="madd" onclick="saveConnection()">Add Connection</button>
@@ -362,7 +343,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-famil
 <!-- ADD MEMBER MODAL -->
 <div id="mbg" onclick="if(event.target===this)closeModal()">
   <div id="modal">
-    <div class="mt">Add Family Member</div>
+    <div class="mt">Add a Twyg</div>
     <div class="ms" id="msub">Connect a new member to the tree</div>
 
     <div class="mf mf-row c2">
@@ -397,7 +378,49 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-famil
 
     <div class="mf mf-row c2">
       <div><label class="ml">City</label><input class="mi" id="fcity" placeholder="City"/></div>
-      <div><label class="ml">State / Region</label><input class="mi" id="fstate" placeholder="State"/></div>
+      <div><label class="ml">State / Region</label>
+        <select class="mi" id="fstate" style="appearance:none">
+          <option value="">Select state…</option>
+          <option>Alabama</option><option>Alaska</option><option>Arizona</option><option>Arkansas</option>
+          <option>California</option><option>Colorado</option><option>Connecticut</option><option>Delaware</option>
+          <option>Florida</option><option>Georgia</option><option>Hawaii</option><option>Idaho</option>
+          <option>Illinois</option><option>Indiana</option><option>Iowa</option><option>Kansas</option>
+          <option>Kentucky</option><option>Louisiana</option><option>Maine</option><option>Maryland</option>
+          <option>Massachusetts</option><option>Michigan</option><option>Minnesota</option><option>Mississippi</option>
+          <option>Missouri</option><option>Montana</option><option>Nebraska</option><option>Nevada</option>
+          <option>New Hampshire</option><option>New Jersey</option><option>New Mexico</option><option>New York</option>
+          <option>North Carolina</option><option>North Dakota</option><option>Ohio</option><option>Oklahoma</option>
+          <option>Oregon</option><option>Pennsylvania</option><option>Rhode Island</option><option>South Carolina</option>
+          <option>South Dakota</option><option>Tennessee</option><option>Texas</option><option>Utah</option>
+          <option>Vermont</option><option>Virginia</option><option>Washington</option><option>West Virginia</option>
+          <option>Wisconsin</option><option>Wyoming</option><option>Washington D.C.</option>
+          <option>Puerto Rico</option><option>Other / International</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="mf">
+      <label class="ml" style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <span>Deceased?</span>
+        <span style="position:relative;display:inline-block;width:32px;height:17px">
+          <input type="checkbox" id="f-deceased" onchange="toggleDeathDate()" style="opacity:0;width:0;height:0;position:absolute"/>
+          <span id="f-deceased-track" style="position:absolute;inset:0;border-radius:100px;background:rgba(255,255,255,.12);transition:background .2s;cursor:pointer" onclick="document.getElementById('f-deceased').click()"></span>
+          <span id="f-deceased-thumb" style="position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:#fff;transition:transform .2s;pointer-events:none"></span>
+        </span>
+      </label>
+      <div id="f-death-fields" style="display:none;margin-top:8px">
+        <div class="mf-row c3">
+          <select class="mi" id="fdod-month" style="appearance:none">
+            <option value="">Month</option>
+            <option value="1">January</option><option value="2">February</option><option value="3">March</option>
+            <option value="4">April</option><option value="5">May</option><option value="6">June</option>
+            <option value="7">July</option><option value="8">August</option><option value="9">September</option>
+            <option value="10">October</option><option value="11">November</option><option value="12">December</option>
+          </select>
+          <input class="mi" id="fdod-day" type="number" placeholder="Day" min="1" max="31"/>
+          <input class="mi" id="fdod-year" type="number" placeholder="Year" min="1800" max="2100"/>
+        </div>
+      </div>
     </div>
 
     <div class="mf">
@@ -463,9 +486,19 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db   = firebase.firestore();
 
-const DEFAULT_TREE = [
-  { id:'you', name:'Your Name', firstName:'Your', lastName:'Name', gender:'', dob:{month:'',day:'',year:''}, city:'', state:'', parents:[], isYou:true, note:'Tap Edit to update your details.', x:600, y:400 }
-];
+function makeDefaultTree(user) {
+  let firstName = '', lastName = '';
+  if (user.displayName) {
+    const parts = user.displayName.trim().split(' ');
+    firstName = parts[0] || '';
+    lastName = parts.slice(1).join(' ') || '';
+  }
+  return [
+    { id:'you', name: user.displayName||'Your Name', firstName, lastName,
+      gender:'', dob:{month:'',day:'',year:''}, city:'', state:'', parents:[],
+      isYou:true, note:'Welcome to Twygie! Tap Edit to add your story.', x:600, y:400 }
+  ];
+}
 
 // ─── AUTH ─────────────────────────────────────────────────────────────────────
 let currentUser=null, saveTimer=null;
@@ -487,8 +520,8 @@ async function loadTree(){
   try{
     const snap=await userDoc().get();
     if(snap.exists && snap.data().people && snap.data().people.length) P=snap.data().people;
-    else { P=DEFAULT_TREE; await saveTree(false); }
-  }catch(e){ P=DEFAULT_TREE; }
+    else { P=makeDefaultTree(currentUser); await saveTree(false); }
+  }catch(e){ P=makeDefaultTree(currentUser||{displayName:''}); }
   rebuild(); render(); setTimeout(resetView,90);
 }
 async function saveTree(ind=true){
@@ -507,6 +540,12 @@ let P=[], byId={};
 function rebuild(){ byId={}; P.forEach(p=>{ if(!p.dob) p.dob={}; byId[p.id]=p; }); autoLayout(); updateCount(); }
 function g(id){ return byId[id]; }
 let nxt=Date.now();
+let treeMode='complex'; // 'simple' | 'complex'
+function toggleTreeMode(){
+  treeMode=treeMode==='simple'?'complex':'simple';
+  document.getElementById('mode-btn').textContent=treeMode==='simple'?'Complex view':'Simple view';
+  render();
+}
 function updateCount(){ document.getElementById('mcnum').textContent=P.length; }
 function fullName(p){ return p.name||[(p.firstName||''),(p.lastName||'')].filter(Boolean).join(' ')||'Unknown'; }
 
@@ -566,11 +605,12 @@ function autoLayout(){
 // ─── VISUAL HELPERS ───────────────────────────────────────────────────────────
 function col(p){
   if(p.isYou) return '#f0efeb';
-  if(p.death) return '#6b9ec2';
-  if((p.dob&&p.dob.year>=2000)||(p.birth>=2000)) return '#4ecdb4';
+  if(p.death||(p.dod&&p.dod.year)) return '#6b9ec2';
+  const birthYear=parseInt(p.dob&&p.dob.year)||p.birth||0;
+  if(birthYear>=2000) return '#4ecdb4';
   return '#f0b845';
 }
-function gclass(p){ if(p.isYou) return 'you'; if(p.death) return 'blue'; if((p.dob&&p.dob.year>=2000)||(p.birth>=2000)) return 'teal'; return 'amber'; }
+function gclass(p){ if(p.isYou) return 'you'; if(p.death||(p.dod&&p.dod.year)) return 'blue'; const by=parseInt(p.dob&&p.dob.year)||p.birth||0; if(by>=2000) return 'teal'; return 'amber'; }
 function gfilt(p){ if(p.isYou) return 'gf-y'; if(p.death) return 'gf-b'; if((p.dob&&p.dob.year>=2000)||(p.birth>=2000)) return 'gf-t'; return 'gf-a'; }
 function nr(p){ return p.isYou?13:9; }
 function gr(p){ return p.isYou?40:26; }
@@ -653,21 +693,32 @@ function bstyle(dy){
   return {w:3,o:.36};
 }
 
+// ─── BRANCH COLOR THEME ──────────────────────────────────────────────────────
+// parent-child: warm green, spouse: soft blue, sibling: orange, labeled: purple
+const BR_COLORS = {
+  parentChild: [100, 180, 100],
+  spouse:      [100, 140, 220],
+  sibling:     [220, 140, 60],
+  labeled:     [160, 100, 220],
+};
+function brRgba([r,g,b], o){ return `rgba(${r},${g},${b},${o})`; }
+
 function drawBranches(){
   const bG=document.getElementById('bG');
-  // Parent-child lines
+  const simple=treeMode==='simple';
+
+  // ── Parent-child lines (green) ──
   P.forEach(child=>{
     (child.parents||[]).forEach(pid=>{
       const par=byId[pid]; if(!par) return;
-      const dy=par.y-child.y; // negative since parent is above (smaller y)
+      const dy=par.y-child.y;
       const {w,o}=bstyle(dy);
       const ox=orb(pid,child.id);
       const r=Math.abs(dy)*.3;
-      // Bezier: from parent down to child
       const d=`M ${par.x} ${par.y} C ${par.x+ox*.3} ${par.y+r} ${child.x+ox*.2} ${child.y-r} ${child.x} ${child.y}`;
       const path=se('path');
       path.setAttribute('d',d);
-      path.setAttribute('stroke',`rgba(180,100,30,${o})`);
+      path.setAttribute('stroke', brRgba(BR_COLORS.parentChild, o));
       path.setAttribute('stroke-width',String(w));
       path.setAttribute('fill','none');
       path.setAttribute('stroke-linecap','round');
@@ -676,7 +727,8 @@ function drawBranches(){
       bG.appendChild(path);
     });
   });
-  // Spouse lines (dashed gold horizontal)
+
+  // ── Spouse lines (blue dashed) ──
   const drawn=new Set();
   P.forEach(p=>{
     if(!p.spouseOf) return;
@@ -684,16 +736,60 @@ function drawBranches(){
     if(drawn.has(key)) return;
     drawn.add(key);
     const sp=byId[p.spouseOf]; if(!sp) return;
-    const mx=(p.x+sp.x)/2, y=p.y;
     const path=se('path');
-    path.setAttribute('d',`M ${p.x} ${y} L ${sp.x} ${y}`);
-    path.setAttribute('stroke','rgba(200,168,75,.3)');
-    path.setAttribute('stroke-width','1.5');
-    path.setAttribute('stroke-dasharray','5,4');
+    path.setAttribute('d',`M ${p.x} ${p.y} L ${sp.x} ${sp.y}`);
+    path.setAttribute('stroke', brRgba(BR_COLORS.spouse, .45));
+    path.setAttribute('stroke-width','2');
+    path.setAttribute('stroke-dasharray','6,4');
     path.setAttribute('fill','none');
     path.setAttribute('class','br');
     path.dataset.src=p.id; path.dataset.dst=sp.id;
     bG.appendChild(path);
+  });
+
+  if(simple) return; // simple mode stops here
+
+  // ── Sibling lines (orange dotted) — only in complex mode ──
+  const sibDrawn=new Set();
+  P.forEach(p=>{
+    const pars=p.parents||[];
+    if(!pars.length) return;
+    P.filter(x=>x.id!==p.id&&(x.parents||[]).some(pp=>pars.includes(pp))).forEach(sib=>{
+      const key=[p.id,sib.id].sort().join('|');
+      if(sibDrawn.has(key)) return;
+      sibDrawn.add(key);
+      const mx=(p.x+sib.x)/2, my=(p.y+sib.y)/2-20;
+      const path=se('path');
+      path.setAttribute('d',`M ${p.x} ${p.y} Q ${mx} ${my} ${sib.x} ${sib.y}`);
+      path.setAttribute('stroke', brRgba(BR_COLORS.sibling, .3));
+      path.setAttribute('stroke-width','1.5');
+      path.setAttribute('stroke-dasharray','3,5');
+      path.setAttribute('fill','none');
+      path.setAttribute('class','br');
+      path.dataset.src=p.id; path.dataset.dst=sib.id;
+      bG.appendChild(path);
+    });
+  });
+
+  // ── Labeled connections (purple dotted) ──
+  const connDrawn=new Set();
+  P.forEach(p=>{
+    (p.connections||[]).forEach(c=>{
+      const key=[p.id,c.targetId].sort().join('|');
+      if(connDrawn.has(key)) return;
+      connDrawn.add(key);
+      const other=byId[c.targetId]; if(!other) return;
+      const mx=(p.x+other.x)/2, my=(p.y+other.y)/2-30;
+      const path=se('path');
+      path.setAttribute('d',`M ${p.x} ${p.y} Q ${mx} ${my} ${other.x} ${other.y}`);
+      path.setAttribute('stroke', brRgba(BR_COLORS.labeled, .28));
+      path.setAttribute('stroke-width','1.5');
+      path.setAttribute('stroke-dasharray','2,6');
+      path.setAttribute('fill','none');
+      path.setAttribute('class','br');
+      path.dataset.src=p.id; path.dataset.dst=c.targetId;
+      bG.appendChild(path);
+    });
   });
 }
 
@@ -1052,15 +1148,26 @@ function removePerson(id){
 // ─── ADD CONNECTION MODAL ────────────────────────────────────────────────────
 let connForId=null, connSelectedId=null;
 
+function buildConnRelOptions(name){
+  const n=name||'them';
+  return [
+    ['They are a parent','parent',[['Father',`Father of ${n}`],['Mother',`Mother of ${n}`],['Grandfather',`Grandfather of ${n}`],['Grandmother',`Grandmother of ${n}`],['Stepfather',`Stepfather of ${n}`],['Stepmother',`Stepmother of ${n}`],['Parent',`Parent of ${n}`]]],
+    ['They are a child','child',[['Son',`Son of ${n}`],['Daughter',`Daughter of ${n}`],['Grandson',`Grandson of ${n}`],['Granddaughter',`Granddaughter of ${n}`],['Stepson',`Stepson of ${n}`],['Stepdaughter',`Stepdaughter of ${n}`],['Child',`Child of ${n}`]]],
+    ['They are a sibling','sibling',[['Brother',`Brother of ${n}`],['Sister',`Sister of ${n}`],['Half-brother',`Half-brother of ${n}`],['Half-sister',`Half-sister of ${n}`]]],
+    ['They are a spouse','spouse',[['Husband',`Husband of ${n}`],['Wife',`Wife of ${n}`],['Partner',`Partner of ${n}`]]],
+    ['They are extended family','labeled',[['Uncle',`Uncle of ${n}`],['Aunt',`Aunt of ${n}`],['Nephew',`Nephew of ${n}`],['Niece',`Niece of ${n}`],['Cousin',`Cousin of ${n}`],['Father-in-law',`Father-in-law of ${n}`],['Mother-in-law',`Mother-in-law of ${n}`],['Brother-in-law',`Brother-in-law of ${n}`],['Sister-in-law',`Sister-in-law of ${n}`],['Godfather',`Godfather of ${n}`],['Godmother',`Godmother of ${n}`],['Godchild',`Godchild of ${n}`],['Other',`Other connection to ${n}`]]],
+  ].map(([group,type,opts])=>
+    `<optgroup label="${group}">${opts.map(([lbl,text])=>`<option value="${type}-${lbl}">${text}</option>`).join('')}</optgroup>`
+  ).join('');
+}
+
 function openConnModal(id){
   connForId=id; connSelectedId=null;
   const p=byId[id];
+  const firstName=p.firstName||fullName(p).split(' ')[0];
   document.getElementById('conn-sub').textContent=`Link another member's relationship to ${fullName(p)}`;
-  // Update option labels
-  document.querySelectorAll('#conn-rel option').forEach(o=>{
-    o.text=o.text.replace('[name]',p.firstName||fullName(p));
-    o.dataset.orig=o.text;
-  });
+  document.getElementById('conn-rel').innerHTML=buildConnRelOptions(firstName);
+  document.getElementById('conn-search').value='';
   renderConnList('');
   document.getElementById('conn-bg').classList.add('open');
 }
@@ -1095,29 +1202,29 @@ function saveConnection(){
   const other=byId[connSelectedId]; // the node we're connecting to it
   const rel=document.getElementById('conn-rel').value;
 
-  const [type, label]=rel.split('-');
+  const dashIdx=rel.indexOf('-');
+  const type=rel.slice(0,dashIdx);
+  const label=rel.slice(dashIdx+1);
+
+  const mGender={'father':'male','grandfather':'male','stepfather':'male','son':'male','grandson':'male','stepson':'male','brother':'male','half-brother':'male','husband':'male','uncle':'male','nephew':'male','brother-in-law':'male','godfather':'male'};
+  const fGender={'mother':'female','grandmother':'female','stepmother':'female','daughter':'female','granddaughter':'female','stepdaughter':'female','sister':'female','half-sister':'female','wife':'female','aunt':'female','niece':'female','sister-in-law':'female','godmother':'female'};
+  const lkey=label.toLowerCase();
+  if(!other.gender){ if(mGender[lkey]) other.gender='male'; else if(fGender[lkey]) other.gender='female'; }
 
   if(type==='parent'){
-    // other IS A parent of target
     if(!(target.parents||[]).includes(other.id)) target.parents=[...(target.parents||[]),other.id];
-    if(!other.gender&&label==='father') other.gender='male';
-    if(!other.gender&&label==='mother') other.gender='female';
     if(!other.relLabel) other.relLabel='Parent';
+    other.relLabel=label;
   } else if(type==='child'){
-    // other IS A child of target
     if(!(other.parents||[]).includes(target.id)) other.parents=[...(other.parents||[]),target.id];
-    if(!other.gender&&label==='son') other.gender='male';
-    if(!other.gender&&label==='daughter') other.gender='female';
     if(!other.relLabel) other.relLabel='Child';
+    other.relLabel=label;
   } else if(type==='sibling'){
-    // Share target's parents
     (target.parents||[]).forEach(pid=>{ if(!(other.parents||[]).includes(pid)) other.parents=[...(other.parents||[]),pid]; });
-    if(!other.gender&&label==='brother') other.gender='male';
-    if(!other.gender&&label==='sister') other.gender='female';
     if(!other.relLabel) other.relLabel='Sibling';
   } else if(type==='spouse'){
     other.spouseOf=target.id;
-    if(!other.gender&&label==='husband') other.gender='male';
+    if(!other.gender&&label.toLowerCase()==='husband') other.gender='male';
     if(!other.gender&&label==='wife') other.gender='female';
     if(!other.relLabel) other.relLabel='Spouse';
   }
@@ -1265,13 +1372,25 @@ const PARENT_RELS=['Father','Mother','Grandfather','Grandmother','Stepfather','S
 const SPOUSE_RELS=['Husband','Wife','Partner'];
 const SIBLING_RELS=['Brother','Sister','Brother-in-law','Sister-in-law','Cousin'];
 
+function toggleDeathDate(){
+  const cb=document.getElementById('f-deceased');
+  const fields=document.getElementById('f-death-fields');
+  const track=document.getElementById('f-deceased-track');
+  const thumb=document.getElementById('f-deceased-thumb');
+  if(!fields||!cb) return;
+  fields.style.display=cb.checked?'block':'none';
+  if(track) track.style.background=cb.checked?'rgba(200,168,75,.5)':'rgba(255,255,255,.12)';
+  if(thumb) thumb.style.transform=cb.checked?'translateX(15px)':'translateX(0)';
+}
+
 function openModal(forId){
   addFor=forId;
   const fp=forId?byId[forId]:null;
   document.getElementById('msub').textContent=fp?`Connected to ${fullName(fp)}`:'Add someone to your tree';
   document.getElementById('rel-to-label').textContent=fp?(fp.firstName||fullName(fp)):'the tree';
-  ['fn-first','fn-last','fdob-day','fdob-year','fcity','fstate','fstory'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
-  ['fdob-month','fgender','fr'].forEach(id=>{const e=document.getElementById(id);if(e)e.selectedIndex=0;});
+  ['fn-first','fn-last','fdob-day','fdob-year','fcity','fstory','fdod-day','fdod-year'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  ['fdob-month','fgender','fr','fstate','fdod-month'].forEach(id=>{const e=document.getElementById(id);if(e)e.selectedIndex=0;});
+  const dec=document.getElementById('f-deceased'); if(dec){dec.checked=false; toggleDeathDate();}
   document.getElementById('mbg').classList.add('open');
 }
 function closeModal(){ document.getElementById('mbg').classList.remove('open'); }
@@ -1289,8 +1408,11 @@ function submitMember(){
     year:document.getElementById('fdob-year').value
   };
   const birth=parseInt(dob.year)||null;
+  const deceased=document.getElementById('f-deceased')?.checked;
+  const dod=deceased?{month:document.getElementById('fdod-month')?.value||'',day:document.getElementById('fdod-day')?.value||'',year:document.getElementById('fdod-year')?.value||''}:null;
+  const death=dod?parseInt(dod.year)||null:null;
   const city=document.getElementById('fcity').value.trim();
-  const state=document.getElementById('fstate').value.trim();
+  const state=document.getElementById('fstate').value||'';
   const note=document.getElementById('fstory').value.trim();
   const rel=document.getElementById('fr').value;
 
@@ -1298,7 +1420,7 @@ function submitMember(){
   const baseRel=CHILD_RELS.includes(rel)?'Child':PARENT_RELS.includes(rel)?'Parent':SPOUSE_RELS.includes(rel)?'Spouse':SIBLING_RELS.includes(rel)?'Sibling':'Other';
 
   const id=`u${nxt++}`;
-  const np={id,name,firstName:first,lastName:last,gender,dob,birth,city,state,note,parents:[],relLabel:baseRel,x:600,y:400};
+  const np={id,name,firstName:first,lastName:last,gender,dob,birth,dod,death,city,state,note,parents:[],relLabel:baseRel,x:600,y:400};
 
   // Infer gender from relationship label
   if(!np.gender){
