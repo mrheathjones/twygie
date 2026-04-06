@@ -877,6 +877,9 @@ function inferRelToYou(anchorRelToYou, newRelToAnchor, gender) {
     // Son/Daughter-in-law's child = your Grandchild (they married your child)
     if((a==='son-in-law'||a==='daughter-in-law')&&isChild(r))      return g('Grandson','Granddaughter','Grandchild');
     if((a==='son-in-law'||a==='daughter-in-law')&&isGrandchild(r)) return g('Great-grandson','Great-granddaughter','Great-grandchild');
+    // DIL/SIL's parent has NO standard kinship term (e.g. your DIL's mom ≠ your relative)
+    if((a==='son-in-law'||a==='daughter-in-law')&&isParent(r))     return null;
+    if((a==='son-in-law'||a==='daughter-in-law')&&isGrandpar(r))   return null;
     if((a==='grandson-in-law'||a==='granddaughter-in-law')&&isChild(r)) return g('Great-grandson','Great-granddaughter','Great-grandchild');
     // Father/Mother-in-law + your child = their Grandchild (you married their child)
     if((a==='father-in-law'||a==='mother-in-law')&&isChild(r))      return g('Grandson','Granddaughter','Grandchild');
@@ -885,7 +888,7 @@ function inferRelToYou(anchorRelToYou, newRelToAnchor, gender) {
     // Brother/Sister-in-law's child = Nephew/Niece
     if((a==='brother-in-law'||a==='sister-in-law')&&isChild(r))   return g('Nephew','Niece','Niece/Nephew');
     if(isSibling(r))  return g('Brother-in-law','Sister-in-law','Sibling-in-law');
-    if(isParent(r))   return g('Grandfather-in-law','Grandmother-in-law','Grandparent-in-law');
+    if(isParent(r))   return null; // e.g. in-law's parent = no standard English kinship term
   }
   // ── Parent's relatives ─────────────────────────────────────────────────────
   if(isParent(a)){
@@ -1160,7 +1163,8 @@ function getRelToYou_for(targetId, fromId){
   const fromChildren=P.filter(x=>(x.parents||[]).includes(from.id));
   for(const child of fromChildren){
     if(t.spouseOf===child.id||child.spouseOf===targetId){
-      return genderedRel('Spouse',t.gender)+'-in-law'; // e.g. "Son-in-law" or "Daughter-in-law"
+      // Use CHILD gender (not Spouse) → "Son-in-law"/"Daughter-in-law" not "Husband-in-law"/"Wife-in-law"
+      return genderedRel('Child',t.gender)+'-in-law';
     }
   }
 
@@ -1250,12 +1254,78 @@ function recalcAllRelationships(){
       }
     }
   });
+  // Clean up any false cross-family connections (co-grandparent/in-law artifacts)
+  cleanFalseConnections();
   rebuild(); render(); scheduleSave();
   // Flash feedback
   const btn=event.target;
   const orig=btn.textContent;
   btn.textContent='✓ Done!'; btn.style.background='rgba(80,180,80,.15)'; btn.style.borderColor='rgba(80,180,80,.4)';
   setTimeout(()=>{ btn.textContent=orig; btn.style.background=''; btn.style.borderColor=''; },2000);
+}
+
+// Remove connections that have no valid kinship path (created by earlier inference bugs)
+function cleanFalseConnections(){
+  P.forEach(p=>{
+    if(!p.customLinks) return;
+    Object.keys(p.customLinks).forEach(tid=>{
+      const other=P.find(x=>x.id===tid); if(!other) return;
+      const v=p.customLinks[tid];
+      const label=typeof v==='string'?v:v.label;
+      // Only examine non-blood labeled connections
+      const lt=typeof v==='string'?'labeled':v.lineType;
+      if(lt!=='labeled') return;
+      // If the label contains '-in-law', verify there's an actual structural in-law path
+      if(label&&label.includes('-in-law')){
+        const hasPath=hasInLawPath(p, other);
+        if(!hasPath){
+          delete p.customLinks[tid];
+          if(other.customLinks) delete other.customLinks[p.id];
+        }
+      }
+    });
+  });
+}
+
+// Check if there's a real in-law structural path between two nodes
+function hasInLawPath(nodeA, nodeB){
+  // In-law = connected through a marriage (spouseOf)
+  // nodeA's spouse's relatives = nodeA's in-laws
+  const spouseA=nodeA.spouseOf?P.find(p=>p.id===nodeA.spouseOf):P.find(p=>p.spouseOf===nodeA.id);
+  if(spouseA){
+    // nodeB is spouse's parent or ancestor → Father/Mother-in-law
+    if((spouseA.parents||[]).includes(nodeB.id)) return true;
+    // nodeB is spouse's sibling → Sibling-in-law
+    const spP=new Set(spouseA.parents||[]);
+    if(spP.size&&(nodeB.parents||[]).some(pp=>spP.has(pp))) return true;
+    // nodeB is spouse's child (not shared) → Step-child type
+    if((nodeB.parents||[]).includes(spouseA.id)&&!(nodeB.parents||[]).includes(nodeA.id)) return true;
+  }
+  // nodeB's spouse's relatives = nodeB's in-laws
+  const spouseB=nodeB.spouseOf?P.find(p=>p.id===nodeB.spouseOf):P.find(p=>p.spouseOf===nodeB.id);
+  if(spouseB){
+    if((spouseB.parents||[]).includes(nodeA.id)) return true;
+    const spP=new Set(spouseB.parents||[]);
+    if(spP.size&&(nodeA.parents||[]).some(pp=>spP.has(pp))) return true;
+    if((nodeA.parents||[]).includes(spouseB.id)&&!(nodeA.parents||[]).includes(nodeB.id)) return true;
+  }
+  // Son/daughter-in-law: nodeA's child married nodeB or vice versa
+  const childrenA=P.filter(x=>(x.parents||[]).includes(nodeA.id));
+  for(const c of childrenA){
+    if(c.spouseOf===nodeB.id||nodeB.spouseOf===c.id) return true;
+  }
+  const childrenB=P.filter(x=>(x.parents||[]).includes(nodeB.id));
+  for(const c of childrenB){
+    if(c.spouseOf===nodeA.id||nodeA.spouseOf===c.id) return true;
+  }
+  // Grandson/daughter-in-law: nodeA's grandchild married nodeB
+  for(const c of childrenA){
+    const gcs=P.filter(x=>(x.parents||[]).includes(c.id));
+    for(const gc of gcs){
+      if(gc.spouseOf===nodeB.id||nodeB.spouseOf===gc.id) return true;
+    }
+  }
+  return false;
 }
 
 function toggleAutoConn(){
