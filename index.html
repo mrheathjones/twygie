@@ -45,11 +45,27 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-famil
 @keyframes pb{0%,100%{opacity:.25}50%{opacity:.52}}
 @keyframes py{0%,100%{opacity:.50}50%{opacity:1.0}}
 @keyframes pt{0%,100%{opacity:.32}50%{opacity:.62}}
+/* Young: fast sparkle pulse with slight scale bounce */
+@keyframes pyoung{
+  0%{opacity:.22;transform:scale(.88)}
+  30%{opacity:.9;transform:scale(1.18)}
+  60%{opacity:.35;transform:scale(.95)}
+  80%{opacity:.75;transform:scale(1.1)}
+  100%{opacity:.22;transform:scale(.88)}
+}
+/* Extra outer ring for young nodes */
+@keyframes pyoung-outer{
+  0%{opacity:.08;transform:scale(1)}
+  40%{opacity:.28;transform:scale(1.4)}
+  100%{opacity:.08;transform:scale(1)}
+}
 .gp{transform-origin:center}
 .gp.amber{animation:pa 3.4s ease-in-out infinite}
 .gp.blue{animation:pb 4.3s ease-in-out infinite}
 .gp.you{animation:py 2.5s ease-in-out infinite}
 .gp.teal{animation:pt 3.8s ease-in-out infinite}
+.gp.young-spark{animation:pyoung 1.8s ease-in-out infinite;transform-origin:center}
+.gp.young-outer{animation:pyoung-outer 1.8s ease-in-out infinite;transform-origin:center}
 /* Hover: freeze animation + brighten */
 .nd:hover .gp{animation:none!important;opacity:.9;filter:brightness(1.5)}
 .nd:hover .core{filter:brightness(1.4)}
@@ -1073,8 +1089,21 @@ function col(p){
 }
 function gclass(p){ const cat=relCategory(p); const map={you:'you',deceased:'blue',young:'teal'}; return map[cat]||'amber'; }
 function gfilt(p){ return 'gf-a'; } // Single filter — color driven by fill (nodeColors)
+function connCount(p){
+  // Count all connections: parents, children, spouse, siblings, customLinks
+  let n=(p.parents||[]).length;
+  n+=P.filter(x=>(x.parents||[]).includes(p.id)).length;
+  if(p.spouseOf||(P.find(x=>x.spouseOf===p.id))) n+=1;
+  n+=Object.keys(p.customLinks||{}).length;
+  return n;
+}
 function nr(p){ return p.isYou?13:9; }
-function gr(p){ return p.isYou?40:26; }
+function gr(p){
+  if(p.isYou) return 40;
+  // Scale glow radius by connection count: more connections = bigger, brighter glow
+  const cc=connCount(p);
+  return Math.min(48, 22 + cc*4); // base 22, +4 per connection, cap 48
+}
 function initials(p){ const n=fullName(p); return n.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase(); }
 
 function orb(a,b){
@@ -1394,20 +1423,38 @@ function drawNodes(){
       G.appendChild(outerGlow);
     }
 
-    // Pulsing halo
+    // Connection count → pulse intensity
+    const cc=connCount(p);
+    const isYoung=relCategory(p)==='young';
+    // Scale opacity with connections (more = brighter glow)
+    const baseOp=Math.min(0.45, 0.18 + cc*0.04);
+
+    if(isYoung){
+      // Young nodes: outer shimmer ring
+      const outerRing=se('circle');
+      outerRing.setAttribute('r',String(GR+14));
+      outerRing.setAttribute('fill',c);
+      outerRing.setAttribute('fill-opacity','0.1');
+      outerRing.setAttribute('filter',`url(#${gfilt(p)})`);
+      outerRing.setAttribute('class','gp young-outer');
+      outerRing.style.animationDelay=`-${(parseFloat(delay)*0.7).toFixed(2)}s`;
+      G.appendChild(outerRing);
+    }
+
+    // Pulsing halo — young uses faster sparkle class, others use standard
     const halo=se('circle');
     halo.setAttribute('r',String(GR));
     halo.setAttribute('fill',c);
-    halo.setAttribute('fill-opacity','.22');
+    halo.setAttribute('fill-opacity',String(baseOp.toFixed(2)));
     halo.setAttribute('filter',`url(#${gfilt(p)})`);
-    halo.setAttribute('class',`gp hi ${gclass(p)}`);
+    halo.setAttribute('class',`gp hi ${isYoung?'young-spark':gclass(p)}`);
     halo.style.animationDelay=`-${delay}s`;
 
-    // Soft inner ring
+    // Soft inner ring — brighter for highly-connected nodes
     const ring=se('circle');
     ring.setAttribute('r',String(R+4));
     ring.setAttribute('fill',c);
-    ring.setAttribute('fill-opacity','.28');
+    ring.setAttribute('fill-opacity',String(Math.min(0.5, 0.22+cc*0.04).toFixed(2)));
 
     // Core
     const core=se('circle');
