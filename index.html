@@ -537,6 +537,17 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-famil
       <div id="custom-line-list"></div>
     </div>
 
+    <div class="sp-section">
+      <div class="sp-section-title">Young age threshold</div>
+      <div style="font-size:.82rem;color:var(--muted);margin-bottom:10px;line-height:1.5">
+        Members this age or younger are shown as "young" with the young color.
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <input class="ei" id="sp-young-age" type="number" min="0" max="30" style="width:80px;padding:7px 10px;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:Outfit,sans-serif;font-size:.88rem;outline:none" placeholder="17"/>
+        <span style="font-size:.84rem;color:var(--muted)">years old and under</span>
+      </div>
+    </div>
+
     <button class="sp-save" onclick="saveSettings()">Save preferences</button>
   </div>
 </div>
@@ -875,18 +886,20 @@ async function loadSettings(){
       if(d.defaultView){
         settingsMode=d.defaultView;
         treeMode=settingsMode;
-        document.getElementById('mode-btn').textContent=treeMode==='simple'?'All Twygs':'Tree view';
+        // setTreeMode called after DOM ready in render cycle
       }
       if(d.lineColors) lineColors={...DEFAULT_LINE_COLORS,...d.lineColors};
       if(d.nodeColors) nodeColors={...DEFAULT_NODE_COLORS,...d.nodeColors};
       if(d.customLineTypes) customLineTypes=d.customLineTypes;
+      if(d.youngAge!=null) youngAge=parseInt(d.youngAge)||17;
     }
   }catch(e){}
 }
 
 async function saveSettings(){
   try{
-    await settingsDoc().set({ defaultView:settingsMode, lineColors, nodeColors, customLineTypes, updatedAt:firebase.firestore.FieldValue.serverTimestamp() });
+    youngAge=parseInt(document.getElementById('sp-young-age')?.value)||17;
+    await settingsDoc().set({ defaultView:settingsMode, lineColors, nodeColors, customLineTypes, youngAge, updatedAt:firebase.firestore.FieldValue.serverTimestamp() });
     treeMode=settingsMode;
     setTreeMode(settingsMode);
     render();
@@ -929,6 +942,8 @@ function openSettings(){
   syncNodeColorPickers();
   renderCustomLineList();
   syncCustomConnOptions();
+  const yaInput=document.getElementById('sp-young-age');
+  if(yaInput) yaInput.value=youngAge;
   document.getElementById('settings-panel').classList.add('open');
   document.getElementById('scrim').classList.add('on');
 }
@@ -948,7 +963,7 @@ async function loadTree(){
     else { P=makeDefaultTree(currentUser); await saveTree(false); }
   }catch(e){ P=makeDefaultTree(currentUser||{displayName:''}); }
   await loadSettings();
-  rebuild(); render(); setTimeout(()=>{setTreeMode(treeMode); resetView();},90);
+  rebuild(); render(); setTimeout(()=>{setTreeMode(treeMode||'simple'); resetView();},90);
 }
 async function saveTree(ind=true){
   if(!currentUser) return;
@@ -974,6 +989,7 @@ function rebuild(newIds=[]){ byId={}; P.forEach(p=>{ if(!p.dob) p.dob={}; if(!p.
 function g(id){ return byId[id]; }
 let nxt=Date.now();
 let treeMode='complex'; // 'simple' | 'complex'
+let youngAge=17; // 'young' if age <= this
 function setTreeMode(mode){
   treeMode=mode;
   const tBtn=document.getElementById('btn-tree');
@@ -1056,7 +1072,7 @@ function col(p){
   return nodeColors[cat]||nodeColors.default||'#f0b845';
 }
 function gclass(p){ const cat=relCategory(p); const map={you:'you',deceased:'blue',young:'teal'}; return map[cat]||'amber'; }
-function gfilt(p){ if(p.isYou) return 'gf-y'; if(p.death) return 'gf-b'; if((p.dob&&p.dob.year>=2000)||(p.birth>=2000)) return 'gf-t'; return 'gf-a'; }
+function gfilt(p){ return 'gf-a'; } // Single filter — color driven by fill (nodeColors)
 function nr(p){ return p.isYou?13:9; }
 function gr(p){ return p.isYou?40:26; }
 function initials(p){ const n=fullName(p); return n.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase(); }
@@ -1183,7 +1199,8 @@ function relCategory(p){
   if(p.isYou) return 'you';
   if(p.death||(p.dod&&p.dod.year)) return 'deceased';
   const birthYear=parseInt(p.dob&&p.dob.year)||p.birth||0;
-  if(birthYear>=2000) return 'young';
+  const currentYear=new Date().getFullYear();
+  if(birthYear>0 && (currentYear-birthYear)<=youngAge) return 'young';
   const you=byId&&Object.values(byId).find(x=>x.isYou);
   if(!you) return 'default';
   if((p.parents||[]).includes(you.id)) return 'child';
