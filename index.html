@@ -828,10 +828,6 @@ function inferRelToYou(anchorRelToYou, newRelToAnchor, gender) {
   const a=anchorRelToYou.toLowerCase();
   const r=newRelToAnchor.toLowerCase();
 
-  // Never auto-infer through step-relationships — don't assume a step-parent's
-  // relatives are blood relatives (e.g. stepfather's mother ≠ grandmother)
-  if(a.startsWith('step')||r.startsWith('step')) return null;
-
   const isSpouse   =s=>['wife','husband','partner','spouse'].includes(s);
   const isParent   =s=>['father','mother','parent','stepfather','stepmother'].includes(s);
   const isChild    =s=>['son','daughter','child','stepson','stepdaughter'].includes(s);
@@ -849,8 +845,8 @@ function inferRelToYou(anchorRelToYou, newRelToAnchor, gender) {
     if(isParent(r))    return g('Father-in-law','Mother-in-law','Parent-in-law');
     if(isSibling(r))   return g('Brother-in-law','Sister-in-law','Sibling-in-law');
     if(isGrandpar(r))  return g('Grandfather-in-law','Grandmother-in-law','Grandparent-in-law');
-    if(isChild(r))     return g('Stepson','Stepdaughter','Stepchild');
-    if(isGrandchild(r))return g('Step-grandson','Step-granddaughter','Step-grandchild');
+    if(isChild(r))     return g('Son','Daughter','Child'); // spouse's child = your child
+    if(isGrandchild(r))return g('Grandson','Granddaughter','Grandchild'); // spouse's grandchild = your grandchild
     if(isUncleAunt(r)) return g('Uncle-in-law','Aunt-in-law','Relative-in-law');
   }
   // ── Child's relatives ──────────────────────────────────────────────────────
@@ -942,8 +938,6 @@ function autoAssignToYou(newNodeId, anchorId, relToAnchor){
   const anchor=P.find(p=>p.id===anchorId)||byId[anchorId]; if(!anchor) return;
   if(newNodeId===you.id||anchorId===you.id) return; // already directly connected to you
 
-  // Skip auto-assign if the relationship being added is a step-relation
-  if(relToAnchor&&relToAnchor.toLowerCase().startsWith('step')) return;
   // Get how anchor relates to isYou — rebuild byId snapshot first so getRelToYou works
   byId[newNodeId]=newNode; byId[anchorId]=anchor; // ensure byId is current
   const anchorRelToYou=getRelToYou(anchorId);
