@@ -285,7 +285,10 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-famil
     <strong id="mcnum">0</strong>&nbsp;members
   </div>
   <div class="hbtns">
-    <button class="hbtn" id="mode-btn" onclick="toggleTreeMode()" title="Toggle Simple/Complex view">All Twygs</button>
+    <div style="display:flex;gap:0;border-radius:100px;overflow:hidden;border:1px solid var(--border);background:rgba(255,255,255,.04)">
+    <button id="btn-tree" onclick="setTreeMode('simple')" style="padding:5px 14px;border:none;font-family:'Outfit',sans-serif;font-size:.76rem;cursor:pointer;transition:all .2s;background:var(--gold);color:#04070c;font-weight:600">Tree view</button>
+    <button id="btn-all" onclick="setTreeMode('complex')" style="padding:5px 14px;border:none;font-family:'Outfit',sans-serif;font-size:.76rem;cursor:pointer;transition:all .2s;background:transparent;color:var(--muted)">All Twygs</button>
+  </div>
     <div id="save-ind">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg>
       Saved
@@ -875,7 +878,7 @@ async function saveSettings(){
   try{
     await settingsDoc().set({ defaultView:settingsMode, lineColors, nodeColors, customLineTypes, updatedAt:firebase.firestore.FieldValue.serverTimestamp() });
     treeMode=settingsMode;
-    document.getElementById('mode-btn').textContent=treeMode==='simple'?'All Twygs':'Tree view';
+    setTreeMode(settingsMode);
     render();
     closeSettings();
     flashSaved();
@@ -935,7 +938,7 @@ async function loadTree(){
     else { P=makeDefaultTree(currentUser); await saveTree(false); }
   }catch(e){ P=makeDefaultTree(currentUser||{displayName:''}); }
   await loadSettings();
-  rebuild(); render(); setTimeout(resetView,90);
+  rebuild(); render(); setTimeout(()=>{setTreeMode(treeMode); resetView();},90);
 }
 async function saveTree(ind=true){
   if(!currentUser) return;
@@ -961,11 +964,21 @@ function rebuild(newIds=[]){ byId={}; P.forEach(p=>{ if(!p.dob) p.dob={}; if(!p.
 function g(id){ return byId[id]; }
 let nxt=Date.now();
 let treeMode='complex'; // 'simple' | 'complex'
-function toggleTreeMode(){
-  treeMode=treeMode==='simple'?'complex':'simple';
-  document.getElementById('mode-btn').textContent=treeMode==='simple'?'All Twygs':'Tree view';
+function setTreeMode(mode){
+  treeMode=mode;
+  const tBtn=document.getElementById('btn-tree');
+  const aBtn=document.getElementById('btn-all');
+  if(tBtn&&aBtn){
+    tBtn.style.background=mode==='simple'?'var(--gold)':'transparent';
+    tBtn.style.color=mode==='simple'?'#04070c':'var(--muted)';
+    tBtn.style.fontWeight=mode==='simple'?'600':'400';
+    aBtn.style.background=mode==='complex'?'var(--gold)':'transparent';
+    aBtn.style.color=mode==='complex'?'#04070c':'var(--muted)';
+    aBtn.style.fontWeight=mode==='complex'?'600':'400';
+  }
   render();
 }
+function toggleTreeMode(){ setTreeMode(treeMode==='simple'?'complex':'simple'); }
 function updateCount(){ document.getElementById('mcnum').textContent=P.length; }
 function fullName(p){ return p.name||[(p.firstName||''),(p.lastName||'')].filter(Boolean).join(' ')||'Unknown'; }
 
@@ -1669,12 +1682,44 @@ function closeCard(){
 }
 
 function removePerson(id){
-  if(!confirm('Remove this person from the tree?')) return;
-  const rm=new Set();
-  function collect(pid){ rm.add(pid); P.filter(x=>(x.parents||[]).includes(pid)).forEach(x=>collect(x.id)); }
-  collect(id);
+  const p=byId[id]; if(!p) return;
+  const children=P.filter(x=>(x.parents||[]).includes(id));
+  
+  let cascade=false;
+  if(children.length){
+    const choice=window.confirm(
+      `Remove ${fullName(p)} from the tree?\n\nOK = Remove only ${fullName(p).split(' ')[0]} (their connections will be unlinked)\nCancel = Keep them`
+    );
+    if(!choice) return;
+    // Ask about descendants separately
+    const descendants=[];
+    function countDesc(pid){ P.filter(x=>(x.parents||[]).includes(pid)).forEach(x=>{descendants.push(x.id);countDesc(x.id);}); }
+    countDesc(id);
+    if(descendants.length){
+      cascade=window.confirm(
+        `Also remove ${descendants.length} connected Twyg${descendants.length>1?'s':''} below ${fullName(p).split(' ')[0]}?\n\nOK = Remove all\nCancel = Keep them (they'll become unlinked)`
+      );
+    }
+  } else {
+    if(!confirm(`Remove ${fullName(p)} from the tree?`)) return;
+  }
+
+  const rm=new Set([id]);
+  if(cascade){
+    function collect(pid){ P.filter(x=>(x.parents||[]).includes(pid)).forEach(x=>{rm.add(x.id);collect(x.id);}); }
+    collect(id);
+  } else {
+    // Just unlink children from this parent
+    P.forEach(x=>{
+      if((x.parents||[]).includes(id)) x.parents=x.parents.filter(pid=>pid!==id);
+    });
+  }
   P=P.filter(p=>!rm.has(p.id));
-  P.forEach(p=>{ if(p.spouseOf&&rm.has(p.spouseOf)) delete p.spouseOf; });
+  // Clean up spouse and customLink references
+  P.forEach(p=>{
+    if(p.spouseOf&&rm.has(p.spouseOf)) delete p.spouseOf;
+    if(p.customLinks) Object.keys(p.customLinks).forEach(k=>{ if(rm.has(k)) delete p.customLinks[k]; });
+  });
   rebuild([]); closeCard(); render(); scheduleSave();
 }
 
@@ -1788,13 +1833,33 @@ function saveConnection(){
   const lkey=label.toLowerCase();
   if(!other.gender){ if(mGender[lkey]) other.gender='male'; else if(fGender[lkey]) other.gender='female'; }
 
+  // Labels that are DIRECT parents (add to parents[])
+  const directParentLabels=['Father','Mother','Stepfather','Stepmother','Parent'];
+  // Labels that are DIRECT children (add to parents[])
+  const directChildLabels=['Son','Daughter','Stepson','Stepdaughter','Child'];
+  // Grandparent/grandchild and others → labeled customLink only
+
   if(type==='parent'){
-    if(!(target.parents||[]).includes(other.id)) target.parents=[...(target.parents||[]),other.id];
-    if(!other.relLabel) other.relLabel='Parent';
+    if(directParentLabels.includes(label)){
+      if(!(target.parents||[]).includes(other.id)) target.parents=[...(target.parents||[]),other.id];
+    } else {
+      // Grandparent, uncle, etc. → store as labeled link, not a direct parent
+      if(!target.customLinks) target.customLinks={};
+      if(!other.customLinks) other.customLinks={};
+      target.customLinks[other.id]={label,lineType:'labeled'};
+      other.customLinks[target.id]={label,lineType:'labeled'};
+    }
     other.relLabel=label;
   } else if(type==='child'){
-    if(!(other.parents||[]).includes(target.id)) other.parents=[...(other.parents||[]),target.id];
-    if(!other.relLabel) other.relLabel='Child';
+    if(directChildLabels.includes(label)){
+      if(!(other.parents||[]).includes(target.id)) other.parents=[...(other.parents||[]),target.id];
+    } else {
+      // Grandchild, nephew, etc. → labeled link only
+      if(!target.customLinks) target.customLinks={};
+      if(!other.customLinks) other.customLinks={};
+      target.customLinks[other.id]={label,lineType:'labeled'};
+      other.customLinks[target.id]={label,lineType:'labeled'};
+    }
     other.relLabel=label;
   } else if(type==='sibling'){
     // Do NOT copy parents — avoids false grandparent connections
