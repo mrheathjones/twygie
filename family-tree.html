@@ -1211,6 +1211,8 @@ function brRgba(key, o){
   return `rgba(${r},${g},${b},${o})`;
 }
 
+const BLOOD_LABELS=new Set(['Father','Mother','Son','Daughter','Brother','Sister','Grandfather','Grandmother','Grandson','Granddaughter','Half-brother','Half-sister','Uncle','Aunt','Nephew','Niece','Cousin','Stepfather','Stepmother','Stepson','Stepdaughter','Parent','Child','Sibling','Grandparent','Grandchild']);
+
 function drawBranches(){
   const bG=document.getElementById('bG');
   const simple=treeMode==='simple';
@@ -1255,21 +1257,25 @@ function drawBranches(){
     bG.appendChild(path);
   });
 
-  // ── Sibling customLinks (BLOOD: solid, bold) — shown in BOTH modes ──
+  // ── Sibling + blood customLinks (BLOOD: solid, bold) — shown in BOTH modes ──
   const sibDrawn=new Set();
   P.forEach(p=>{
     Object.entries(p.customLinks||{}).forEach(([tid,v])=>{
-      const lineType=typeof v==='string'?'labeled':v.lineType||'labeled';
-      if(lineType!=='sibling') return;
+      const lineType=typeof v==='string'?
+        (BLOOD_LABELS.has(v)?'blood':'labeled') :
+        v.lineType||'labeled';
+      if(lineType!=='sibling'&&lineType!=='blood') return;
       const key=[p.id,tid].sort().join('|');
       if(sibDrawn.has(key)) return;
       sibDrawn.add(key);
       const other=byId[tid]; if(!other) return;
-      const mx=(p.x+other.x)/2, my=(p.y+other.y)/2-20;
+      const mx=(p.x+other.x)/2, my=(p.y+other.y)/2-22;
+      const isSib=lineType==='sibling';
       const path=se('path');
       path.setAttribute('d',`M ${p.x} ${p.y} Q ${mx} ${my} ${other.x} ${other.y}`);
-      path.setAttribute('stroke', brRgba('sibling', .72));
-      path.setAttribute('stroke-width','3.5');
+      // Use sibling color for siblings, parentChild color for other blood relations
+      path.setAttribute('stroke', isSib ? brRgba('sibling',.72) : brRgba('parentChild',.60));
+      path.setAttribute('stroke-width',isSib?'3.5':'3');
       path.setAttribute('fill','none');
       path.setAttribute('stroke-linecap','round');
       path.setAttribute('class','br');
@@ -1304,12 +1310,15 @@ function drawBranches(){
     });
   });
 
-  // ── Extended/labeled customLinks (NON-BLOOD: dashed, All Twygs only) ──
+  // ── Non-blood labeled customLinks (dashed, All Twygs only) ──
   const extDrawn=new Set();
   P.forEach(p=>{
     Object.entries(p.customLinks||{}).forEach(([tid,v])=>{
-      const lineType=typeof v==='string'?'labeled':v.lineType||'labeled';
-      if(lineType==='sibling') return;
+      const lineType=typeof v==='string'?
+        (BLOOD_LABELS.has(v)?'blood':'labeled') :
+        v.lineType||'labeled';
+      // Skip blood types (drawn above) and siblings
+      if(lineType==='sibling'||lineType==='blood') return;
       const key=[p.id,tid].sort().join('|');
       if(extDrawn.has(key)) return;
       extDrawn.add(key);
@@ -1843,22 +1852,24 @@ function saveConnection(){
     if(directParentLabels.includes(label)){
       if(!(target.parents||[]).includes(other.id)) target.parents=[...(target.parents||[]),other.id];
     } else {
-      // Grandparent, uncle, etc. → store as labeled link, not a direct parent
+      // Grandparent, uncle, etc. → store as customLink with correct line type
       if(!target.customLinks) target.customLinks={};
       if(!other.customLinks) other.customLinks={};
-      target.customLinks[other.id]={label,lineType:'labeled'};
-      other.customLinks[target.id]={label,lineType:'labeled'};
+      const ltype=BLOOD_LABELS.has(label)?'blood':'labeled';
+      target.customLinks[other.id]={label,lineType:ltype};
+      other.customLinks[target.id]={label,lineType:ltype};
     }
     other.relLabel=label;
   } else if(type==='child'){
     if(directChildLabels.includes(label)){
       if(!(other.parents||[]).includes(target.id)) other.parents=[...(other.parents||[]),target.id];
     } else {
-      // Grandchild, nephew, etc. → labeled link only
+      // Grandchild, nephew, etc. → customLink with correct line type
       if(!target.customLinks) target.customLinks={};
       if(!other.customLinks) other.customLinks={};
-      target.customLinks[other.id]={label,lineType:'labeled'};
-      other.customLinks[target.id]={label,lineType:'labeled'};
+      const ltype2=BLOOD_LABELS.has(label)?'blood':'labeled';
+      target.customLinks[other.id]={label,lineType:ltype2};
+      other.customLinks[target.id]={label,lineType:ltype2};
     }
     other.relLabel=label;
   } else if(type==='sibling'){
@@ -1876,11 +1887,11 @@ function saveConnection(){
     if(!other.relLabel) other.relLabel='Spouse';
     other.relLabel=label;
   } else if(type==='labeled'){
-    // Store as a direct key on each node — simpler than arrays, survives Firestore round-trips
     if(!target.customLinks) target.customLinks={};
     if(!other.customLinks) other.customLinks={};
-    target.customLinks[other.id]={label,lineType:'labeled'};
-    other.customLinks[target.id]={label,lineType:'labeled'};
+    const ltype3=BLOOD_LABELS.has(label)?'blood':'labeled';
+    target.customLinks[other.id]={label,lineType:ltype3};
+    other.customLinks[target.id]={label,lineType:ltype3};
     other.relLabel=label;
   }
 
