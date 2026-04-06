@@ -869,14 +869,16 @@ function inferRelToYou(anchorRelToYou, newRelToAnchor, gender) {
     if(isSpouse(r))     return g('Great-grandson-in-law','Great-granddaughter-in-law','Great-grandchild-in-law');
     if(isChild(r))      return g('Great-great-grandson','Great-great-granddaughter','Great-great-grandchild');
   }
-  // ── In-law relatives (son/daughter-in-law chain is key for multi-gen) ──────
+  // ── In-law relatives (both directions — key for multi-gen propagation) ──────
   if(a.includes('-in-law')){
-    // Son/Daughter-in-law's child = your Grandchild
+    // Son/Daughter-in-law's child = your Grandchild (they married your child)
     if((a==='son-in-law'||a==='daughter-in-law')&&isChild(r))      return g('Grandson','Granddaughter','Grandchild');
     if((a==='son-in-law'||a==='daughter-in-law')&&isGrandchild(r)) return g('Great-grandson','Great-granddaughter','Great-grandchild');
-    if((a==='son-in-law'||a==='daughter-in-law')&&isSpouse(r))     return null; // their spouse is not your relative
-    // Grandson/Granddaughter-in-law's child = your Great-grandchild
     if((a==='grandson-in-law'||a==='granddaughter-in-law')&&isChild(r)) return g('Great-grandson','Great-granddaughter','Great-grandchild');
+    // Father/Mother-in-law + your child = their Grandchild (you married their child)
+    if((a==='father-in-law'||a==='mother-in-law')&&isChild(r))      return g('Grandson','Granddaughter','Grandchild');
+    if((a==='father-in-law'||a==='mother-in-law')&&isGrandchild(r)) return g('Great-grandson','Great-granddaughter','Great-grandchild');
+    if((a==='grandfather-in-law'||a==='grandmother-in-law')&&isChild(r)) return g('Great-grandson','Great-granddaughter','Great-grandchild');
     // Brother/Sister-in-law's child = Nephew/Niece
     if((a==='brother-in-law'||a==='sister-in-law')&&isChild(r))   return g('Nephew','Niece','Niece/Nephew');
     if(isSibling(r))  return g('Brother-in-law','Sister-in-law','Sibling-in-law');
@@ -947,17 +949,38 @@ const DIRECT_PARENT_SET=new Set(['Father','Mother','Stepfather','Stepmother','Pa
 const DIRECT_CHILD_SET =new Set(['Son','Daughter','Stepson','Stepdaughter','Child']);
 const SPOUSE_SET       =new Set(['Husband','Wife','Partner']);
 
+// Inverse relationship labels — so both nodes store from their own perspective
+const INVERSE_REL={
+  'Father':'Son','Mother':'Daughter','Son':'Father','Daughter':'Mother',
+  'Grandfather':'Grandson','Grandmother':'Granddaughter',
+  'Grandson':'Grandfather','Granddaughter':'Grandmother',
+  'Great-grandfather':'Great-grandson','Great-grandmother':'Great-granddaughter',
+  'Great-grandson':'Great-grandfather','Great-granddaughter':'Great-grandmother',
+  'Great-great-grandfather':'Great-great-grandson','Great-great-grandmother':'Great-great-granddaughter',
+  'Great-great-grandson':'Great-great-grandfather','Great-great-granddaughter':'Great-great-grandmother',
+  'Uncle':'Nephew','Aunt':'Niece','Nephew':'Uncle','Niece':'Aunt',
+  'Grand-nephew':'Grand-uncle','Grand-niece':'Grand-aunt',
+  'Great-uncle':'Grand-nephew','Great-aunt':'Grand-niece',
+  'Stepfather':'Stepson','Stepmother':'Stepdaughter',
+  'Stepson':'Stepfather','Stepdaughter':'Stepmother',
+  'Father-in-law':'Son-in-law','Mother-in-law':'Daughter-in-law',
+  'Son-in-law':'Father-in-law','Daughter-in-law':'Mother-in-law',
+  'Brother-in-law':'Brother-in-law','Sister-in-law':'Sister-in-law',
+  'Grandfather-in-law':'Grandson-in-law','Grandmother-in-law':'Granddaughter-in-law',
+  'Grandson-in-law':'Grandfather-in-law','Granddaughter-in-law':'Grandmother-in-law',
+  'Godfather':'Godchild','Godmother':'Godchild','Godchild':'Godparent',
+};
+function inverseLabel(lbl){ return INVERSE_REL[lbl]||lbl; }
+
 function applyInferredRel(fromNode, toNode, inferred){
-  // If inferred is a direct parent-child, use parents[] so green line draws
+  // Direct parent-child → parents[] (green line)
   if(DIRECT_CHILD_SET.has(inferred)){
-    // fromNode is the parent, toNode is the child
     if(!(toNode.parents||[]).includes(fromNode.id))
       toNode.parents=[...(toNode.parents||[]),fromNode.id];
     toNode.relLabel=inferred;
     return;
   }
   if(DIRECT_PARENT_SET.has(inferred)){
-    // fromNode is the child, toNode is the parent
     if(!(fromNode.parents||[]).includes(toNode.id))
       fromNode.parents=[...(fromNode.parents||[]),toNode.id];
     toNode.relLabel=inferred;
@@ -968,14 +991,14 @@ function applyInferredRel(fromNode, toNode, inferred){
     toNode.relLabel=inferred;
     return;
   }
-  // Default: store as customLink
   const isSib=['Brother','Sister','Half-brother','Half-sister'].includes(inferred);
   const ltype=isSib?'sibling':BLOOD_LABELS.has(inferred)?'blood':'labeled';
   if(!fromNode.customLinks) fromNode.customLinks={};
   if(!toNode.customLinks) toNode.customLinks={};
+  // Store label from each node's OWN perspective using inverse lookup
   fromNode.customLinks[toNode.id]={label:inferred,lineType:ltype};
-  toNode.customLinks[fromNode.id]={label:inferred,lineType:ltype};
-  toNode.relLabel=inferred;
+  toNode.customLinks[fromNode.id]={label:inverseLabel(inferred),lineType:ltype};
+  toNode.relLabel=inverseLabel(inferred);
 }
 
 function autoAssignToYou(newNodeId, anchorId, relToAnchor){
