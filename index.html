@@ -345,10 +345,11 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-famil
   <div class="lr"><div class="ld" id="ln-extended" style="background:#e8c87a"></div>Extended</div>
   <div style="height:1px;background:var(--border);margin:8px 0"></div>
   <div style="font-size:.6rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:6px">Lines</div>
-  <div class="lr"><div id="leg-parentChild" style="width:18px;height:2px;background:#64b464;border-radius:1px"></div>Parent / Child</div>
+  <div class="lr"><div id="leg-parentChild" style="width:18px;height:3px;background:#64b464;border-radius:2px"></div>Parent / Child</div>
+  <div class="lr"><div id="leg-sibling" style="width:18px;height:3px;background:#dc8c3c;border-radius:2px"></div>Sibling</div>
+  <div class="lr"><div id="leg-blood-ext" style="width:18px;height:3px;background:#a064dc;border-radius:2px"></div>Extended blood</div>
   <div class="lr"><div id="leg-spouse" style="width:18px;height:0;border-top:2px dashed #648cdc"></div>Spouse</div>
-  <div class="lr"><div id="leg-sibling" style="width:18px;height:0;border-top:2px dashed #dc8c3c"></div>Sibling</div>
-  <div class="lr"><div id="leg-labeled" style="width:18px;height:0;border-top:2px dashed #a064dc"></div>Extended</div>
+  <div class="lr"><div id="leg-labeled" style="width:18px;height:0;border-top:2px dashed #a064dc"></div>Non-blood</div>
 </div>
 
 <!-- OVERLAY CARD -->
@@ -769,16 +770,25 @@ function syncNodeLegend(){
 }
 
 function syncLegend(){
-  const map={parentChild:'solid',spouse:'dashed',sibling:'dashed',labeled:'dashed'};
-  ['parentChild','spouse','sibling','labeled'].forEach(key=>{
+  ['parentChild','sibling'].forEach(key=>{
     const el=document.getElementById(`leg-${key}`);
     if(!el) return;
     const c=lineColors[key]||DEFAULT_LINE_COLORS[key];
-    if(key==='parentChild'){ el.style.background=c; el.style.borderTop='none'; }
-    else { el.style.background='transparent'; el.style.borderTop=`2px dashed ${c}`; }
+    el.style.background=c; el.style.height='3px'; el.style.borderTop='none'; el.style.borderRadius='2px';
   });
+  ['spouse'].forEach(key=>{
+    const el=document.getElementById(`leg-${key}`);
+    if(!el) return;
+    const c=lineColors[key]||DEFAULT_LINE_COLORS[key];
+    el.style.background='transparent'; el.style.height='0'; el.style.borderTop=`2px dashed ${c}`;
+  });
+  // Extended blood = labeled color but solid
+  const eb=document.getElementById('leg-blood-ext');
+  if(eb){ const c=lineColors.labeled||DEFAULT_LINE_COLORS.labeled; eb.style.background=c; eb.style.height='3px'; eb.style.borderTop='none'; eb.style.borderRadius='2px'; }
+  // Non-blood = labeled color dashed
+  const lb=document.getElementById('leg-labeled');
+  if(lb){ const c=lineColors.labeled||DEFAULT_LINE_COLORS.labeled; lb.style.background='transparent'; lb.style.height='0'; lb.style.borderTop=`2px dashed ${c}`; }
 }
-
 function syncColorPickers(){
   ['parentChild','spouse','sibling','labeled'].forEach(key=>{
     const input=document.getElementById(`color-${key}`);
@@ -1273,10 +1283,10 @@ function drawBranches(){
       const isSib=lineType==='sibling';
       const path=se('path');
       path.setAttribute('d',`M ${p.x} ${p.y} Q ${mx} ${my} ${other.x} ${other.y}`);
-      // Use sibling color for siblings, parentChild color for other blood relations
-      path.setAttribute('stroke', isSib ? brRgba('sibling',.72) : brRgba('parentChild',.60));
+      // Siblings: sibling color. Other blood (grandparent, aunt, etc): labeled/extended color but SOLID
+      path.setAttribute('stroke', isSib ? brRgba('sibling',.72) : brRgba('labeled',.72));
       path.setAttribute('stroke-width',isSib?'3.5':'3');
-      path.setAttribute('fill','none');
+      path.setAttribute('fill','none'); // NO dash — solid for all blood
       path.setAttribute('stroke-linecap','round');
       path.setAttribute('class','br');
       path.dataset.src=p.id; path.dataset.dst=tid;
