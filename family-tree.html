@@ -828,101 +828,113 @@ function inferRelToYou(anchorRelToYou, newRelToAnchor, gender) {
   const a=anchorRelToYou.toLowerCase();
   const r=newRelToAnchor.toLowerCase();
 
-  const isSpouse   =s=>['wife','husband','partner','spouse'].includes(s);
-  const isParent   =s=>['father','mother','parent','stepfather','stepmother'].includes(s);
-  const isChild    =s=>['son','daughter','child','stepson','stepdaughter'].includes(s);
-  const isSibling  =s=>['brother','sister','sibling','half-brother','half-sister'].includes(s);
-  const isGrandpar =s=>['grandfather','grandmother','grandparent'].includes(s);
-  const isGrandchild =s=>['grandson','granddaughter','grandchild'].includes(s);
-  const isGreatGrandpar=s=>s.startsWith('great-grand')&&(s.includes('father')||s.includes('mother')||s.includes('parent'));
-  const isGreatGrandchild=s=>s.startsWith('great-grand')&&(s.includes('son')||s.includes('daughter')||s.includes('child'));
-  const isCousin     =s=>s.includes('cousin');
-  const isUncleAunt=s=>['uncle','aunt'].includes(s);
-  const isNieceNeph=s=>['nephew','niece'].includes(s);
+  const isSpouse    =s=>['wife','husband','partner','spouse'].includes(s);
+  const isParent    =s=>['father','mother','parent','stepfather','stepmother'].includes(s);
+  const isChild     =s=>['son','daughter','child','stepson','stepdaughter'].includes(s);
+  const isSibling   =s=>['brother','sister','sibling','half-brother','half-sister'].includes(s);
+  const isGrandpar  =s=>['grandfather','grandmother','grandparent'].includes(s);
+  const isGrandchild=s=>['grandson','granddaughter','grandchild'].includes(s);
+  const isGreatGP   =s=>s.startsWith('great-grand')&&(s.includes('father')||s.includes('mother')||s.includes('parent'));
+  const isGreatGC   =s=>s.startsWith('great-grand')&&(s.includes('son')||s.includes('daughter')||s.includes('child'));
+  const isUncleAunt =s=>['uncle','aunt','great-uncle','great-aunt'].includes(s);
+  const isNieceNeph =s=>['nephew','niece','grand-nephew','grand-niece'].includes(s);
+  const isCousin    =s=>s.includes('cousin');
 
   // ── Spouse's relatives ─────────────────────────────────────────────────────
   if(isSpouse(a)){
-    if(isParent(r))    return g('Father-in-law','Mother-in-law','Parent-in-law');
-    if(isSibling(r))   return g('Brother-in-law','Sister-in-law','Sibling-in-law');
-    if(isGrandpar(r))  return g('Grandfather-in-law','Grandmother-in-law','Grandparent-in-law');
-    if(isChild(r))     return g('Son','Daughter','Child'); // spouse's child = your child
-    if(isGrandchild(r))return g('Grandson','Granddaughter','Grandchild'); // spouse's grandchild = your grandchild
-    if(isUncleAunt(r)) return g('Uncle-in-law','Aunt-in-law','Relative-in-law');
+    if(isParent(r))     return g('Father-in-law','Mother-in-law','Parent-in-law');
+    if(isSibling(r))    return g('Brother-in-law','Sister-in-law','Sibling-in-law');
+    if(isGrandpar(r))   return g('Grandfather-in-law','Grandmother-in-law','Grandparent-in-law');
+    if(isGreatGP(r))    return g('Great-grandfather-in-law','Great-grandmother-in-law','Great-grandparent-in-law');
+    if(isChild(r))      return g('Son','Daughter','Child');         // spouse's child = your child
+    if(isGrandchild(r)) return g('Grandson','Granddaughter','Grandchild');
+    if(isGreatGC(r))    return g('Great-grandson','Great-granddaughter','Great-grandchild');
+    if(isUncleAunt(r))  return g('Uncle-in-law','Aunt-in-law','Relative-in-law');
   }
   // ── Child's relatives ──────────────────────────────────────────────────────
   if(isChild(a)){
-    if(isSpouse(r))    return g('Son-in-law','Daughter-in-law','Child-in-law');
-    if(isChild(r))     return g('Grandson','Granddaughter','Grandchild');
-    if(isGrandchild(r))return g('Great-grandson','Great-granddaughter','Great-grandchild');
-    if(isSibling(r))   return null; // sibling of child = another child, already handled
+    if(isSpouse(r))     return g('Son-in-law','Daughter-in-law','Child-in-law');
+    if(isChild(r))      return g('Grandson','Granddaughter','Grandchild');
+    if(isGrandchild(r)) return g('Great-grandson','Great-granddaughter','Great-grandchild');
+    if(isGreatGC(r))    return g('Great-great-grandson','Great-great-granddaughter','Great-great-grandchild');
+  }
+  // ── Grandchild's relatives ─────────────────────────────────────────────────
+  if(isGrandchild(a)){
+    if(isSpouse(r))     return g('Grandson-in-law','Granddaughter-in-law','Grandchild-in-law');
+    if(isChild(r))      return g('Great-grandson','Great-granddaughter','Great-grandchild');
+    if(isGrandchild(r)) return g('Great-great-grandson','Great-great-granddaughter','Great-great-grandchild');
+  }
+  // ── Great-grandchild's relatives ──────────────────────────────────────────
+  if(isGreatGC(a)){
+    if(isSpouse(r))     return g('Great-grandson-in-law','Great-granddaughter-in-law','Great-grandchild-in-law');
+    if(isChild(r))      return g('Great-great-grandson','Great-great-granddaughter','Great-great-grandchild');
+  }
+  // ── In-law relatives (son/daughter-in-law chain is key for multi-gen) ──────
+  if(a.includes('-in-law')){
+    // Son/Daughter-in-law's child = your Grandchild
+    if((a==='son-in-law'||a==='daughter-in-law')&&isChild(r))      return g('Grandson','Granddaughter','Grandchild');
+    if((a==='son-in-law'||a==='daughter-in-law')&&isGrandchild(r)) return g('Great-grandson','Great-granddaughter','Great-grandchild');
+    if((a==='son-in-law'||a==='daughter-in-law')&&isSpouse(r))     return null; // their spouse is not your relative
+    // Grandson/Granddaughter-in-law's child = your Great-grandchild
+    if((a==='grandson-in-law'||a==='granddaughter-in-law')&&isChild(r)) return g('Great-grandson','Great-granddaughter','Great-grandchild');
+    // Brother/Sister-in-law's child = Nephew/Niece
+    if((a==='brother-in-law'||a==='sister-in-law')&&isChild(r))   return g('Nephew','Niece','Niece/Nephew');
+    if(isSibling(r))  return g('Brother-in-law','Sister-in-law','Sibling-in-law');
+    if(isParent(r))   return g('Grandfather-in-law','Grandmother-in-law','Grandparent-in-law');
   }
   // ── Parent's relatives ─────────────────────────────────────────────────────
   if(isParent(a)){
-    if(isSibling(r))   return g('Uncle','Aunt','Aunt/Uncle');
-    if(isParent(r))    return g('Grandfather','Grandmother','Grandparent');
-    if(isSpouse(r))    return g('Stepfather','Stepmother','Stepparent');
-    if(isGrandpar(r))  return g('Great-grandfather','Great-grandmother','Great-grandparent');
-    if(isNieceNeph(r)) return 'Cousin'; // parent's niece/nephew = your cousin
-  }
-  // ── Sibling's relatives ────────────────────────────────────────────────────
-  if(isSibling(a)){
-    if(isChild(r))     return g('Nephew','Niece','Niece/Nephew');
-    if(isSpouse(r))    return g('Brother-in-law','Sister-in-law','Sibling-in-law');
-    if(isGrandchild(r))return g('Grand-nephew','Grand-niece','Grand-niece/Nephew');
+    if(isSibling(r))    return g('Uncle','Aunt','Aunt/Uncle');
+    if(isParent(r))     return g('Grandfather','Grandmother','Grandparent');
+    if(isSpouse(r))     return g('Stepfather','Stepmother','Stepparent');
+    if(isGrandpar(r))   return g('Great-grandfather','Great-grandmother','Great-grandparent');
+    if(isNieceNeph(r))  return 'Cousin';
   }
   // ── Grandparent's relatives ────────────────────────────────────────────────
   if(isGrandpar(a)){
-    if(isSibling(r))   return g('Great-uncle','Great-aunt','Great-aunt/Uncle');
-    if(isParent(r))    return g('Great-grandfather','Great-grandmother','Great-grandparent');
-    if(isChild(r))     return g('Uncle','Aunt','Aunt/Uncle'); // grandparent's child (not your parent)
-    if(isSpouse(r))    return g('Grandfather-in-law','Grandmother-in-law','Grandparent-in-law');
+    if(isSibling(r))    return g('Great-uncle','Great-aunt','Great-aunt/Uncle');
+    if(isParent(r))     return g('Great-grandfather','Great-grandmother','Great-grandparent');
+    if(isChild(r))      return g('Uncle','Aunt','Aunt/Uncle');
+    if(isSpouse(r))     return g('Grandfather-in-law','Grandmother-in-law','Grandparent-in-law');
     if(isGrandchild(r)) return 'First Cousin';
   }
   // ── Great-grandparent's relatives ─────────────────────────────────────────
-  if(isGreatGrandpar(a)){
-    if(isSibling(r))   return g('Great-grand-uncle','Great-grand-aunt','Great-grand-aunt/Uncle');
-    if(isParent(r))    return g('Great-great-grandfather','Great-great-grandmother','Great-great-grandparent');
-    if(isChild(r))     return g('Great-uncle','Great-aunt','Great-aunt/Uncle');
-    if(isGrandchild(r)) return 'First Cousin Once Removed'; // approx
+  if(isGreatGP(a)){
+    if(isSibling(r))    return g('Great-grand-uncle','Great-grand-aunt','Great-grand-aunt/Uncle');
+    if(isParent(r))     return g('Great-great-grandfather','Great-great-grandmother','Great-great-grandparent');
+    if(isChild(r))      return g('Great-uncle','Great-aunt','Great-aunt/Uncle');
+    if(isGrandchild(r)) return 'First Cousin Once Removed';
   }
-  // ── Uncle/Aunt's relatives (expanded) ────────────────────────────────────
-  if(isUncleAunt(a)||a==='great-uncle'||a==='great-aunt'){
+  // ── Sibling's relatives ────────────────────────────────────────────────────
+  if(isSibling(a)){
+    if(isChild(r))      return g('Nephew','Niece','Niece/Nephew');
+    if(isSpouse(r))     return g('Brother-in-law','Sister-in-law','Sibling-in-law');
+    if(isGrandchild(r)) return g('Grand-nephew','Grand-niece','Grand-niece/Nephew');
+  }
+  // ── Uncle/Aunt's relatives ─────────────────────────────────────────────────
+  if(isUncleAunt(a)){
     const isGreat=a.startsWith('great');
-    if(isChild(r))     return isGreat?'First Cousin Once Removed':'First Cousin';
-    if(isGrandchild(r))return isGreat?'First Cousin Twice Removed':'First Cousin Once Removed';
-    if(isSpouse(r))    return m?'Uncle-by-marriage':f?'Aunt-by-marriage':'Relative-by-marriage';
-    if(isSibling(r))   return a.startsWith('great')?g('Great-grand-uncle','Great-grand-aunt','Great-grand-aunt/Uncle'):g('Great-uncle','Great-aunt','Great-aunt/Uncle');
+    if(isChild(r))      return isGreat?'First Cousin Once Removed':'First Cousin';
+    if(isGrandchild(r)) return isGreat?'First Cousin Twice Removed':'First Cousin Once Removed';
+    if(isSibling(r))    return isGreat?g('Great-grand-uncle','Great-grand-aunt','Great-grand-aunt/Uncle'):g('Great-uncle','Great-aunt','Great-aunt/Uncle');
+  }
+  // ── Nephew/Niece's relatives ──────────────────────────────────────────────
+  if(isNieceNeph(a)){
+    if(isChild(r))      return g('Grand-nephew','Grand-niece','Grand-niece/Nephew');
   }
   // ── Cousin's relatives ────────────────────────────────────────────────────
   if(isCousin(a)){
     if(isChild(r)){
-      if(a==='first cousin') return 'First Cousin Once Removed';
-      if(a==='second cousin') return 'Second Cousin Once Removed';
-      if(a==='first cousin once removed') return 'First Cousin Twice Removed';
+      if(a==='first cousin')               return 'First Cousin Once Removed';
+      if(a==='second cousin')              return 'Second Cousin Once Removed';
+      if(a==='first cousin once removed')  return 'First Cousin Twice Removed';
       if(a==='second cousin once removed') return 'Second Cousin Twice Removed';
-      return a+' Once Removed'; // generic fallback
+      return a+' Once Removed';
     }
-    if(isSpouse(r)) return null; // cousin's spouse = cousin-in-law, skip
   }
-  // ── Nephew/Niece's relatives ──────────────────────────────────────────────
-  if(isNieceNeph(a)){
-    if(isChild(r))    return g('Grand-nephew','Grand-niece','Grand-niece/Nephew');
-    if(isSpouse(r))   return null;
-  }
-  // ── Uncle/Aunt's relatives ─────────────────────────────────────────────────
-  if(isUncleAunt(a)){
-    if(isChild(r))     return 'Cousin';
-    if(isSpouse(r))    return a==='uncle'?g('Uncle','Aunt-by-marriage','Relative-by-marriage'):g('Uncle-by-marriage','Aunt','Relative-by-marriage');
-  }
-  // ── In-law relatives ───────────────────────────────────────────────────────
-  if(a.includes('-in-law')){
-    const base=a.replace('-in-law','');
-    if(isSpouse(r)||isChild(r)) return null; // getting complex, skip
-    if(isSibling(r))   return g('Brother-in-law','Sister-in-law','Sibling-in-law');
-    if(isParent(r))    return g('Grandfather-in-law','Grandmother-in-law','Grandparent-in-law');
-  }
-  return null; // can't infer
+  return null;
 }
+
 
 /**
  * After adding/connecting a node, auto-assign its relationship to isYou
