@@ -546,7 +546,7 @@ function hideLoading(){ const e=document.getElementById('loading'); e.classList.
 
 // ─── DATA ─────────────────────────────────────────────────────────────────────
 let P=[], byId={};
-function rebuild(){ byId={}; P.forEach(p=>{ if(!p.dob) p.dob={}; if(!p.connections) p.connections=[]; byId[p.id]=p; }); autoLayout(); updateCount(); }
+function rebuild(){ byId={}; P.forEach(p=>{ if(!p.dob) p.dob={}; if(!p.customLinks) p.customLinks={}; byId[p.id]=p; }); autoLayout(); updateCount(); }
 function g(id){ return byId[id]; }
 let nxt=Date.now();
 let treeMode='complex'; // 'simple' | 'complex'
@@ -666,12 +666,9 @@ function genderedRel(baseRel, gender){
 function getRelToYou(id){
   const you=P.find(p=>p.isYou); if(!you||id===you.id) return '';
   const p=byId[id]; if(!p) return '';
-  // Check you's connections[] for an explicit label to this person
-  const youConn=(you.connections||[]).find(c=>c.targetId===id);
-  if(youConn) return youConn.label;
-  // Check if this person has an explicit connection back to you
-  const theirConn=(p.connections||[]).find(c=>c.targetId===you.id);
-  if(theirConn) return theirConn.label;
+  // Check explicit custom links first
+  if(you.customLinks&&you.customLinks[id]) return you.customLinks[id];
+  if(p.customLinks&&p.customLinks[you.id]) return p.customLinks[you.id];
   // Use stored relLabel
   if(p.relLabel) return genderedRel(p.relLabel,p.gender)||p.relLabel;
   // Infer from tree structure
@@ -772,47 +769,49 @@ function drawBranches(){
     bG.appendChild(path);
   });
 
-  if(simple) return; // simple mode stops here
+  if(!simple){
 
-  // ── Sibling lines (orange dotted) — only in complex mode ──
-  const sibDrawn=new Set();
-  P.forEach(p=>{
-    const pars=p.parents||[];
-    if(!pars.length) return;
-    P.filter(x=>x.id!==p.id&&(x.parents||[]).some(pp=>pars.includes(pp))).forEach(sib=>{
-      const key=[p.id,sib.id].sort().join('|');
-      if(sibDrawn.has(key)) return;
-      sibDrawn.add(key);
-      const mx=(p.x+sib.x)/2, my=(p.y+sib.y)/2-20;
-      const path=se('path');
-      path.setAttribute('d',`M ${p.x} ${p.y} Q ${mx} ${my} ${sib.x} ${sib.y}`);
-      path.setAttribute('stroke', brRgba(BR_COLORS.sibling, .45));
-      path.setAttribute('stroke-width','1.5');
-      path.setAttribute('stroke-dasharray','3,5');
-      path.setAttribute('fill','none');
-      path.setAttribute('class','br');
-      path.dataset.src=p.id; path.dataset.dst=sib.id;
-      bG.appendChild(path);
+
+    // ── Sibling lines (orange dotted) — only in complex mode ──
+    const sibDrawn=new Set();
+    P.forEach(p=>{
+      const pars=p.parents||[];
+      if(!pars.length) return;
+      P.filter(x=>x.id!==p.id&&(x.parents||[]).some(pp=>pars.includes(pp))).forEach(sib=>{
+        const key=[p.id,sib.id].sort().join('|');
+        if(sibDrawn.has(key)) return;
+        sibDrawn.add(key);
+        const mx=(p.x+sib.x)/2, my=(p.y+sib.y)/2-20;
+        const path=se('path');
+        path.setAttribute('d',`M ${p.x} ${p.y} Q ${mx} ${my} ${sib.x} ${sib.y}`);
+        path.setAttribute('stroke', brRgba(BR_COLORS.sibling, .45));
+        path.setAttribute('stroke-width','1.5');
+        path.setAttribute('stroke-dasharray','3,5');
+        path.setAttribute('fill','none');
+        path.setAttribute('class','br');
+        path.dataset.src=p.id; path.dataset.dst=sib.id;
+        bG.appendChild(path);
+      });
     });
-  });
+  }
 
-  // ── Labeled connections (purple dotted) ──
+  // ── Labeled connections (purple — ALWAYS shown, both simple + complex) ──
   const connDrawn=new Set();
   P.forEach(p=>{
-    (p.connections||[]).forEach(c=>{
-      const key=[p.id,c.targetId].sort().join('|');
+    Object.keys(p.customLinks||{}).forEach(tid=>{
+      const key=[p.id,tid].sort().join('|');
       if(connDrawn.has(key)) return;
       connDrawn.add(key);
-      const other=byId[c.targetId]; if(!other) return;
+      const other=byId[tid]; if(!other) return;
       const mx=(p.x+other.x)/2, my=(p.y+other.y)/2-30;
       const path=se('path');
       path.setAttribute('d',`M ${p.x} ${p.y} Q ${mx} ${my} ${other.x} ${other.y}`);
-      path.setAttribute('stroke', brRgba(BR_COLORS.labeled, .62));
-      path.setAttribute('stroke-width','2');
-      path.setAttribute('stroke-dasharray','6,5');
+      path.setAttribute('stroke', brRgba(BR_COLORS.labeled, .68));
+      path.setAttribute('stroke-width','2.5');
+      path.setAttribute('stroke-dasharray','7,5');
       path.setAttribute('fill','none');
       path.setAttribute('class','br');
-      path.dataset.src=p.id; path.dataset.dst=c.targetId;
+      path.dataset.src=p.id; path.dataset.dst=tid;
       bG.appendChild(path);
     });
   });
@@ -972,9 +971,9 @@ function highlightConnected(id){
   P.filter(x=>x.id!==id&&(x.parents||[]).some(pp=>myP.has(pp))).forEach(x=>conn.add(x.id));
   if(p.spouseOf) conn.add(p.spouseOf);
   const sp=P.find(x=>x.spouseOf===id); if(sp) conn.add(sp.id);
-  // Include labeled connections
-  (p.connections||[]).forEach(c=>conn.add(c.targetId));
-  P.filter(x=>(x.connections||[]).some(c=>c.targetId===id)).forEach(x=>conn.add(x.id));
+  // Include labeled connections (customLinks)
+  Object.keys(p.customLinks||{}).forEach(tid=>conn.add(tid));
+  P.filter(x=>x.customLinks&&x.customLinks[id]).forEach(x=>conn.add(x.id));
 
   document.querySelectorAll('.nd').forEach(n=>{
     n.classList.toggle('dim',!conn.has(n.dataset.id));
@@ -1040,7 +1039,7 @@ function fillCard(p){
   const spouseNode=p.spouseOf?byId[p.spouseOf]:P.find(x=>x.spouseOf===p.id);
   const spouses=spouseNode?[{p:spouseNode,rel:genderedRel('Spouse',spouseNode.gender)}]:[];
   // Include labeled connections (in-laws, etc.)
-  const labeled=(p.connections||[]).map(c=>({p:byId[c.targetId],rel:c.label,targetId:c.targetId})).filter(x=>x.p);
+  const labeled=Object.entries(p.customLinks||{}).map(([tid,lbl])=>({p:byId[tid],rel:lbl,targetId:tid})).filter(x=>x.p);
   const conns=[...spouses,...parentsArr,...children,...sibs,...labeled];
 
   let html='';
@@ -1188,10 +1187,8 @@ function removePerson(id){
 
 function deleteConnection(fromId, toId){
   const from=byId[fromId]; const to=byId[toId]; if(!from||!to) return;
-  // Remove from both nodes' connections arrays
-  if(from.connections) from.connections=from.connections.filter(c=>c.targetId!==toId);
-  if(to.connections) to.connections=to.connections.filter(c=>c.targetId!==fromId);
-  // Also clear relLabel if it was set by this connection
+  if(from.customLinks) delete from.customLinks[toId];
+  if(to.customLinks) delete to.customLinks[fromId];
   if(to.relLabel) delete to.relLabel;
   rebuild(); render(); scheduleSave();
   selectNode(fromId);
@@ -1279,6 +1276,14 @@ function saveConnection(){
     if(!other.gender&&label.toLowerCase()==='husband') other.gender='male';
     if(!other.gender&&label==='wife') other.gender='female';
     if(!other.relLabel) other.relLabel='Spouse';
+    other.relLabel=label;
+  } else if(type==='labeled'){
+    // Store as a direct key on each node — simpler than arrays, survives Firestore round-trips
+    if(!target.customLinks) target.customLinks={};
+    if(!other.customLinks) other.customLinks={};
+    target.customLinks[other.id]=label;
+    other.customLinks[target.id]=label;
+    other.relLabel=label;
   }
 
   rebuild(); render(); scheduleSave();
