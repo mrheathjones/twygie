@@ -1001,28 +1001,132 @@ function applyInferredRel(fromNode, toNode, inferred){
   toNode.relLabel=inverseLabel(inferred);
 }
 
+// Helper: link two nodes with explicit labels without applyInferredRel routing
+function linkNodes(nodeA, nodeB, labelAtoB, labelBtoA){
+  if(!nodeA||!nodeB||nodeA.id===nodeB.id) return;
+  const alreadyLinked=
+    (nodeA.parents||[]).includes(nodeB.id)||(nodeB.parents||[]).includes(nodeA.id)||
+    nodeA.spouseOf===nodeB.id||nodeB.spouseOf===nodeA.id||
+    (nodeA.customLinks&&nodeA.customLinks[nodeB.id])||
+    (nodeB.customLinks&&nodeB.customLinks[nodeA.id]);
+  if(alreadyLinked) return;
+  const ltypeAB=BLOOD_LABELS.has(labelAtoB)?'blood':'labeled';
+  const ltypeBA=BLOOD_LABELS.has(labelBtoA)?'blood':'labeled';
+  if(!nodeA.customLinks) nodeA.customLinks={};
+  if(!nodeB.customLinks) nodeB.customLinks={};
+  nodeA.customLinks[nodeB.id]={label:labelAtoB,lineType:ltypeAB};
+  nodeB.customLinks[nodeA.id]={label:labelBtoA,lineType:ltypeBA};
+}
+
 function autoAssignToYou(newNodeId, anchorId, relToAnchor){
   if(!autoConnections) return;
   const newNode=P.find(p=>p.id===newNodeId)||byId[newNodeId]; if(!newNode) return;
   const anchor=P.find(p=>p.id===anchorId)||byId[anchorId]; if(!anchor) return;
 
-  // Ensure byId is current for relationship lookups
+  // Sync byId so all lookups are current
   byId[newNodeId]=newNode; byId[anchorId]=anchor;
   P.forEach(p=>{ byId[p.id]=p; });
 
-  // ── Enumerate ALL existing nodes and infer a relationship ─────────────────
-  P.forEach(existing=>{
-    if(existing.id===newNodeId||existing.id===anchorId) return; // skip self + anchor
+  const m=newNode.gender==='male', f=newNode.gender==='female';
+  const gn=(male,female,neutral)=>m?male:f?female:neutral;
 
-    // Get how anchor relates to this existing node
+  // ── STRUCTURAL CASCADE: explicit rules for common relationships ───────────
+  // These cover cases that inference chains miss due to multi-hop paths
+
+  const isDirChild  =DIRECT_CHILD_SET.has(relToAnchor);
+  const isDirParent =DIRECT_PARENT_SET.has(relToAnchor);
+  const isSpouseRel =SPOUSE_SET.has(relToAnchor);
+  const isSibRel    =['Brother','Sister','Half-brother','Half-sister','Sibling'].includes(relToAnchor);
+
+  // Find anchor's spouse
+  const anchorSpouseId=anchor.spouseOf||(P.find(p=>p.spouseOf===anchor.id)||{}).id;
+  const anchorSpouse=anchorSpouseId?P.find(p=>p.id===anchorSpouseId):null;
+
+  if(isDirChild){
+    // New node is a CHILD of anchor
+    // → anchor's parents = new node's grandparents
+    (anchor.parents||[]).forEach(gpId=>{
+      const gp=P.find(p=>p.id===gpId); if(!gp) return;
+      const gpLabel=genderedRel('Grandparent',gp.gender);
+      const gcLabel=gn('Grandson','Granddaughter','Grandchild');
+      linkNodes(gp, newNode, gcLabel, gpLabel);
+    });
+    // → anchor's spouse's parents = new node's grandparents (other side)
+    if(anchorSpouse){
+      (anchorSpouse.parents||[]).forEach(gpId=>{
+        const gp=P.find(p=>p.id===gpId); if(!gp) return;
+        const gpLabel=genderedRel('Grandparent',gp.gender);
+        const gcLabel=gn('Grandson','Granddaughter','Grandchild');
+        linkNodes(gp, newNode, gcLabel, gpLabel);
+      });
+      // → anchor's spouse is also new node's parent
+      if(!((newNode.parents||[]).includes(anchorSpouseId))){
+        newNode.parents=[...(newNode.parents||[]),anchorSpouseId];
+      }
+    }
+    // → anchor's siblings = new node's uncles/aunts
+    const anchorSibIds=Object.keys(anchor.customLinks||{}).filter(k=>{
+      const v=anchor.customLinks[k]; const lt=typeof v==='string'?'labeled':v.lineType;
+      return lt==='sibling';
+    });
+    anchorSibIds.forEach(sibId=>{
+      const sib=P.find(p=>p.id===sibId); if(!sib) return;
+      const sibLabel=genderedRel('Sibling',sib.gender); // Uncle/Aunt
+      const uaLabel=sib.gender==='male'?'Uncle':sib.gender==='female'?'Aunt':'Uncle/Aunt';
+      const npLabel=gn('Nephew','Niece','Niece/Nephew');
+      linkNodes(sib, newNode, npLabel, uaLabel);
+    });
+  }
+
+  if(isDirParent){
+    // New node is a PARENT of anchor
+    // → anchor's children = new node's grandchildren
+    P.filter(x=>(x.parents||[]).includes(anchorId)).forEach(gc=>{
+      const gcLabel=genderedRel('Grandchild',gc.gender);
+      const gpLabel=genderedRel('Grandparent',newNode.gender);
+      linkNodes(newNode, gc, gcLabel, gpLabel);
+    });
+    // → anchor's spouse's children (shared) = new node's grandchildren
+    if(anchorSpouse){
+      P.filter(x=>(x.parents||[]).includes(anchorSpouseId)).forEach(gc=>{
+        const gcLabel=genderedRel('Grandchild',gc.gender);
+        const gpLabel=genderedRel('Grandparent',newNode.gender);
+        linkNodes(newNode, gc, gcLabel, gpLabel);
+      });
+      // → anchor's spouse = new node's child-in-law
+      const spouseLabel=genderedRel('Spouse',anchorSpouse.gender)+'-in-law';
+      const newLabel=genderedRel('Spouse',newNode.gender)+'-in-law';
+      linkNodes(newNode, anchorSpouse, genderedRel('Child',anchorSpouse.gender)+'-in-law', genderedRel('Parent',newNode.gender)+'-in-law');
+    }
+  }
+
+  if(isSpouseRel){
+    // New node is a SPOUSE of anchor
+    // → anchor's children = new node's children (both parents)
+    P.filter(x=>(x.parents||[]).includes(anchorId)).forEach(child=>{
+      if(!(child.parents||[]).includes(newNodeId)){
+        child.parents=[...(child.parents||[]),newNodeId];
+      }
+    });
+    // → anchor's parents = new node's in-laws
+    (anchor.parents||[]).forEach(ilId=>{
+      const il=P.find(p=>p.id===ilId); if(!il) return;
+      const ilLabel=genderedRel('Parent',il.gender)+'-in-law';
+      const rLabel=genderedRel('Child',newNode.gender)+'-in-law';
+      linkNodes(newNode, il, ilLabel, rLabel);
+    });
+  }
+
+  // ── INFERENCE LOOP: for remaining nodes not caught by structural cascade ──
+  P.forEach(existing=>{
+    if(existing.id===newNodeId||existing.id===anchorId) return;
+
     const anchorRelToExisting=getRelToYou_for(anchorId, existing.id);
     if(!anchorRelToExisting) return;
 
-    // Infer new node's relationship to this existing node
     const inferred=inferRelToYou(anchorRelToExisting, relToAnchor, newNode.gender||'');
     if(!inferred) return;
 
-    // Skip if a connection already exists between existing and new node
     const alreadyLinked=
       (existing.parents||[]).includes(newNodeId)||
       (newNode.parents||[]).includes(existing.id)||
