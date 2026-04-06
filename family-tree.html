@@ -457,6 +457,15 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-famil
       </select>
     </div>
 
+    <div class="mf"><label class="ml">Photo <span style="font-size:.7em;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label>
+      <div class="photo-upload">
+        <div class="photo-preview" id="modal-photo-preview" style="width:38px;height:38px;border-radius:50%;overflow:hidden;background:rgba(255,255,255,.06);border:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.65rem;color:var(--muted)">
+          <span>+</span>
+        </div>
+        <label class="photo-btn" for="modal-photo-file" style="cursor:pointer">Upload photo</label>
+        <input type="file" id="modal-photo-file" accept="image/*" style="display:none" onchange="handleModalPhoto(event)"/>
+      </div>
+    </div>
     <div class="mf"><label class="ml">Story / Note</label>
       <textarea class="mi" id="fstory" rows="2" placeholder="A brief memory or note…" style="resize:vertical"></textarea>
     </div>
@@ -537,7 +546,7 @@ function hideLoading(){ const e=document.getElementById('loading'); e.classList.
 
 // ─── DATA ─────────────────────────────────────────────────────────────────────
 let P=[], byId={};
-function rebuild(){ byId={}; P.forEach(p=>{ if(!p.dob) p.dob={}; byId[p.id]=p; }); autoLayout(); updateCount(); }
+function rebuild(){ byId={}; P.forEach(p=>{ if(!p.dob) p.dob={}; if(!p.connections) p.connections=[]; byId[p.id]=p; }); autoLayout(); updateCount(); }
 function g(id){ return byId[id]; }
 let nxt=Date.now();
 let treeMode='complex'; // 'simple' | 'complex'
@@ -777,7 +786,7 @@ function drawBranches(){
       const mx=(p.x+sib.x)/2, my=(p.y+sib.y)/2-20;
       const path=se('path');
       path.setAttribute('d',`M ${p.x} ${p.y} Q ${mx} ${my} ${sib.x} ${sib.y}`);
-      path.setAttribute('stroke', brRgba(BR_COLORS.sibling, .3));
+      path.setAttribute('stroke', brRgba(BR_COLORS.sibling, .45));
       path.setAttribute('stroke-width','1.5');
       path.setAttribute('stroke-dasharray','3,5');
       path.setAttribute('fill','none');
@@ -798,9 +807,9 @@ function drawBranches(){
       const mx=(p.x+other.x)/2, my=(p.y+other.y)/2-30;
       const path=se('path');
       path.setAttribute('d',`M ${p.x} ${p.y} Q ${mx} ${my} ${other.x} ${other.y}`);
-      path.setAttribute('stroke', brRgba(BR_COLORS.labeled, .48));
-      path.setAttribute('stroke-width','1.5');
-      path.setAttribute('stroke-dasharray','2,6');
+      path.setAttribute('stroke', brRgba(BR_COLORS.labeled, .62));
+      path.setAttribute('stroke-width','2');
+      path.setAttribute('stroke-dasharray','6,5');
       path.setAttribute('fill','none');
       path.setAttribute('class','br');
       path.dataset.src=p.id; path.dataset.dst=c.targetId;
@@ -1031,22 +1040,28 @@ function fillCard(p){
   const spouseNode=p.spouseOf?byId[p.spouseOf]:P.find(x=>x.spouseOf===p.id);
   const spouses=spouseNode?[{p:spouseNode,rel:genderedRel('Spouse',spouseNode.gender)}]:[];
   // Include labeled connections (in-laws, etc.)
-  const labeled=(p.connections||[]).map(c=>({p:byId[c.targetId],rel:c.label})).filter(x=>x.p);
+  const labeled=(p.connections||[]).map(c=>({p:byId[c.targetId],rel:c.label,targetId:c.targetId})).filter(x=>x.p);
   const conns=[...spouses,...parentsArr,...children,...sibs,...labeled];
 
   let html='';
   if(p.note) html+=`<div class="csec">Story</div><p class="cbio">${p.note}</p>`;
   if(conns.length){
-    html+=`<div class="csec">Immediate family</div><div class="frow">`;
-    conns.forEach(({p:cp,rel})=>{
+    html+=`<div class="csec">Connections</div><div class="frow">`;
+    conns.forEach(({p:cp,rel,targetId})=>{
       const cc=col(cp);
       const chipPhoto=cp.photo
         ?`<div class="fchip-photo"><img src="${cp.photo}"/></div>`
         :`<div class="fdot" style="background:${cc};box-shadow:0 0 5px ${cc}"></div>`;
-      html+=`<div class="fchip" onclick="selectNode('${cp.id}')">
-        ${chipPhoto}
-        <div class="fi2"><div class="fn2">${fullName(cp)}</div><div class="frel">${rel}</div></div>
-        <div class="fyr">${dobDisplay(cp).replace('b. ','')}</div></div>`;
+      // Show delete button only for labeled (explicit) connections
+      const isLabeled=targetId!==undefined;
+      html+=`<div class="fchip" style="position:relative">
+        <div style="flex:1;display:flex;align-items:center;gap:8px;cursor:pointer" onclick="selectNode('${cp.id}')">
+          ${chipPhoto}
+          <div class="fi2"><div class="fn2">${fullName(cp)}</div><div class="frel">${rel}</div></div>
+          <div class="fyr">${dobDisplay(cp).replace('b. ','')}</div>
+        </div>
+        ${isLabeled?`<button onclick="deleteConnection('${p.id}','${cp.id}');event.stopPropagation()" title="Remove connection" style="background:transparent;border:none;cursor:pointer;color:rgba(200,100,100,.5);font-size:14px;padding:0 2px;line-height:1;flex-shrink:0;transition:color .2s" onmouseover="this.style.color='rgba(220,120,120,.9)'" onmouseout="this.style.color='rgba(200,100,100,.5)'">×</button>`:''}
+      </div>`;
     });
     html+=`</div>`;
   }
@@ -1071,6 +1086,11 @@ function fillCard(p){
 }
 
 // ─── EDIT CARD ────────────────────────────────────────────────────────────────
+function stateSelectOpts(current){
+  const states=['Alabama','Alaska','Arizona','Arkansas','California','Colorado','Connecticut','Delaware','Florida','Georgia','Hawaii','Idaho','Illinois','Indiana','Iowa','Kansas','Kentucky','Louisiana','Maine','Maryland','Massachusetts','Michigan','Minnesota','Mississippi','Missouri','Montana','Nebraska','Nevada','New Hampshire','New Jersey','New Mexico','New York','North Carolina','North Dakota','Ohio','Oklahoma','Oregon','Pennsylvania','Rhode Island','South Carolina','South Dakota','Tennessee','Texas','Utah','Vermont','Virginia','Washington','West Virginia','Wisconsin','Wyoming','Washington D.C.','Puerto Rico','Other / International'];
+  return '<option value="">Select state…</option>'+states.map(s=>`<option value="${s}"${s===current?' selected':''}>${s}</option>`).join('');
+}
+
 function editCard(id){
   const p=byId[id]; if(!p) return;
   const months=['','January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -1095,7 +1115,7 @@ function editCard(id){
     </div>
     <div class="ef ef-row c2">
       <div><label class="el">City</label><input class="ei" id="ei-city" value="${(p.city||'').replace(/"/g,'&quot;')}" placeholder="City"/></div>
-      <div><label class="el">State</label><input class="ei" id="ei-state" value="${(p.state||'').replace(/"/g,'&quot;')}" placeholder="State"/></div>
+      <div><label class="el">State</label><select class="ei" id="ei-state" style="appearance:none">${stateSelectOpts(p.state||"")}</select></div>
     </div>
     <div class="ef"><label class="el">Photo</label>
       <div class="photo-upload">
@@ -1141,7 +1161,7 @@ function saveCard(id){
   };
   p.birth=parseInt(p.dob.year)||p.birth||null;
   p.city=document.getElementById('ei-city').value.trim();
-  p.state=document.getElementById('ei-state').value.trim();
+  p.state=document.getElementById('ei-state').value||'';
   p.note=document.getElementById('ei-note').value.trim();
   rebuild(); render(); scheduleSave(); selectNode(id);
 }
@@ -1164,6 +1184,17 @@ function removePerson(id){
   P=P.filter(p=>!rm.has(p.id));
   P.forEach(p=>{ if(p.spouseOf&&rm.has(p.spouseOf)) delete p.spouseOf; });
   rebuild(); closeCard(); render(); scheduleSave();
+}
+
+function deleteConnection(fromId, toId){
+  const from=byId[fromId]; const to=byId[toId]; if(!from||!to) return;
+  // Remove from both nodes' connections arrays
+  if(from.connections) from.connections=from.connections.filter(c=>c.targetId!==toId);
+  if(to.connections) to.connections=to.connections.filter(c=>c.targetId!==fromId);
+  // Also clear relLabel if it was set by this connection
+  if(to.relLabel) delete to.relLabel;
+  rebuild(); render(); scheduleSave();
+  selectNode(fromId);
 }
 
 // ─── ADD CONNECTION MODAL ────────────────────────────────────────────────────
@@ -1307,12 +1338,22 @@ function renderMembersList(){
 }
 
 // ─── TOOLTIP ─────────────────────────────────────────────────────────────────
+function calcAge(p){
+  const birthYear=parseInt(p.dob&&p.dob.year)||p.birth||null;
+  if(!birthYear) return null;
+  const deathYear=parseInt(p.dod&&p.dod.year)||p.death||null;
+  const endYear=deathYear||(new Date().getFullYear());
+  return endYear-birthYear;
+}
+
 function showTip(e,p){
   if(selId||nodeDrag) return;
   const t=document.getElementById('tip');
   const photoHtml=p.photo?`<div class="tip-photo"><img src="${p.photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/></div>`:'';
   const rel=getRelToYou(p.id);
-  t.innerHTML=`${photoHtml}<span>${fullName(p)}${rel?' · '+rel:''}</span>`;
+  const age=calcAge(p);
+  const ageStr=age?(p.death||(p.dod&&p.dod.year)?` · ${age} yrs`:(` · Age ${age}`)):'';
+  t.innerHTML=`${photoHtml}<span>${fullName(p)}${rel?' · '+rel:''}${ageStr}</span>`;
   t.style.left=(e.clientX+14)+'px'; t.style.top=(e.clientY-12)+'px';
   t.classList.add('show');
 }
@@ -1388,6 +1429,18 @@ wrap.addEventListener('touchmove',e=>{
 
 // ─── ADD MEMBER ───────────────────────────────────────────────────────────────
 let addFor=null;
+let modalPhoto=null;
+function handleModalPhoto(event){
+  const file=event.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    modalPhoto=e.target.result;
+    const prev=document.getElementById('modal-photo-preview');
+    if(prev) prev.innerHTML=`<img src="${modalPhoto}" style="width:100%;height:100%;object-fit:cover"/>`;
+  };
+  reader.readAsDataURL(file);
+}
+
 const CHILD_RELS=['Son','Daughter','Grandson','Granddaughter','Stepson','Stepdaughter','Nephew','Niece'];
 const PARENT_RELS=['Father','Mother','Grandfather','Grandmother','Stepfather','Stepmother','Father-in-law','Mother-in-law','Uncle','Aunt'];
 const SPOUSE_RELS=['Husband','Wife','Partner'];
@@ -1412,6 +1465,9 @@ function openModal(forId){
   ['fn-first','fn-last','fdob-day','fdob-year','fcity','fstory','fdod-day','fdod-year'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
   ['fdob-month','fgender','fr','fstate','fdod-month'].forEach(id=>{const e=document.getElementById(id);if(e)e.selectedIndex=0;});
   const dec=document.getElementById('f-deceased'); if(dec){dec.checked=false; toggleDeathDate();}
+  modalPhoto=null;
+  const prev=document.getElementById('modal-photo-preview'); if(prev) prev.innerHTML='<span>+</span>';
+  const fi=document.getElementById('modal-photo-file'); if(fi) fi.value='';
   document.getElementById('mbg').classList.add('open');
 }
 function closeModal(){ document.getElementById('mbg').classList.remove('open'); }
@@ -1442,6 +1498,7 @@ function submitMember(){
 
   const id=`u${nxt++}`;
   const np={id,name,firstName:first,lastName:last,gender,dob,birth,dod,death,city,state,note,parents:[],relLabel:baseRel,x:600,y:400};
+  if(modalPhoto) np.photo=modalPhoto;
 
   // Infer gender from relationship label
   if(!np.gender){
