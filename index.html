@@ -657,9 +657,15 @@ function genderedRel(baseRel, gender){
 function getRelToYou(id){
   const you=P.find(p=>p.isYou); if(!you||id===you.id) return '';
   const p=byId[id]; if(!p) return '';
-  // Use stored relLabel first
+  // Check you's connections[] for an explicit label to this person
+  const youConn=(you.connections||[]).find(c=>c.targetId===id);
+  if(youConn) return youConn.label;
+  // Check if this person has an explicit connection back to you
+  const theirConn=(p.connections||[]).find(c=>c.targetId===you.id);
+  if(theirConn) return theirConn.label;
+  // Use stored relLabel
   if(p.relLabel) return genderedRel(p.relLabel,p.gender)||p.relLabel;
-  // Infer
+  // Infer from tree structure
   if((p.parents||[]).includes(you.id)) return genderedRel('Child',p.gender);
   if((you.parents||[]).includes(id)) return genderedRel('Parent',p.gender);
   if(p.spouseOf===you.id||you.spouseOf===id) return genderedRel('Spouse',p.gender);
@@ -670,6 +676,16 @@ function getRelToYou(id){
   if(grandIds.has(id)) return genderedRel('Grandparent',p.gender);
   const myChildren=P.filter(x=>(x.parents||[]).includes(you.id));
   for(const c of myChildren){ if((p.parents||[]).includes(c.id)) return genderedRel('Grandchild',p.gender); }
+  // Infer in-law: parent of spouse's parent
+  const spouseId=you.spouseOf||(P.find(x=>x.spouseOf===you.id)||{}).id;
+  if(spouseId){
+    const sp=byId[spouseId];
+    if(sp){
+      if((sp.parents||[]).includes(id)) return genderedRel('Parent',p.gender)+'-in-law';
+      const spSibs=P.filter(x=>x.id!==spouseId&&(x.parents||[]).some(pp=>(sp.parents||[]).includes(pp)));
+      if(spSibs.some(s=>s.id===id)) return genderedRel('Sibling',p.gender)+'-in-law';
+    }
+  }
   return 'Family';
 }
 
@@ -782,7 +798,7 @@ function drawBranches(){
       const mx=(p.x+other.x)/2, my=(p.y+other.y)/2-30;
       const path=se('path');
       path.setAttribute('d',`M ${p.x} ${p.y} Q ${mx} ${my} ${other.x} ${other.y}`);
-      path.setAttribute('stroke', brRgba(BR_COLORS.labeled, .28));
+      path.setAttribute('stroke', brRgba(BR_COLORS.labeled, .48));
       path.setAttribute('stroke-width','1.5');
       path.setAttribute('stroke-dasharray','2,6');
       path.setAttribute('fill','none');
@@ -947,6 +963,9 @@ function highlightConnected(id){
   P.filter(x=>x.id!==id&&(x.parents||[]).some(pp=>myP.has(pp))).forEach(x=>conn.add(x.id));
   if(p.spouseOf) conn.add(p.spouseOf);
   const sp=P.find(x=>x.spouseOf===id); if(sp) conn.add(sp.id);
+  // Include labeled connections
+  (p.connections||[]).forEach(c=>conn.add(c.targetId));
+  P.filter(x=>(x.connections||[]).some(c=>c.targetId===id)).forEach(x=>conn.add(x.id));
 
   document.querySelectorAll('.nd').forEach(n=>{
     n.classList.toggle('dim',!conn.has(n.dataset.id));
@@ -1011,7 +1030,9 @@ function fillCard(p){
 
   const spouseNode=p.spouseOf?byId[p.spouseOf]:P.find(x=>x.spouseOf===p.id);
   const spouses=spouseNode?[{p:spouseNode,rel:genderedRel('Spouse',spouseNode.gender)}]:[];
-  const conns=[...spouses,...parentsArr,...children,...sibs];
+  // Include labeled connections (in-laws, etc.)
+  const labeled=(p.connections||[]).map(c=>({p:byId[c.targetId],rel:c.label})).filter(x=>x.p);
+  const conns=[...spouses,...parentsArr,...children,...sibs,...labeled];
 
   let html='';
   if(p.note) html+=`<div class="csec">Story</div><p class="cbio">${p.note}</p>`;
