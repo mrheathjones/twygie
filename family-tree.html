@@ -853,6 +853,7 @@ function inferRelToYou(anchorRelToYou, newRelToAnchor, gender) {
     if(isGrandchild(r)) return g('Grandson','Granddaughter','Grandchild');
     if(isGreatGC(r))    return g('Great-grandson','Great-granddaughter','Great-grandchild');
     if(isUncleAunt(r))  return g('Uncle-in-law','Aunt-in-law','Relative-in-law');
+    if(isNieceNeph(r))  return g('Nephew','Niece','Niece/Nephew');
   }
   // ── Child's relatives ──────────────────────────────────────────────────────
   if(isChild(a)){
@@ -881,19 +882,29 @@ function inferRelToYou(anchorRelToYou, newRelToAnchor, gender) {
     if((a==='son-in-law'||a==='daughter-in-law')&&isParent(r))     return null;
     if((a==='son-in-law'||a==='daughter-in-law')&&isGrandpar(r))   return null;
     if((a==='grandson-in-law'||a==='granddaughter-in-law')&&isChild(r)) return g('Great-grandson','Great-granddaughter','Great-grandchild');
-    // Father/Mother-in-law + your child = their Grandchild (you married their child)
-    if((a==='father-in-law'||a==='mother-in-law')&&isChild(r))      return g('Grandson','Granddaughter','Grandchild');
-    if((a==='father-in-law'||a==='mother-in-law')&&isGrandchild(r)) return g('Great-grandson','Great-granddaughter','Great-grandchild');
-    if((a==='grandfather-in-law'||a==='grandmother-in-law')&&isChild(r)) return g('Great-grandson','Great-granddaughter','Great-grandchild');
-    // Son/Daughter-in-law's spouse = your own child (already linked) → skip
-    if((a==='son-in-law'||a==='daughter-in-law')&&isSpouse(r))    return null;
-    // Brother/Sister-in-law's child = Nephew/Niece
-    if((a==='brother-in-law'||a==='sister-in-law')&&isChild(r))   return g('Nephew','Niece','Niece/Nephew');
-    // Father/Mother-in-law's spouse = Mother/Father-in-law (your in-law's spouse is also your in-law)
-    if((a==='father-in-law'||a==='mother-in-law')&&isSpouse(r))    return g('Father-in-law','Mother-in-law','Parent-in-law');
+    // Father/Mother-in-law's child = spouse's sibling = Brother/Sister-in-law
+    if((a==='father-in-law'||a==='mother-in-law')&&isChild(r))      return g('Brother-in-law','Sister-in-law','Sibling-in-law');
+    // Father/Mother-in-law's grandchild = spouse's sibling's child = Nephew/Niece
+    if((a==='father-in-law'||a==='mother-in-law')&&isGrandchild(r)) return g('Nephew','Niece','Niece/Nephew');
+    // Father/Mother-in-law's parent = Grandfather/Grandmother-in-law
+    if((a==='father-in-law'||a==='mother-in-law')&&isParent(r))     return g('Grandfather-in-law','Grandmother-in-law','Grandparent-in-law');
+    // Father/Mother-in-law's sibling = Uncle/Aunt-in-law
+    if((a==='father-in-law'||a==='mother-in-law')&&isSibling(r))    return g('Uncle-in-law','Aunt-in-law','Relative-in-law');
+    // Father/Mother-in-law's spouse = other Parent-in-law
+    if((a==='father-in-law'||a==='mother-in-law')&&isSpouse(r))     return g('Father-in-law','Mother-in-law','Parent-in-law');
+    // Grandfather/Grandmother-in-law's child = no standard term (FIL if already linked)
+    if((a==='grandfather-in-law'||a==='grandmother-in-law')&&isChild(r)) return null;
+    // Grandfather/Grandmother-in-law's spouse = other Grandparent-in-law
     if((a==='grandfather-in-law'||a==='grandmother-in-law')&&isSpouse(r)) return g('Grandfather-in-law','Grandmother-in-law','Grandparent-in-law');
-    // son/daughter-in-law's spouse = your own child (already linked, skip)
-    // sibling-of-in-law, parent-of-in-law — no standard kinship term
+    // Son/Daughter-in-law's spouse = your own child (already linked) → skip
+    if((a==='son-in-law'||a==='daughter-in-law')&&isSpouse(r))      return null;
+    // Brother/Sister-in-law's child = Nephew/Niece
+    if((a==='brother-in-law'||a==='sister-in-law')&&isChild(r))     return g('Nephew','Niece','Niece/Nephew');
+    // Brother/Sister-in-law's grandchild = Grand-nephew/niece
+    if((a==='brother-in-law'||a==='sister-in-law')&&isGrandchild(r)) return g('Grand-nephew','Grand-niece','Grand-niece/Nephew');
+    // Brother/Sister-in-law's sibling = another Brother/Sister-in-law (or your spouse, alreadyLinked)
+    if((a==='brother-in-law'||a==='sister-in-law')&&isSibling(r))   return g('Brother-in-law','Sister-in-law','Sibling-in-law');
+    // No standard kinship term for other in-law combinations
     return null;
   }
   // ── Parent's relatives ─────────────────────────────────────────────────────
@@ -911,6 +922,7 @@ function inferRelToYou(anchorRelToYou, newRelToAnchor, gender) {
     if(isChild(r))      return g('Uncle','Aunt','Aunt/Uncle');
     if(isSpouse(r))     return g('Grandfather','Grandmother','Grandparent');
     if(isGrandchild(r)) return 'First Cousin';
+    if(isGreatGC(r))    return 'First Cousin Once Removed';
   }
   // ── Great-grandparent's relatives ─────────────────────────────────────────
   if(isGreatGP(a)){
@@ -919,6 +931,7 @@ function inferRelToYou(anchorRelToYou, newRelToAnchor, gender) {
     if(isChild(r))      return g('Great-uncle','Great-aunt','Great-aunt/Uncle');
     if(isSpouse(r))     return g('Great-grandfather','Great-grandmother','Great-grandparent');
     if(isGrandchild(r)) return 'First Cousin Once Removed';
+    if(isGreatGC(r))    return 'Second Cousin';
   }
   // ── Sibling's relatives ────────────────────────────────────────────────────
   if(isSibling(a)){
@@ -932,6 +945,7 @@ function inferRelToYou(anchorRelToYou, newRelToAnchor, gender) {
     if(isChild(r))      return isGreat?'First Cousin Once Removed':'First Cousin';
     if(isGrandchild(r)) return isGreat?'First Cousin Twice Removed':'First Cousin Once Removed';
     if(isSibling(r))    return isGreat?g('Great-grand-uncle','Great-grand-aunt','Great-grand-aunt/Uncle'):g('Great-uncle','Great-aunt','Great-aunt/Uncle');
+    if(isSpouse(r))     return isGreat?g('Great-uncle','Great-aunt','Great-aunt/Uncle'):g('Uncle','Aunt','Uncle/Aunt');
   }
   // ── Nephew/Niece's relatives ──────────────────────────────────────────────
   if(isNieceNeph(a)){
@@ -946,6 +960,8 @@ function inferRelToYou(anchorRelToYou, newRelToAnchor, gender) {
       if(a==='second cousin once removed') return 'Second Cousin Twice Removed';
       return a+' Once Removed';
     }
+    if(a==='first cousin'&&isParent(r))    return g('Uncle','Aunt','Uncle/Aunt');
+    if(a==='first cousin'&&isSpouse(r))    return 'Cousin-in-law';
   }
   return null;
 }
