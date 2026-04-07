@@ -3102,9 +3102,10 @@ function drawBranches(){
   const sibDrawn=new Set();
   P.forEach(p=>{
     Object.entries(p.customLinks||{}).forEach(([tid,v])=>{
-      const lineType=typeof v==='string'?
-        (BLOOD_LABELS.has(v)?'blood':'labeled') :
-        v.lineType||'labeled';
+      const label=typeof v==='string'?v:v.label||'';
+      // Always re-check BLOOD_LABELS at draw time (stored lineType may be stale)
+      const isSibLabel=['Brother','Sister','Half-brother','Half-sister'].includes(label);
+      const lineType=isSibLabel?'sibling':BLOOD_LABELS.has(label)?'blood':(typeof v==='string'?'labeled':v.lineType||'labeled');
       // Siblings: show in both modes. Blood extended (grandparent etc): All Twygs only
       if(lineType!=='sibling'&&lineType!=='blood') return;
       if(lineType==='blood'&&simple) return;
@@ -3158,9 +3159,9 @@ function drawBranches(){
   const extDrawn=new Set();
   P.forEach(p=>{
     Object.entries(p.customLinks||{}).forEach(([tid,v])=>{
-      const lineType=typeof v==='string'?
-        (BLOOD_LABELS.has(v)?'blood':'labeled') :
-        v.lineType||'labeled';
+      const label=typeof v==='string'?v:v.label||'';
+      // Always re-check BLOOD_LABELS at draw time (stored lineType may be stale)
+      const lineType=BLOOD_LABELS.has(label)?'blood':(typeof v==='string'?'labeled':v.lineType||'labeled');
       // Skip blood types (drawn above) and siblings
       if(lineType==='sibling'||lineType==='blood') return;
       const key=[p.id,tid].sort().join('|');
