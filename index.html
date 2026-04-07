@@ -2094,13 +2094,15 @@ function subscribeActiveLinks(){
   const rebuild=()=>{
     // Merge both listener results
     const combined=[...linksA,...linksB];
-    // Only update and re-render if something actually changed
-    const newJson=JSON.stringify(combined.map(l=>l.id).sort());
-    const oldJson=JSON.stringify(activeLinks.map(l=>l.id).sort());
+    // Detect ANY change — IDs, share levels, or shared data presence
+    const fingerprint=l=>`${l.id}|${l.shareLevel?.[currentUser.uid]||''}|${Object.keys(l.sharedData||{}).join(',')}`;
+    const newJson=JSON.stringify(combined.map(fingerprint).sort());
+    const oldJson=JSON.stringify(activeLinks.map(fingerprint).sort());
     activeLinks=combined;
     if(newJson!==oldJson){
       console.log('Tree links updated:',activeLinks.length,'active link(s)');
-      loadSharedNodes().then(()=>render());
+      // Auto-upload our shared data if shareLevel is 'all' but data is missing
+      autoUploadSharedData().then(()=>loadSharedNodes()).then(()=>render());
     }
   };
 
@@ -2227,6 +2229,36 @@ async function toggleShareLevel(linkId, newLevel){
 
 // ─── SHARED NODES (received from linked users) ──────────────────────────────
 let sharedNodes=[];
+
+// Auto-upload shared data if our shareLevel is 'all' but data isn't uploaded yet
+async function autoUploadSharedData(){
+  if(!currentUser||!P.length) return;
+  for(const link of activeLinks){
+    const myLevel=link.shareLevel?.[currentUser.uid];
+    const myData=link.sharedData?.[currentUser.uid];
+    if(myLevel==='all'&&!myData){
+      try{
+        console.log('Auto-uploading shared data for link',link.id);
+        const sharedKey=await deriveSharedKey(link.userA, link.userB);
+        const sharedData=P.map(p=>({
+          id:p.id, name:fullName(p),
+          firstName:p.firstName||'', lastName:p.lastName||'',
+          gender:p.gender||'', photo:p.photo||null,
+          dob:p.dob||null, dod:p.dod||null,
+          birth:p.birth||null, death:p.death||null,
+          city:p.city||'', state:p.state||'',
+          note:p.note||'', relLabel:p.relLabel||'',
+          parents:p.parents||[], spouseOf:p.spouseOf||null,
+          isYou:p.isYou||false, x:p.x, y:p.y
+        }));
+        const encrypted=await encryptShared(sharedKey, sharedData);
+        await db.collection('treeLinks').doc(link.id).update({
+          [`sharedData.${currentUser.uid}`]:encrypted
+        });
+      }catch(e){console.warn('Auto-upload failed for link',link.id,e)}
+    }
+  }
+}
 
 // Adopt a shared node — copy it into the local tree as a regular node
 function adoptSharedNode(sharedId){
