@@ -1146,6 +1146,9 @@ function autoAssignToYou(newNodeId, anchorId, relToAnchor){
 
     applyInferredRel(existing, newNode, inferred);
   });
+
+  // Post-processing: remove any connections that can't be traced through real family structure
+  cleanFalseConnections();
 }
 
 // Generic getRelToYou from any node's perspective (not just isYou)
@@ -1262,68 +1265,150 @@ function recalcAllRelationships(){
   setTimeout(()=>{ btn.textContent=orig; btn.style.background=''; btn.style.borderColor=''; },2000);
 }
 
-// Remove connections that have no valid kinship path (created by earlier inference bugs)
-function cleanFalseConnections(){
-  P.forEach(p=>{
-    if(!p.customLinks) return;
-    Object.keys(p.customLinks).forEach(tid=>{
-      const other=P.find(x=>x.id===tid); if(!other) return;
-      const v=p.customLinks[tid];
-      const label=typeof v==='string'?v:v.label;
-      // Only examine non-blood labeled connections
-      const lt=typeof v==='string'?'labeled':v.lineType;
-      if(lt!=='labeled') return;
-      // If the label contains '-in-law', verify there's an actual structural in-law path
-      if(label&&label.includes('-in-law')){
-        const hasPath=hasInLawPath(p, other);
-        if(!hasPath){
-          delete p.customLinks[tid];
-          if(other.customLinks) delete other.customLinks[p.id];
-        }
-      }
-    });
-  });
+// ─── STRUCTURAL VALIDATION HELPERS ───────────────────────────────────────────
+
+function getSpouseNode(node){
+  if(node.spouseOf) return P.find(p=>p.id===node.spouseOf);
+  return P.find(p=>p.spouseOf===node.id)||null;
 }
 
-// Check if there's a real in-law structural path between two nodes
+// Collect all ancestor IDs through parents[] chains, up to maxGen generations
+function collectAncestors(nodeId, maxGen){
+  const ancestors=new Set();
+  let current=new Set([nodeId]);
+  for(let g=0;g<maxGen;g++){
+    const next=new Set();
+    for(const id of current){
+      const node=P.find(p=>p.id===id); if(!node) continue;
+      for(const pid of (node.parents||[])){
+        if(!ancestors.has(pid)){ ancestors.add(pid); next.add(pid); }
+      }
+    }
+    if(next.size===0) break;
+    current=next;
+  }
+  return ancestors;
+}
+
+// Collect all descendant IDs through reverse parents[] lookup, up to maxGen generations
+function collectDescendants(nodeId, maxGen){
+  const desc=new Set();
+  let current=new Set([nodeId]);
+  for(let g=0;g<maxGen;g++){
+    const next=new Set();
+    for(const id of current){
+      P.filter(p=>(p.parents||[]).includes(id)).forEach(child=>{
+        if(!desc.has(child.id)){ desc.add(child.id); next.add(child.id); }
+      });
+    }
+    if(next.size===0) break;
+    current=next;
+  }
+  return desc;
+}
+
+// Check if two nodes share at least one parent
+function hasSharedParent(a, b){
+  const ap=new Set(a.parents||[]);
+  return (b.parents||[]).some(p=>ap.has(p));
+}
+
+// Check if two nodes are blood-related: share a common ancestor OR one descends from the other
+// Traces through parents[] only (no spouseOf crossings) — up to 6 generations
+function hasBloodPath(nodeA, nodeB){
+  const ancA=collectAncestors(nodeA.id, 6); ancA.add(nodeA.id);
+  const ancB=collectAncestors(nodeB.id, 6); ancB.add(nodeB.id);
+  // Common ancestor = blood relation (siblings, cousins, uncle/nephew, etc.)
+  for(const id of ancA){ if(ancB.has(id)) return true; }
+  // A is ancestor of B or B is ancestor of A (direct line: grandparent/grandchild)
+  const descA=collectDescendants(nodeA.id, 6);
+  if(descA.has(nodeB.id)) return true;
+  const descB=collectDescendants(nodeB.id, 6);
+  if(descB.has(nodeA.id)) return true;
+  // Uncle/nephew/cousin: A's ancestor's descendant = B (through a sibling branch)
+  for(const aId of ancA){
+    const d=collectDescendants(aId, 6);
+    if(d.has(nodeB.id)) return true;
+  }
+  return false;
+}
+
+// Check if there's a valid in-law structural path between two nodes
+// In-law = connected through exactly ONE marriage bridge
+// Valid paths: A→spouse→blood→B, A→child/grandchild→marriage→B, or the reverse
 function hasInLawPath(nodeA, nodeB){
-  // In-law = connected through a marriage (spouseOf)
-  // nodeA's spouse's relatives = nodeA's in-laws
-  const spouseA=nodeA.spouseOf?P.find(p=>p.id===nodeA.spouseOf):P.find(p=>p.spouseOf===nodeA.id);
-  if(spouseA){
-    // nodeB is spouse's parent or ancestor → Father/Mother-in-law
-    if((spouseA.parents||[]).includes(nodeB.id)) return true;
-    // nodeB is spouse's sibling → Sibling-in-law
-    const spP=new Set(spouseA.parents||[]);
-    if(spP.size&&(nodeB.parents||[]).some(pp=>spP.has(pp))) return true;
-    // nodeB is spouse's child (not shared) → Step-child type
-    if((nodeB.parents||[]).includes(spouseA.id)&&!(nodeB.parents||[]).includes(nodeA.id)) return true;
-  }
-  // nodeB's spouse's relatives = nodeB's in-laws
-  const spouseB=nodeB.spouseOf?P.find(p=>p.id===nodeB.spouseOf):P.find(p=>p.spouseOf===nodeB.id);
-  if(spouseB){
-    if((spouseB.parents||[]).includes(nodeA.id)) return true;
-    const spP=new Set(spouseB.parents||[]);
-    if(spP.size&&(nodeA.parents||[]).some(pp=>spP.has(pp))) return true;
-    if((nodeA.parents||[]).includes(spouseB.id)&&!(nodeA.parents||[]).includes(nodeB.id)) return true;
-  }
-  // Son/daughter-in-law: nodeA's child married nodeB or vice versa
+  // Path 1: A's spouse is blood-related to B
+  // Covers: Father/Mother/Grandfather/Brother/Uncle-in-law, Nephew through marriage, etc.
+  const spouseA=getSpouseNode(nodeA);
+  if(spouseA && hasBloodPath(spouseA, nodeB)) return true;
+
+  // Path 2: B's spouse is blood-related to A (reverse of path 1)
+  const spouseB=getSpouseNode(nodeB);
+  if(spouseB && hasBloodPath(spouseB, nodeA)) return true;
+
+  // Path 3: A's child/grandchild married B directly → Son/Daughter/Grandson-in-law
   const childrenA=P.filter(x=>(x.parents||[]).includes(nodeA.id));
   for(const c of childrenA){
     if(c.spouseOf===nodeB.id||nodeB.spouseOf===c.id) return true;
-  }
-  const childrenB=P.filter(x=>(x.parents||[]).includes(nodeB.id));
-  for(const c of childrenB){
-    if(c.spouseOf===nodeA.id||nodeA.spouseOf===c.id) return true;
-  }
-  // Grandson/daughter-in-law: nodeA's grandchild married nodeB
-  for(const c of childrenA){
+    // Grandchild level
     const gcs=P.filter(x=>(x.parents||[]).includes(c.id));
     for(const gc of gcs){
       if(gc.spouseOf===nodeB.id||nodeB.spouseOf===gc.id) return true;
     }
   }
+
+  // Path 4: B's child/grandchild married A directly (reverse of path 3)
+  const childrenB=P.filter(x=>(x.parents||[]).includes(nodeB.id));
+  for(const c of childrenB){
+    if(c.spouseOf===nodeA.id||nodeA.spouseOf===c.id) return true;
+    const gcs=P.filter(x=>(x.parents||[]).includes(c.id));
+    for(const gc of gcs){
+      if(gc.spouseOf===nodeA.id||nodeA.spouseOf===gc.id) return true;
+    }
+  }
+
   return false;
+}
+
+// ─── CONNECTION CLEANUP ─────────────────────────────────────────────────────
+// Remove connections that have no valid structural kinship path
+// Validates ALL customLink types — blood, labeled, and sibling
+function cleanFalseConnections(){
+  const toRemove=[];
+  P.forEach(p=>{
+    if(!p.customLinks) return;
+    Object.keys(p.customLinks).forEach(tid=>{
+      // Only process each pair once (lower id processes)
+      if(p.id>tid) return;
+      const other=P.find(x=>x.id===tid); if(!other) return;
+      const v=p.customLinks[tid];
+      const label=typeof v==='string'?v:v.label;
+      const lt=typeof v==='string'?'labeled':v.lineType;
+
+      let valid=false;
+
+      if(lt==='sibling'){
+        // Siblings must share at least one parent
+        valid=hasSharedParent(p, other);
+      } else if(lt==='blood'||lt==='labeled'){
+        // Blood and labeled connections: valid if there's a real blood OR in-law path
+        valid=hasBloodPath(p, other)||hasInLawPath(p, other);
+      } else {
+        // Custom/unknown lineTypes (user-created custom connection types) — always keep
+        valid=true;
+      }
+
+      if(!valid) toRemove.push({a:p.id, b:tid});
+    });
+  });
+  // Remove invalid connections (deferred to avoid mutating during iteration)
+  toRemove.forEach(({a,b})=>{
+    const nodeA=P.find(x=>x.id===a);
+    const nodeB=P.find(x=>x.id===b);
+    if(nodeA&&nodeA.customLinks) delete nodeA.customLinks[b];
+    if(nodeB&&nodeB.customLinks) delete nodeB.customLinks[a];
+  });
+  if(toRemove.length) console.log('cleanFalseConnections: removed',toRemove.length,'invalid connection(s)');
 }
 
 function toggleAutoConn(){
