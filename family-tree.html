@@ -1727,9 +1727,60 @@ function closeSettings(){
 
 // ─── FIRESTORE ────────────────────────────────────────────────────────────────
 function userDoc(){ return db.collection('familyTrees').doc(currentUser.uid); }
+
+// ─── CLIENT-SIDE ENCRYPTION (Phase 2) ────────────────────────────────────────
+// AES-256-GCM encryption using Web Crypto API
+// Key derived from Firebase UID via PBKDF2 — data is encrypted before leaving the browser
+let encryptionKey=null;
+
+async function deriveEncryptionKey(uid){
+  const enc=new TextEncoder();
+  const keyMaterial=await crypto.subtle.importKey(
+    'raw', enc.encode(uid), 'PBKDF2', false, ['deriveKey']
+  );
+  return crypto.subtle.deriveKey(
+    {name:'PBKDF2', salt:enc.encode('twygie-encryption-v1'), iterations:100000, hash:'SHA-256'},
+    keyMaterial,
+    {name:'AES-GCM', length:256},
+    false,
+    ['encrypt','decrypt']
+  );
+}
+
+async function encryptPeople(key, people){
+  const enc=new TextEncoder();
+  const iv=crypto.getRandomValues(new Uint8Array(12)); // 96-bit IV for AES-GCM
+  const plaintext=enc.encode(JSON.stringify(people));
+  const ciphertext=await crypto.subtle.encrypt({name:'AES-GCM',iv}, key, plaintext);
+  // Prepend IV to ciphertext, then base64 encode
+  const combined=new Uint8Array(iv.length+ciphertext.byteLength);
+  combined.set(iv);
+  combined.set(new Uint8Array(ciphertext),iv.length);
+  // Convert to base64 in chunks to avoid call stack overflow on large arrays
+  let binary='';
+  const chunk=8192;
+  for(let i=0;i<combined.length;i+=chunk){
+    binary+=String.fromCharCode.apply(null,combined.subarray(i,i+chunk));
+  }
+  return btoa(binary);
+}
+
+async function decryptPeople(key, base64Data){
+  const binary=atob(base64Data);
+  const raw=new Uint8Array(binary.length);
+  for(let i=0;i<binary.length;i++) raw[i]=binary.charCodeAt(i);
+  const iv=raw.slice(0,12);
+  const ciphertext=raw.slice(12);
+  const decrypted=await crypto.subtle.decrypt({name:'AES-GCM',iv}, key, ciphertext);
+  return JSON.parse(new TextDecoder().decode(decrypted));
+}
 async function loadTree(){
   // Load settings FIRST so we know if demoMode is on
   await loadSettings();
+
+  // Derive encryption key from user's UID
+  try{ encryptionKey=await deriveEncryptionKey(currentUser.uid); }
+  catch(e){ console.warn('Web Crypto unavailable — encryption disabled',e); encryptionKey=null; }
 
   if(demoMode){
     // Demo mode: fresh tree every reload, saves blocked (treeLoaded stays false)
@@ -1738,9 +1789,44 @@ async function loadTree(){
   } else {
     try{
       const snap=await userDoc().get();
-      if(snap.exists && snap.data().people && snap.data().people.length){
-        P=snap.data().people;
-        treeLoaded=true;
+      if(snap.exists){
+        const d=snap.data();
+        if(d.encryptedData && encryptionKey){
+          // ── Encrypted format (Phase 2) ──
+          try{
+            P=await decryptPeople(encryptionKey, d.encryptedData);
+            treeLoaded=true;
+            console.log('Tree loaded and decrypted successfully.');
+          }catch(decErr){
+            console.error('Decryption failed:',decErr);
+            P=makeDefaultTree(currentUser||{displayName:''});
+            setTimeout(()=>alert('Could not decrypt your tree data. If you recently changed accounts, the encryption key may not match. Please contact support.'),500);
+          }
+        } else if(d.people && d.people.length){
+          // ── Legacy plaintext format — migrate to encrypted ──
+          P=d.people;
+          treeLoaded=true;
+          console.log('Legacy plaintext tree loaded. Migrating to encrypted format...');
+          // Auto-migrate: save in encrypted format immediately
+          if(encryptionKey){
+            try{
+              const encrypted=await encryptPeople(encryptionKey,P);
+              await userDoc().set({
+                encryptedData:encrypted,
+                encryptionVersion:1,
+                ownerEmail:currentUser.email||'',
+                nodeCount:P.length,
+                updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+              });
+              console.log('Migration complete — tree data is now encrypted.');
+            }catch(migErr){ console.warn('Migration save failed — will retry on next save:',migErr); }
+          }
+        } else {
+          // ── Empty/new user ──
+          P=makeDefaultTree(currentUser);
+          treeLoaded=true;
+          await saveTree(false);
+        }
       } else {
         P=makeDefaultTree(currentUser);
         treeLoaded=true;
@@ -1749,7 +1835,6 @@ async function loadTree(){
     }catch(e){
       console.error('Failed to load tree from Firestore:',e);
       P=makeDefaultTree(currentUser||{displayName:''});
-      // Do NOT set treeLoaded — prevents saving default tree over real data
       setTimeout(()=>alert('Could not load your tree — you may be offline. Your saved data is safe. Please refresh to try again.'),500);
     }
   }
@@ -1759,7 +1844,25 @@ async function saveTree(ind=true){
   if(!currentUser) return;
   if(!treeLoaded){ console.warn('Save blocked — tree not loaded from Firestore yet'); return; }
   try{
-    await userDoc().set({ people:P, updatedAt:firebase.firestore.FieldValue.serverTimestamp(), ownerEmail:currentUser.email||'' });
+    if(encryptionKey){
+      // ── Encrypted save (Phase 2) ──
+      const encrypted=await encryptPeople(encryptionKey, P);
+      await userDoc().set({
+        encryptedData:encrypted,
+        encryptionVersion:1,
+        ownerEmail:currentUser.email||'',
+        nodeCount:P.length,
+        updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+      });
+    } else {
+      // ── Fallback: plaintext save (Web Crypto unavailable) ──
+      await userDoc().set({
+        people:P,
+        ownerEmail:currentUser.email||'',
+        nodeCount:P.length,
+        updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
     if(ind) flashSaved();
   }catch(e){ console.warn('Save failed',e); }
 }
