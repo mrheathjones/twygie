@@ -1817,7 +1817,8 @@ function closeLinkModal(){ document.getElementById('link-bg').classList.remove('
 
 // Generate a SHA-256 hash of name+DOB for bridge node matching
 async function hashNode(p){
-  const raw=`${fullName(p).toLowerCase().trim()}|${p.dob?.year||''}|${p.dob?.month||''}|${p.dob?.day||''}`;
+  const birthYear=p.dob?.year||p.birth||'';
+  const raw=`${fullName(p).toLowerCase().trim()}|${birthYear}`;
   const enc=new TextEncoder();
   const buf=await crypto.subtle.digest('SHA-256',enc.encode(raw));
   return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
