@@ -3156,7 +3156,15 @@ function submitMember(){
       np.customLinks[addFor]={label:sibLabel,lineType:'sibling'};
       target.customLinks[id]={label:sibLabel,lineType:'sibling'};
     }
-        else if(baseRel==='Spouse'){ np.spouseOf=addFor; if(target) target.spouseOf=id; }
+        else if(baseRel==='Spouse'){
+          np.spouseOf=addFor; if(target) target.spouseOf=id;
+          // Structural: anchor's existing children become new spouse's children too
+          P.filter(x=>(x.parents||[]).includes(addFor)).forEach(child=>{
+            if(!(child.parents||[]).includes(id)){
+              child.parents=[...(child.parents||[]),id];
+            }
+          });
+        }
     else if(rel&&rel.startsWith('custom-')){
       // Custom relationship type — store as customLink
       const customLabel=rel.slice(7); // remove 'custom-' prefix
