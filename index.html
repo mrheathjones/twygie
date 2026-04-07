@@ -2276,6 +2276,12 @@ function adoptSharedNode(sharedId){
 
   // Generate a new local ID
   const newId='n'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
+  const oldId=sn.id;
+
+  // Find bridge node for positioning
+  const link=activeLinks.find(l=>l.id===sn._linkId);
+  const myBridgeId=link?(link.userA===currentUser.uid?link.bridgeNodeIdA:link.bridgeNodeIdB):null;
+  const bridge=myBridgeId?byId[myBridgeId]:null;
 
   // Build the adopted node
   const adopted={
@@ -2286,24 +2292,35 @@ function adoptSharedNode(sharedId){
     birth:sn.birth||null, death:sn.death||null,
     city:sn.city||'', state:sn.state||'',
     note:sn.note||'', relLabel:sn.relLabel||'',
-    parents:[], spouseOf:sn.spouseOf||null,
+    parents:[], spouseOf:null,
     customLinks:{}, isYou:false, _adopted:true,
-    x:sn.x||Math.random()*400+200, y:sn.y||Math.random()*400+200
+    x:bridge?(bridge.x+Math.random()*200-100):(Math.random()*400+200),
+    y:bridge?(bridge.y+Math.random()*200+50):(Math.random()*400+200)
   };
 
-  // Remap parents — shared parents that point to local nodes stay, others become customLinks
+  // Remap parents — keep references to local nodes
   (sn.parents||[]).forEach(pid=>{
-    if(byId[pid]){
-      adopted.parents.push(pid);
-    }
+    if(byId[pid]) adopted.parents.push(pid);
   });
 
-  // Remap spouse
-  if(adopted.spouseOf&&!byId[adopted.spouseOf]) adopted.spouseOf=null;
+  // Remap spouse — keep if local node exists
+  if(sn.spouseOf&&byId[sn.spouseOf]) adopted.spouseOf=sn.spouseOf;
 
   // Add to tree
   P.push(adopted);
   byId[newId]=adopted;
+
+  // Remap references: update remaining shared nodes AND local nodes
+  // that pointed to the old shared ID → now point to new local ID
+  sharedNodes.forEach(n=>{
+    n.parents=(n.parents||[]).map(pid=>pid===oldId?newId:pid);
+    if(n.spouseOf===oldId) n.spouseOf=newId;
+  });
+  P.forEach(n=>{
+    if(n.id===newId) return;
+    n.parents=(n.parents||[]).map(pid=>pid===oldId?newId:pid);
+    if(n.spouseOf===oldId) n.spouseOf=newId;
+  });
 
   // Remove from shared nodes
   sharedNodes=sharedNodes.filter(n=>n.id!==sharedId);
