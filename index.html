@@ -2202,7 +2202,7 @@ async function toggleShareLevel(linkId, newLevel){
         dob:p.dob||null, dod:p.dod||null,
         birth:p.birth||null, death:p.death||null,
         city:p.city||'', state:p.state||'',
-        note:p.note||'', relLabel:p.relLabel||'',
+        note:p.note||'', relLabel:getRelToYou(p.id)||p.relLabel||'',
         parents:p.parents||[], spouseOf:p.spouseOf||null,
         isYou:p.isYou||false, x:p.x, y:p.y
       }));
@@ -2249,7 +2249,7 @@ async function autoUploadSharedData(){
           dob:p.dob||null, dod:p.dod||null,
           birth:p.birth||null, death:p.death||null,
           city:p.city||'', state:p.state||'',
-          note:p.note||'', relLabel:p.relLabel||'',
+          note:p.note||'', relLabel:getRelToYou(p.id)||p.relLabel||'',
           parents:p.parents||[], spouseOf:p.spouseOf||null,
           isYou:p.isYou||false, x:p.x, y:p.y
         }));
