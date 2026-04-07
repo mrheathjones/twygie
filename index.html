@@ -2195,17 +2195,21 @@ async function toggleShareLevel(linkId, newLevel){
       // Encrypt our people[] with the shared key and store in the link
       const sharedKey=await deriveSharedKey(link.userA, link.userB);
       // Share stripped-down node data (no customLinks internals, no isYou)
-      const sharedData=P.map(p=>({
-        id:p.id, name:fullName(p),
-        firstName:p.firstName||'', lastName:p.lastName||'',
-        gender:p.gender||'', photo:p.photo||null,
-        dob:p.dob||null, dod:p.dod||null,
-        birth:p.birth||null, death:p.death||null,
-        city:p.city||'', state:p.state||'',
-        note:p.note||'', relLabel:getRelToYou(p.id)||p.relLabel||'',
-        parents:p.parents||[], spouseOf:p.spouseOf||null,
-        isYou:p.isYou||false, x:p.x, y:p.y
-      }));
+      const sharedData=P.map(p=>{
+        // Compute spouse bidirectionally (spouseOf is one-way)
+        const spouseId=p.spouseOf||(P.find(x=>x.spouseOf===p.id)||{}).id||null;
+        return {
+          id:p.id, name:fullName(p),
+          firstName:p.firstName||'', lastName:p.lastName||'',
+          gender:p.gender||'', photo:p.photo||null,
+          dob:p.dob||null, dod:p.dod||null,
+          birth:p.birth||null, death:p.death||null,
+          city:p.city||'', state:p.state||'',
+          note:p.note||'', relLabel:getRelToYou(p.id)||p.relLabel||'',
+          parents:p.parents||[], spouseOf:spouseId,
+          isYou:p.isYou||false, x:p.x, y:p.y
+        };
+      });
       const encrypted=await encryptShared(sharedKey, sharedData);
 
       await db.collection('treeLinks').doc(linkId).update({
@@ -2242,17 +2246,20 @@ async function autoUploadSharedData(){
       try{
         console.log('Auto-uploading shared data for link',link.id);
         const sharedKey=await deriveSharedKey(link.userA, link.userB);
-        const sharedData=P.map(p=>({
-          id:p.id, name:fullName(p),
-          firstName:p.firstName||'', lastName:p.lastName||'',
-          gender:p.gender||'', photo:p.photo||null,
-          dob:p.dob||null, dod:p.dod||null,
-          birth:p.birth||null, death:p.death||null,
-          city:p.city||'', state:p.state||'',
-          note:p.note||'', relLabel:getRelToYou(p.id)||p.relLabel||'',
-          parents:p.parents||[], spouseOf:p.spouseOf||null,
-          isYou:p.isYou||false, x:p.x, y:p.y
-        }));
+        const sharedData=P.map(p=>{
+          const spouseId=p.spouseOf||(P.find(x=>x.spouseOf===p.id)||{}).id||null;
+          return {
+            id:p.id, name:fullName(p),
+            firstName:p.firstName||'', lastName:p.lastName||'',
+            gender:p.gender||'', photo:p.photo||null,
+            dob:p.dob||null, dod:p.dod||null,
+            birth:p.birth||null, death:p.death||null,
+            city:p.city||'', state:p.state||'',
+            note:p.note||'', relLabel:getRelToYou(p.id)||p.relLabel||'',
+            parents:p.parents||[], spouseOf:spouseId,
+            isYou:p.isYou||false, x:p.x, y:p.y
+          };
+        });
         const encrypted=await encryptShared(sharedKey, sharedData);
         await db.collection('treeLinks').doc(link.id).update({
           [`sharedData.${currentUser.uid}`]:encrypted
