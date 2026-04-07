@@ -1886,14 +1886,27 @@ async function generateLinkCode(nodeId){
       <div style="font-size:.82rem;color:var(--muted);margin-bottom:4px">Link code for</div>
       <div style="font-family:'Cormorant Garamond',serif;font-size:1.2rem;font-weight:600;color:var(--text)">${nm}</div>
       <div class="link-code">${code}</div>
-      <div style="font-size:.75rem;color:var(--muted);margin-bottom:16px;line-height:1.5">
+      <div style="font-size:.75rem;color:var(--muted);margin-bottom:12px;line-height:1.5">
         Share this code with another Twygie user who has<br><strong>${nm}</strong> in their tree to link your trees.
       </div>
+      <label style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:rgba(110,203,138,.06);border:1px solid rgba(110,203,138,.15);border-radius:8px;cursor:pointer;margin-bottom:14px">
+        <input type="checkbox" id="link-share-all" style="accent-color:var(--gold);width:16px;height:16px"/>
+        <div>
+          <div style="font-size:.78rem;color:var(--text)">Share All</div>
+          <div style="font-size:.65rem;color:var(--muted)">Share your entire tree when linked</div>
+        </div>
+      </label>
       <button class="link-copy" onclick="copyLinkCode('${code}')">Copy Code</button>
       <div class="link-expires">Expires in 7 days</div>
       <div style="height:14px"></div>
       <button onclick="closeLinkModal()" style="padding:6px 16px;background:transparent;border:1px solid var(--border);border-radius:100px;color:var(--muted);font-family:'Outfit',sans-serif;font-size:.76rem;cursor:pointer">Close</button>
     `;
+    // Listen for Share All checkbox — update invite
+    document.getElementById('link-share-all').addEventListener('change',async function(){
+      try{
+        await db.collection('linkInvites').doc(code).update({autoShareAll:this.checked});
+      }catch(e){console.warn('Failed to update invite share flag:',e)}
+    });
   }catch(e){
     console.error('Failed to create link invite:',e);
     modal.innerHTML=`
@@ -1967,11 +1980,24 @@ async function acceptLinkCode(){
     // Mark invite as used
     await db.collection('linkInvites').doc(code).update({usedBy:currentUser.uid});
 
+    // If creator opted for Share All, enable it on their side
+    if(invite.autoShareAll){
+      try{
+        const sharedKey=await deriveSharedKey(invite.createdBy, currentUser.uid);
+        // We can't encrypt THEIR data (we don't have it), but the flag is set
+        // Their side will detect the link via onSnapshot and see autoShareAll
+        await db.collection('treeLinks').doc(linkId).update({
+          [`shareLevel.${invite.createdBy}`]:'all'
+        });
+      }catch(e){console.warn('Could not auto-enable share all for creator:',e)}
+    }
+
     msg.style.color='rgba(110,203,138,.8)';
     msg.textContent=`Linked! "${invite.bridgeNodeName}" now bridges your trees.`;
     input.value='';
-    await loadActiveLinks(); // refresh cache so bridge badges appear immediately
-    render(); // re-render tree to show any visual changes
+    await loadActiveLinks();
+    await loadSharedNodes();
+    render();
     loadLinkedTrees();
   }catch(e){
     console.error('Failed to accept link:',e);
@@ -2200,20 +2226,66 @@ async function toggleShareLevel(linkId, newLevel){
 }
 
 // ─── SHARED NODES (received from linked users) ──────────────────────────────
-let sharedNodes=[]; // [{...node, _sharedBy, _sharedByName, _linkId}]
+let sharedNodes=[];
+
+// Adopt a shared node — copy it into the local tree as a regular node
+function adoptSharedNode(sharedId){
+  const sn=sharedNodes.find(n=>n.id===sharedId);
+  if(!sn){closeLinkModal();return}
+
+  // Generate a new local ID
+  const newId='n'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
+
+  // Build the adopted node
+  const adopted={
+    id:newId,
+    name:sn.name||'', firstName:sn.firstName||'', lastName:sn.lastName||'',
+    gender:sn.gender||'', photo:sn.photo||null,
+    dob:sn.dob||null, dod:sn.dod||null,
+    birth:sn.birth||null, death:sn.death||null,
+    city:sn.city||'', state:sn.state||'',
+    note:sn.note||'', relLabel:sn.relLabel||'',
+    parents:[], spouseOf:sn.spouseOf||null,
+    customLinks:{}, isYou:false, _adopted:true,
+    x:sn.x||Math.random()*400+200, y:sn.y||Math.random()*400+200
+  };
+
+  // Remap parents — shared parents that point to local nodes stay, others become customLinks
+  (sn.parents||[]).forEach(pid=>{
+    if(byId[pid]){
+      adopted.parents.push(pid);
+    }
+  });
+
+  // Remap spouse
+  if(adopted.spouseOf&&!byId[adopted.spouseOf]) adopted.spouseOf=null;
+
+  // Add to tree
+  P.push(adopted);
+  byId[newId]=adopted;
+
+  // Remove from shared nodes
+  sharedNodes=sharedNodes.filter(n=>n.id!==sharedId);
+
+  closeLinkModal();
+  rebuild();
+  scheduleSave();
+  render();
+} // [{...node, _sharedBy, _sharedByName, _linkId}]
 
 async function loadSharedNodes(){
   sharedNodes=[];
   if(!currentUser||!activeLinks.length) return;
 
-  // Build local node fingerprints for deduplication (firstName+birthYear AND fullName+birthYear)
-  const localFingerprints=new Set();
+  // Build local node fingerprints for deduplication AND ID mapping
+  // Maps fingerprint → local node ID so shared children can remap to local parents
+  const fpToLocalId={};
   P.forEach(p=>{
     const fn=(p.firstName||fullName(p).split(' ')[0]||'').toLowerCase().trim();
     const full=fullName(p).toLowerCase().trim();
     const by=p.dob?.year||p.birth||'';
-    if(fn&&by) localFingerprints.add(`${fn}|${by}`);
-    if(full&&by) localFingerprints.add(`${full}|${by}`);
+    if(fn&&by) fpToLocalId[`${fn}|${by}`]=p.id;
+    if(full&&by) fpToLocalId[`${full}|${by}`]=p.id;
   });
 
   for(const link of activeLinks){
@@ -2228,24 +2300,34 @@ async function loadSharedNodes(){
         const nodes=await decryptShared(sharedKey, otherData);
         const myBridgeId=link.userA===currentUser.uid?link.bridgeNodeIdA:link.bridgeNodeIdB;
         const otherBridgeId=link.userA===currentUser.uid?link.bridgeNodeIdB:link.bridgeNodeIdA;
+
+        // First pass: build a map of other-node-ID → local-node-ID for duplicates
+        const otherToLocal={};
+        otherToLocal[otherBridgeId]=myBridgeId; // bridge always maps
         nodes.forEach(n=>{
-          // Skip the bridge node (we already have it)
-          if(n.id===otherBridgeId) return;
-          // Skip duplicates — match on firstName+birthYear or fullName+birthYear
           const nFull=(n.name||[n.firstName,n.lastName].filter(Boolean).join(' ')||'').toLowerCase().trim();
           const nFirst=(n.firstName||nFull.split(' ')[0]||'').toLowerCase().trim();
           const nBy=n.dob?.year||n.birth||'';
-          if(nBy&&(localFingerprints.has(`${nFirst}|${nBy}`)||localFingerprints.has(`${nFull}|${nBy}`))) return;
+          // Check if this node has a local duplicate
+          const localId=fpToLocalId[`${nFirst}|${nBy}`]||fpToLocalId[`${nFull}|${nBy}`];
+          if(localId) otherToLocal[n.id]=localId;
+        });
 
+        // Helper: remap an ID — use local node if duplicate, otherwise prefix as shared
+        const remap=id=>otherToLocal[id]||`shared_${link.id}_${id}`;
+
+        // Second pass: add non-duplicate nodes with remapped IDs
+        nodes.forEach(n=>{
+          if(otherToLocal[n.id]) return; // skip duplicates (including bridge)
           n._origId=n.id;
           n.id=`shared_${link.id}_${n.id}`;
           n._sharedBy=otherUid;
           n._sharedByName=otherName;
           n._linkId=link.id;
           n._readOnly=true;
-          // Remap parent IDs
-          n.parents=(n.parents||[]).map(pid=>pid===otherBridgeId?myBridgeId:`shared_${link.id}_${pid}`);
-          if(n.spouseOf){n.spouseOf=n.spouseOf===otherBridgeId?myBridgeId:`shared_${link.id}_${n.spouseOf}`}
+          // Remap parent/spouse IDs to local equivalents where possible
+          n.parents=(n.parents||[]).map(pid=>remap(pid));
+          if(n.spouseOf) n.spouseOf=remap(n.spouseOf);
           sharedNodes.push(n);
         });
       }catch(e){console.warn('Failed to decrypt shared nodes from',otherName,e)}
@@ -2933,6 +3015,25 @@ function drawNodes(){
       G.appendChild(bRing);
     }
 
+    // Adopted node indicator — double ring with spinning outer
+    if(p._adopted){
+      const outerA=se('circle');
+      outerA.setAttribute('r',String(R+10));
+      outerA.setAttribute('fill','none');
+      outerA.setAttribute('stroke','rgba(200,168,75,0.35)');
+      outerA.setAttribute('stroke-width','1.5');
+      outerA.setAttribute('stroke-dasharray','6,4');
+      outerA.setAttribute('class','bridge-ring');
+      outerA.style.animationDuration='12s'; // faster spin
+      G.appendChild(outerA);
+      const innerA=se('circle');
+      innerA.setAttribute('r',String(R+6));
+      innerA.setAttribute('fill','none');
+      innerA.setAttribute('stroke','rgba(200,168,75,0.2)');
+      innerA.setAttribute('stroke-width','1');
+      G.appendChild(innerA);
+    }
+
     // Events
     G.addEventListener('mousedown',e=>onNodeMouseDown(e,p.id));
     G.addEventListener('touchstart',e=>onNodeTouchStart(e,p.id),{passive:true});
@@ -3035,6 +3136,7 @@ function drawNodes(){
           ${dateStr?`<div style="font-size:.72rem;color:var(--muted);text-align:center;margin-top:6px">${dateStr}</div>`:''}
           ${story?`<div style="font-size:.75rem;color:rgba(255,255,255,.35);font-style:italic;text-align:center;margin-top:10px;line-height:1.5">"${story}"</div>`:''}
           <div style="height:16px"></div>
+          <button onclick="adoptSharedNode('${sn.id}')" style="width:100%;padding:8px;background:rgba(200,168,75,.1);border:1px solid rgba(200,168,75,.25);border-radius:100px;color:var(--gold);font-family:'Outfit',sans-serif;font-size:.78rem;cursor:pointer;margin-bottom:8px">Adopt to My Tree</button>
           <button onclick="closeLinkModal()" style="width:100%;padding:8px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:100px;color:var(--muted);font-family:'Outfit',sans-serif;font-size:.76rem;cursor:pointer">Close</button>
         `;
         document.getElementById('link-bg').classList.add('open');
