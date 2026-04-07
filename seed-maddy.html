@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Twygie — Setup Maddy's Tree</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#04070c;--text:rgba(255,255,255,.88);--muted:rgba(255,255,255,.4);--gold:#c8a84b;--border:rgba(255,255,255,.08)}
+html,body{height:100%;background:var(--bg);font-family:'Outfit',sans-serif;color:var(--text);display:flex;align-items:center;justify-content:center}
+.card{background:rgba(10,18,32,.95);border:1px solid var(--border);border-radius:18px;padding:40px;max-width:420px;width:90%;text-align:center;backdrop-filter:blur(20px)}
+h1{font-family:'Cormorant Garamond',serif;font-size:1.8rem;font-weight:700;margin-bottom:8px}
+.sub{color:var(--muted);font-size:.88rem;line-height:1.5;margin-bottom:24px}
+.status{font-size:.82rem;color:var(--muted);margin-top:16px;min-height:20px}
+.status.ok{color:rgba(110,203,138,.8)}
+.status.err{color:rgba(200,100,100,.8)}
+.btn{padding:12px 28px;background:var(--gold);border:none;border-radius:100px;color:#04070c;font-family:'Outfit',sans-serif;font-size:.9rem;font-weight:600;cursor:pointer;transition:all .2s}
+.btn:hover{opacity:.9}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-link{display:inline-block;margin-top:16px;padding:8px 20px;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:100px;color:var(--muted);font-size:.78rem;text-decoration:none;transition:all .2s}
+.btn-link:hover{color:var(--text);background:rgba(255,255,255,.1)}
+.tree-preview{margin:20px 0;padding:16px;background:rgba(255,255,255,.03);border-radius:12px;text-align:left;font-size:.75rem;color:var(--muted);line-height:1.8}
+.tree-preview strong{color:var(--text)}
+.tree-preview .you{color:var(--gold)}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>🌿 Maddy's Twygie Setup</h1>
+  <div class="sub">This will create Maddy's family tree with shared family members so you can test tree linking.</div>
+  
+  <div class="tree-preview">
+    <strong class="you">Maddy</strong> — <em>You (isYou)</em><br>
+    <strong>Hank</strong> — Father (b. 1967)<br>
+    <strong>Mary</strong> — Mother (b. 1966)<br>
+    <strong>Heath</strong> — Brother (b. 1980)<br>
+  </div>
+
+  <div id="auth-section">
+    <div style="font-size:.78rem;color:var(--muted);margin-bottom:12px">First, sign in with Maddy's account:</div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
+      <input id="email" type="email" placeholder="Email" style="padding:10px 14px;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'Outfit',sans-serif;font-size:.85rem;outline:none"/>
+      <input id="password" type="password" placeholder="Password" style="padding:10px 14px;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'Outfit',sans-serif;font-size:.85rem;outline:none"/>
+    </div>
+    <button class="btn" onclick="signUpAndSeed()">Create Account & Seed Tree</button>
+    <div style="margin-top:10px;font-size:.68rem;color:var(--muted)">Or sign in if account already exists</div>
+    <button class="btn" onclick="signInAndSeed()" style="margin-top:8px;background:transparent;border:1px solid var(--gold);color:var(--gold);font-size:.82rem;padding:10px 24px">Sign In & Seed Tree</button>
+  </div>
+
+  <div id="status" class="status"></div>
+  <div id="done-link" style="display:none">
+    <a class="btn-link" href="/family-tree">Open Maddy's Tree →</a>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+<script>
+firebase.initializeApp({apiKey:"AIzaSyBwtDMGEIphvwvq319MZIr62C32fvSSe-4",authDomain:"twygie.firebaseapp.com",projectId:"twygie",storageBucket:"twygie.firebasestorage.app",messagingSenderId:"654053569477",appId:"1:654053569477:web:9296f441c285686d7c11ac"});
+const auth=firebase.auth(),db=firebase.firestore();
+
+// Encryption — must match main app exactly
+async function deriveKey(uid){
+  const e=new TextEncoder();
+  const km=await crypto.subtle.importKey('raw',e.encode(uid),'PBKDF2',false,['deriveKey']);
+  return crypto.subtle.deriveKey({name:'PBKDF2',salt:e.encode('twygie-encryption-v1'),iterations:100000,hash:'SHA-256'},km,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);
+}
+async function encryptPeople(key,people){
+  const enc=new TextEncoder();
+  const iv=crypto.getRandomValues(new Uint8Array(12));
+  const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},key,enc.encode(JSON.stringify(people)));
+  const combined=new Uint8Array(iv.length+ct.byteLength);
+  combined.set(iv);combined.set(new Uint8Array(ct),iv.length);
+  let bin='';const chunk=8192;
+  for(let i=0;i<combined.length;i+=chunk) bin+=String.fromCharCode.apply(null,combined.subarray(i,i+chunk));
+  return btoa(bin);
+}
+
+function status(msg,type){
+  const el=document.getElementById('status');
+  el.textContent=msg;
+  el.className='status'+(type?' '+type:'');
+}
+
+// Maddy's tree data — names and DOBs MUST match Heath's tree exactly for bridge hashing
+const MADDY_TREE=[
+  {
+    id:'you', name:'Maddy', firstName:'Maddy', lastName:'',
+    gender:'female', dob:{month:'',day:'',year:''}, dod:null,
+    birth:null, death:null, city:'', state:'', note:'Welcome to Twygie! Tap Edit to add your story.',
+    photo:null, parents:['dad','mom'], spouseOf:undefined,
+    customLinks:{}, relLabel:'', isYou:true, x:600, y:400
+  },
+  {
+    id:'dad', name:'Hank', firstName:'Hank', lastName:'',
+    gender:'male', dob:{month:'',day:'',year:'1967'}, dod:null,
+    birth:1967, death:null, city:'', state:'', note:'',
+    photo:null, parents:[], spouseOf:'mom',
+    customLinks:{}, relLabel:'Father', isYou:false, x:500, y:250
+  },
+  {
+    id:'mom', name:'Mary', firstName:'Mary', lastName:'',
+    gender:'female', dob:{month:'',day:'',year:'1966'}, dod:null,
+    birth:1966, death:null, city:'', state:'', note:'',
+    photo:null, parents:[], spouseOf:undefined,
+    customLinks:{}, relLabel:'Mother', isYou:false, x:700, y:250
+  },
+  {
+    id:'bro', name:'Heath', firstName:'Heath', lastName:'',
+    gender:'male', dob:{month:'',day:'',year:'1980'}, dod:null,
+    birth:1980, death:null, city:'', state:'', note:'',
+    photo:null, parents:['dad','mom'], spouseOf:undefined,
+    customLinks:{
+      'you':{label:'Sister',lineType:'sibling'}
+    },
+    relLabel:'Brother', isYou:false, x:450, y:400
+  }
+];
+
+// Add sibling link back from Maddy to Heath
+MADDY_TREE[0].customLinks['bro']={label:'Brother',lineType:'sibling'};
+// Fix mom's spouseOf
+MADDY_TREE[2].spouseOf='dad';
+
+async function seedTree(user){
+  status('Deriving encryption key…');
+  const key=await deriveKey(user.uid);
+  
+  status('Encrypting tree data…');
+  const encrypted=await encryptPeople(key, MADDY_TREE);
+  
+  status('Saving to Firestore…');
+  await db.collection('familyTrees').doc(user.uid).set({
+    encryptedData:encrypted,
+    encryptionVersion:1,
+    ownerEmail:user.email||'',
+    nodeCount:MADDY_TREE.length,
+    updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+  });
+
+  // Save default settings
+  await db.collection('userSettings').doc(user.uid).set({
+    defaultView:'simple',
+    autoConnections:true,
+    youngAge:17,
+    updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+  });
+
+  status('Maddy\'s tree is ready! 4 members seeded.','ok');
+  document.getElementById('done-link').style.display='block';
+  document.getElementById('auth-section').style.display='none';
+}
+
+async function signUpAndSeed(){
+  const email=document.getElementById('email').value.trim();
+  const pass=document.getElementById('password').value;
+  if(!email||!pass){status('Enter email and password.','err');return}
+  if(pass.length<6){status('Password must be at least 6 characters.','err');return}
+  
+  try{
+    status('Creating account…');
+    const cred=await auth.createUserWithEmailAndPassword(email,pass);
+    await cred.user.updateProfile({displayName:'Maddy'});
+    await seedTree(cred.user);
+  }catch(e){
+    if(e.code==='auth/email-already-in-use'){
+      status('Account exists — use "Sign In & Seed" instead.','err');
+    } else {
+      status('Error: '+e.message,'err');
+    }
+  }
+}
+
+async function signInAndSeed(){
+  const email=document.getElementById('email').value.trim();
+  const pass=document.getElementById('password').value;
+  if(!email||!pass){status('Enter email and password.','err');return}
+  
+  try{
+    status('Signing in…');
+    const cred=await auth.signInWithEmailAndPassword(email,pass);
+    await seedTree(cred.user);
+  }catch(e){
+    status('Error: '+e.message,'err');
+  }
+}
+</script>
+</body>
+</html>
