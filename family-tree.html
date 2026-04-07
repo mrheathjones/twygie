@@ -131,6 +131,13 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-famil
 #link-bg{position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);opacity:0;pointer-events:none;transition:opacity .25s;display:flex;align-items:center;justify-content:center}
 #link-bg.open{opacity:1;pointer-events:all}
 #link-modal{background:#080f1d;border:1px solid rgba(200,168,75,.2);border-radius:16px;width:380px;max-width:92vw;padding:28px;box-shadow:0 30px 60px rgba(0,0,0,.6);text-align:center}
+
+/* BRANDED CONFIRM/ALERT MODAL */
+#app-modal-bg{position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);opacity:0;pointer-events:none;transition:opacity .2s;display:flex;align-items:center;justify-content:center}
+#app-modal-bg.open{opacity:1;pointer-events:all}
+#app-modal{background:#080f1d;border:1px solid rgba(200,168,75,.2);border-radius:14px;width:340px;max-width:90vw;padding:24px;box-shadow:0 20px 50px rgba(0,0,0,.6);text-align:center}
+#app-modal-msg{font-size:.88rem;color:var(--text);line-height:1.6;margin-bottom:20px}
+#app-modal-btns{display:flex;gap:8px;justify-content:center}
 .link-code{font-family:'Cormorant Garamond',serif;font-size:1.8rem;font-weight:700;color:var(--gold);letter-spacing:.15em;margin:18px 0;user-select:all}
 .link-copy{padding:8px 20px;background:rgba(200,168,75,.12);border:1px solid rgba(200,168,75,.3);border-radius:100px;color:var(--gold);font-family:'Outfit',sans-serif;font-size:.8rem;cursor:pointer;transition:all .15s}
 .link-copy:hover{background:rgba(200,168,75,.2)}
@@ -500,6 +507,14 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-famil
       <button class="mcan" onclick="closeConnModal()">Cancel</button>
       <button class="madd" onclick="saveConnection()">Add Connection</button>
     </div>
+  </div>
+</div>
+
+<!-- BRANDED CONFIRM/ALERT MODAL -->
+<div id="app-modal-bg">
+  <div id="app-modal">
+    <div id="app-modal-msg"></div>
+    <div id="app-modal-btns"></div>
   </div>
 </div>
 
@@ -889,6 +904,34 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db   = firebase.firestore();
 
+// ─── BRANDED MODALS (replace browser confirm/alert) ─────────────────────────
+function appAlert(msg){
+  return new Promise(resolve=>{
+    const bg=document.getElementById('app-modal-bg');
+    document.getElementById('app-modal-msg').innerHTML=msg;
+    document.getElementById('app-modal-btns').innerHTML=`<button onclick="document.getElementById('app-modal-bg').classList.remove('open');(${resolve})()" style="flex:1;padding:8px 16px;background:var(--gold);border:none;border-radius:100px;color:#04070c;font-family:'Outfit',sans-serif;font-size:.82rem;font-weight:600;cursor:pointer">OK</button>`;
+    bg.classList.add('open');
+  });
+}
+function appConfirm(msg){
+  return new Promise(resolve=>{
+    const bg=document.getElementById('app-modal-bg');
+    document.getElementById('app-modal-msg').innerHTML=msg;
+    const close=(val)=>{bg.classList.remove('open');resolve(val)};
+    document.getElementById('app-modal-btns').innerHTML='';
+    const cancelBtn=document.createElement('button');
+    cancelBtn.textContent='Cancel';
+    cancelBtn.style.cssText='flex:1;padding:8px 16px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:100px;color:var(--muted);font-family:Outfit,sans-serif;font-size:.82rem;cursor:pointer';
+    cancelBtn.onclick=()=>close(false);
+    const okBtn=document.createElement('button');
+    okBtn.textContent='OK';
+    okBtn.style.cssText='flex:1;padding:8px 16px;background:var(--gold);border:none;border-radius:100px;color:#04070c;font-family:Outfit,sans-serif;font-size:.82rem;font-weight:600;cursor:pointer';
+    okBtn.onclick=()=>close(true);
+    document.getElementById('app-modal-btns').append(cancelBtn,okBtn);
+    bg.classList.add('open');
+  });
+}
+
 function makeDefaultTree(user) {
   let firstName = '', lastName = '';
   if (user.displayName) {
@@ -918,7 +961,7 @@ auth.onAuthStateChanged(async user => {
   subscribeActiveLinks();
   hideLoading();
 });
-async function signOut(){ if(!confirm('Sign out?')) return; await auth.signOut(); window.location.href='login.html'; }
+async function signOut(){ if(!await appConfirm('Sign out?')) return; await auth.signOut(); window.location.href='login.html'; }
 
 function toggleSection(id){
   const body=document.getElementById(id);
@@ -1361,7 +1404,7 @@ function getRelToYou_for(targetId, fromId){
 }
 
 function recalcAllRelationships(){
-  if(!autoConnections){ alert('Enable auto-assign first.'); return; }
+  if(!autoConnections){ appAlert('Enable auto-assign first.'); return; }
   // Run autoAssignToYou for every node against every other node it's directly connected to
   // Iterate over every direct structural connection in the tree
   const seen=new Set();
@@ -1829,6 +1872,10 @@ function openLinkCard(){
       <input class="link-input" id="link-code-input" placeholder="TWYG-XXXX-XXXX" maxlength="14"/>
       <button class="link-accept" onclick="acceptLinkCode()">Link</button>
     </div>
+    <label style="display:flex;align-items:center;gap:6px;margin-top:8px;cursor:pointer">
+      <input type="checkbox" id="link-auto-adopt" style="accent-color:var(--gold);width:14px;height:14px"/>
+      <span style="font-size:.7rem;color:var(--muted)">Auto-adopt unique nodes from their tree</span>
+    </label>
     <div id="link-accept-msg" style="font-size:.72rem;margin-top:6px;min-height:16px"></div>
     <div style="height:14px"></div>
     <div style="font-size:.72rem;color:var(--muted);margin-bottom:6px">Active links</div>
@@ -1995,10 +2042,41 @@ async function acceptLinkCode(){
     }
 
     msg.style.color='rgba(110,203,138,.8)';
-    msg.textContent=`Linked! "${invite.bridgeNodeName}" now bridges your trees.`;
     input.value='';
     await loadActiveLinks();
     await loadSharedNodes();
+
+    // Auto-adopt unique nodes if checkbox is checked
+    const autoAdopt=document.getElementById('link-auto-adopt');
+    if(autoAdopt&&autoAdopt.checked&&sharedNodes.length){
+      const adoptCount=sharedNodes.length;
+      // Adopt all shared nodes (copy to local tree)
+      const toAdopt=[...sharedNodes];
+      for(const sn of toAdopt){
+        const newId='n'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
+        const oldId=sn.id;
+        const adopted={
+          id:newId, name:sn.name||'', firstName:sn.firstName||'', lastName:sn.lastName||'',
+          gender:sn.gender||'', photo:sn.photo||null,
+          dob:sn.dob||null, dod:sn.dod||null, birth:sn.birth||null, death:sn.death||null,
+          city:sn.city||'', state:sn.state||'', note:sn.note||'', relLabel:sn.relLabel||'',
+          parents:[], spouseOf:null, customLinks:{}, isYou:false, _adopted:true,
+          x:sn.x||Math.random()*400+200, y:sn.y||Math.random()*400+200
+        };
+        (sn.parents||[]).forEach(pid=>{if(byId[pid])adopted.parents.push(pid)});
+        if(sn.spouseOf&&byId[sn.spouseOf])adopted.spouseOf=sn.spouseOf;
+        P.push(adopted);byId[newId]=adopted;
+        // Remap references in remaining nodes
+        sharedNodes.forEach(n=>{n.parents=(n.parents||[]).map(pid=>pid===oldId?newId:pid);if(n.spouseOf===oldId)n.spouseOf=newId});
+        P.forEach(n=>{if(n.id===newId)return;n.parents=(n.parents||[]).map(pid=>pid===oldId?newId:pid);if(n.spouseOf===oldId)n.spouseOf=newId});
+        sharedNodes=sharedNodes.filter(n=>n.id!==oldId);
+      }
+      rebuild();scheduleSave();
+      msg.textContent=`Linked! ${adoptCount} unique node${adoptCount>1?'s':''} adopted to your tree.`;
+    } else {
+      msg.textContent=`Linked! "${invite.bridgeNodeName}" now bridges your trees.`;
+    }
+
     render();
     loadLinkedTrees();
   }catch(e){
@@ -2071,7 +2149,7 @@ async function loadLinkedTrees(){
 }
 
 async function revokeLink(linkId){
-  if(!confirm('Revoke this tree link? The other user will lose access to your shared data.')) return;
+  if(!await appConfirm('Revoke this tree link?<br><span style="font-size:.78rem;color:var(--muted)">The other user will lose access to your shared data.</span>')) return;
   try{
     await db.collection('treeLinks').doc(linkId).update({status:'revoked'});
     await loadActiveLinks();
@@ -2079,7 +2157,7 @@ async function revokeLink(linkId){
     loadLinkedTrees();
   }catch(e){
     console.error('Failed to revoke:',e);
-    alert('Failed to revoke link. Please try again.');
+    appAlert('Failed to revoke link. Please try again.');
   }
 }
 
@@ -2229,7 +2307,7 @@ async function toggleShareLevel(linkId, newLevel){
     loadLinkedTrees();
   }catch(e){
     console.error('Failed to toggle share level:',e);
-    alert('Failed to update sharing. Please try again.');
+    appAlert('Failed to update sharing. Please try again.');
   }
 }
 
@@ -2474,7 +2552,7 @@ async function loadTree(){
           }catch(decErr){
             console.error('Decryption failed:',decErr);
             P=makeDefaultTree(currentUser||{displayName:''});
-            setTimeout(()=>alert('Could not decrypt your tree data. If you recently changed accounts, the encryption key may not match. Please contact support.'),500);
+            setTimeout(()=>appAlert('Could not decrypt your tree data. If you recently changed accounts, the encryption key may not match.'),500);
           }
         } else if(d.people && d.people.length){
           // ── Legacy plaintext format — migrate to encrypted ──
@@ -2509,7 +2587,7 @@ async function loadTree(){
     }catch(e){
       console.error('Failed to load tree from Firestore:',e);
       P=makeDefaultTree(currentUser||{displayName:''});
-      setTimeout(()=>alert('Could not load your tree — you may be offline. Your saved data is safe. Please refresh to try again.'),500);
+      setTimeout(()=>appAlert('Could not load your tree. You may be offline. Your saved data is safe. Please refresh to try again.'),500);
     }
   }
   rebuild(); render(); setTimeout(()=>{setTreeMode(treeMode||'simple'); resetView();},90);
@@ -3542,13 +3620,13 @@ function closeCard(){
   resetView();
 }
 
-function removePerson(id){
+async function removePerson(id){
   const p=byId[id]; if(!p) return;
   const children=P.filter(x=>(x.parents||[]).includes(id));
   
   let cascade=false;
   if(children.length){
-    const choice=window.confirm(
+    const choice=await appConfirm(
       `Remove ${fullName(p)} from the tree?\n\nOK = Remove only ${fullName(p).split(' ')[0]} (their connections will be unlinked)\nCancel = Keep them`
     );
     if(!choice) return;
@@ -3557,12 +3635,12 @@ function removePerson(id){
     function countDesc(pid){ P.filter(x=>(x.parents||[]).includes(pid)).forEach(x=>{descendants.push(x.id);countDesc(x.id);}); }
     countDesc(id);
     if(descendants.length){
-      cascade=window.confirm(
+      cascade=await appConfirm(
         `Also remove ${descendants.length} connected Twyg${descendants.length>1?'s':''} below ${fullName(p).split(' ')[0]}?\n\nOK = Remove all\nCancel = Keep them (they'll become unlinked)`
       );
     }
   } else {
-    if(!confirm(`Remove ${fullName(p)} from the tree?`)) return;
+    if(!await appConfirm(`Remove ${fullName(p)} from the tree?`)) return;
   }
 
   const rm=new Set([id]);
@@ -3678,8 +3756,8 @@ function saveEditedConnRel(fromId, toId, connType, newLabel){
   selectNode(fromId);
 }
 
-function removeConnFromCard(fromId, toId, connType){
-  if(!confirm('Remove this connection?')) return;
+async function removeConnFromCard(fromId, toId, connType){
+  if(!await appConfirm('Remove this connection?')) return;
   // Always get fresh references from P (byId may be stale)
   const from=P.find(p=>p.id===fromId);
   const to=P.find(p=>p.id===toId);
@@ -3841,7 +3919,7 @@ function selectConnNode(id){
 }
 
 function saveConnection(){
-  if(!connForId||!connSelectedId){ alert('Please select a member.'); return; }
+  if(!connForId||!connSelectedId){ appAlert('Please select a member.'); return; }
   const target=byId[connForId];   // the node the card is about
   const other=byId[connSelectedId]; // the node we're connecting to it
   const rel=document.getElementById('conn-rel').value;
@@ -4106,7 +4184,7 @@ function closeExportMenu(){ document.getElementById('export-menu').style.display
 
 async function exportTree(format){
   closeExportMenu();
-  if(!P.length){ alert('No Twygs to export.'); return; }
+  if(!P.length){ appAlert('No Twygs to export.'); return; }
 
   // 1. Calculate bounding box from node positions
   const pad=120;
@@ -4197,7 +4275,7 @@ async function exportTree(format){
   img.onerror=()=>{
     URL.revokeObjectURL(svgUrl);
     // Fallback: try without data URLs (photos might cause CORS)
-    alert('Export failed — try removing photos from nodes and retrying.');
+    appAlert('Export failed. Try removing photos from nodes and retrying.');
   };
   img.src=svgUrl;
 }
@@ -4217,7 +4295,7 @@ async function exportCanvasToPDF(canvas, w, h){
       link.download=`twygie-tree-${new Date().toISOString().slice(0,10)}.png`;
       link.href=canvas.toDataURL('image/png');
       link.click();
-      alert('PDF export unavailable offline. Saved as PNG instead.');
+      appAlert('PDF export unavailable offline. Saved as PNG instead.');
       return;
     }
   }
