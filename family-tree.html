@@ -2160,6 +2160,52 @@ async function loadLinkedTrees(){
 
 async function revokeLink(linkId){
   if(!await appConfirm('Unlink this tree?<br><span style="font-size:.78rem;color:var(--muted)">Shared data will be removed for both sides.</span>','Unlink','Keep Link')) return;
+
+function openUnlinkModal(){
+  if(!activeLinks.length){appAlert('No active links to manage.');return}
+  const modal=document.getElementById('link-modal-content');
+  let listHtml=activeLinks.map(link=>{
+    const otherName=link.userA===currentUser.uid?link.userBName:link.userAName;
+    return `<label style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:8px;background:rgba(255,255,255,.03);margin-bottom:6px;cursor:pointer">
+      <input type="checkbox" class="unlink-cb" value="${link.id}" style="accent-color:rgba(200,100,100,.7);width:16px;height:16px"/>
+      <div style="flex:1">
+        <div style="font-size:.84rem;color:var(--text)">${otherName||'Unknown'}</div>
+        <div style="font-size:.65rem;color:var(--gold)">Bridge: ${link.bridgeNodeName}</div>
+      </div>
+    </label>`;
+  }).join('');
+
+  modal.innerHTML=`
+    <div style="font-family:'Cormorant Garamond',serif;font-size:1.2rem;font-weight:600;color:var(--text);margin-bottom:14px">Unlink Trees</div>
+    <div style="font-size:.78rem;color:var(--muted);margin-bottom:14px">Select which links to remove:</div>
+    ${listHtml}
+    <div style="display:flex;gap:6px;margin-top:16px">
+      <button onclick="unlinkSelected()" style="flex:1;padding:8px;background:rgba(180,80,80,.15);border:1px solid rgba(180,80,80,.3);border-radius:100px;color:rgba(220,120,120,.9);font-family:'Outfit',sans-serif;font-size:.78rem;cursor:pointer;font-weight:500">Unlink Selected</button>
+      <button onclick="unlinkAll()" style="flex:1;padding:8px;background:rgba(180,80,80,.25);border:1px solid rgba(180,80,80,.4);border-radius:100px;color:rgba(220,120,120,.9);font-family:'Outfit',sans-serif;font-size:.78rem;cursor:pointer;font-weight:600">Unlink All</button>
+    </div>
+    <button onclick="closeLinkModal()" style="width:100%;padding:8px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:100px;color:var(--muted);font-family:'Outfit',sans-serif;font-size:.76rem;cursor:pointer;margin-top:8px">Cancel</button>
+  `;
+  document.getElementById('link-bg').classList.add('open');
+}
+
+async function unlinkSelected(){
+  const checked=[...document.querySelectorAll('.unlink-cb:checked')].map(cb=>cb.value);
+  if(!checked.length){appAlert('Select at least one link to remove.');return}
+  for(const id of checked){
+    try{await db.collection('treeLinks').doc(id).update({status:'revoked'})}catch(e){console.warn('Failed to revoke',id,e)}
+  }
+  closeLinkModal();closeCard();
+  await loadActiveLinks();await loadSharedNodes();render();
+}
+
+async function unlinkAll(){
+  if(!await appConfirm(`Unlink all ${activeLinks.length} linked tree${activeLinks.length>1?'s':''}?<br><span style="font-size:.78rem;color:var(--muted)">All shared data will be removed.</span>`,'Unlink All','Cancel')) return;
+  for(const link of activeLinks){
+    try{await db.collection('treeLinks').doc(link.id).update({status:'revoked'})}catch(e){console.warn('Failed to revoke',link.id,e)}
+  }
+  closeLinkModal();closeCard();
+  await loadActiveLinks();await loadSharedNodes();render();
+}
   try{
     await db.collection('treeLinks').doc(linkId).update({status:'revoked'});
     await loadActiveLinks();
@@ -3588,7 +3634,8 @@ function fillCard(p){
       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
       Link Twyg
     </button>`}
-    ${bridgeLink?`<button class="btn-sm" onclick="revokeLink('${bridgeLink.linkId}')" style="background:rgba(180,80,80,.06);border-color:rgba(180,80,80,.2);color:rgba(200,100,100,.7)">Unlink</button>`:''}
+    ${p.isYou&&activeLinks.length?`<button class="btn-sm" onclick="openUnlinkModal()" style="background:rgba(180,80,80,.06);border-color:rgba(180,80,80,.2);color:rgba(200,100,100,.7)">Unlink</button>`:''}
+    ${!p.isYou&&bridgeLink?`<button class="btn-sm" onclick="revokeLink('${bridgeLink.linkId}')" style="background:rgba(180,80,80,.06);border-color:rgba(180,80,80,.2);color:rgba(200,100,100,.7)">Unlink</button>`:''}
     ${!p.isYou?`<button class="btn-sm btn-del" onclick="removePerson('${p.id}')">Remove</button>`:''}
   </div>`;
 
