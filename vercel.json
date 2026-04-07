@@ -3,6 +3,7 @@
   "routes": [
     { "src": "/", "dest": "/login.html" },
     { "src": "/app", "dest": "/family-tree.html" },
+    { "src": "/timeline", "dest": "/timeline.html" },
     { "src": "/login", "dest": "/login.html" }
   ]
 }

@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Twygie — Timeline</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#04070c;--surface:rgba(10,18,32,.95);--border:rgba(255,255,255,.08);
+  --text:rgba(255,255,255,.88);--muted:rgba(255,255,255,.4);--gold:#c8a84b;
+  --cream:#f0efeb;
+}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-family:'Outfit',sans-serif;color:var(--text)}
+
+/* Header */
+#hdr{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:14px 24px;background:linear-gradient(to bottom,var(--bg) 70%,transparent);pointer-events:none}
+#hdr>*{pointer-events:all}
+.logo{font-family:'Cormorant Garamond',serif;font-size:1.15rem;font-weight:700;color:var(--text);display:flex;align-items:center;gap:7px;letter-spacing:.01em}
+.hbtns{display:flex;align-items:center;gap:8px}
+.hbtn{padding:6px 14px;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:100px;color:var(--muted);font-family:'Outfit',sans-serif;font-size:.76rem;cursor:pointer;transition:all .2s;white-space:nowrap;text-decoration:none;display:inline-flex;align-items:center;gap:5px}
+.hbtn:hover{background:rgba(255,255,255,.1);color:var(--text)}
+
+/* Loading */
+#loading{position:fixed;inset:0;z-index:999;background:var(--bg);display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:1.2rem;color:var(--muted);transition:opacity .4s}
+#loading.fade{opacity:0;pointer-events:none}
+#loading.gone{display:none}
+
+/* Timeline container */
+#timeline-wrap{position:fixed;top:0;left:0;right:0;bottom:0;overflow:hidden;cursor:grab}
+#timeline-wrap.grabbing{cursor:grabbing}
+
+/* Timeline content - transformed for pan/zoom */
+#tl-canvas{position:absolute;top:0;left:0;transform-origin:0 0;will-change:transform}
+
+/* Year axis */
+.year-marker{position:absolute;bottom:0;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;pointer-events:none}
+.year-line{width:1px;flex:1;background:linear-gradient(to bottom,transparent 60px,rgba(200,168,75,.08) 60px,rgba(200,168,75,.15) calc(100% - 50px),transparent)}
+.year-label{font-size:.7rem;color:var(--gold);font-weight:600;letter-spacing:.05em;padding:12px 0;opacity:.6}
+.year-marker.decade .year-line{background:linear-gradient(to bottom,transparent 60px,rgba(200,168,75,.15) 60px,rgba(200,168,75,.25) calc(100% - 50px),transparent)}
+.year-marker.decade .year-label{opacity:1;font-size:.78rem}
+
+/* Generation bands */
+.gen-band{position:absolute;left:0;right:0;border-top:1px solid rgba(200,168,75,.06);pointer-events:none}
+.gen-label{position:absolute;left:16px;top:4px;font-size:.58rem;text-transform:uppercase;letter-spacing:.15em;color:var(--gold);opacity:.35;font-weight:600}
+
+/* Member cards */
+.tl-card{position:absolute;width:140px;cursor:pointer;transition:transform .2s,box-shadow .2s}
+.tl-card:hover{transform:scale(1.05);z-index:10}
+.tl-card-inner{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:0 4px 20px rgba(0,0,0,.4)}
+.tl-card:hover .tl-card-inner{border-color:rgba(200,168,75,.3);box-shadow:0 8px 32px rgba(0,0,0,.6)}
+.tl-photo{width:40px;height:40px;border-radius:50%;overflow:hidden;margin:0 auto 8px;background:rgba(255,255,255,.06);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:600}
+.tl-photo img{width:100%;height:100%;object-fit:cover}
+.tl-card-name{font-size:.78rem;font-weight:600;color:var(--text);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tl-card-rel{font-size:.62rem;color:var(--gold);text-align:center;font-style:italic;margin-top:1px}
+.tl-card-dates{font-size:.62rem;color:var(--muted);text-align:center;margin-top:3px}
+.tl-card-age{font-size:.58rem;color:var(--muted);text-align:center;margin-top:1px}
+
+/* Life span bar */
+.tl-lifespan-bar{position:absolute;height:3px;border-radius:2px;opacity:.45;pointer-events:none}
+
+/* Connector line from card to axis */
+.tl-connector{position:absolute;width:1px;opacity:.2;pointer-events:none}
+
+/* Legend */
+#legend{position:fixed;bottom:16px;left:16px;z-index:50;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px;backdrop-filter:blur(12px);display:flex;gap:12px;flex-wrap:wrap;font-size:.65rem}
+.leg-item{display:flex;align-items:center;gap:4px;color:var(--muted)}
+.leg-dot{width:8px;height:8px;border-radius:50%}
+
+/* Zoom controls */
+#zc{position:fixed;bottom:16px;right:16px;z-index:50;display:flex;flex-direction:column;gap:4px}
+.zb{width:32px;height:32px;border-radius:8px;background:var(--surface);border:1px solid var(--border);color:var(--muted);font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.zb:hover{background:rgba(255,255,255,.08);color:var(--text)}
+
+/* Empty state */
+#empty{display:none;position:fixed;inset:0;z-index:10;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:12px;color:var(--muted);font-size:.95rem}
+#empty.show{display:flex}
+</style>
+</head>
+<body>
+
+<div id="loading">Loading timeline…</div>
+
+<div id="hdr">
+  <div class="logo">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+      <path d="M12 22V10"/><path d="M12 10C12 6 8 3.5 4 4.5"/><path d="M12 10C12 6 16 3.5 20 4.5"/>
+      <path d="M12 16C12 13 9 11 5 12"/><path d="M12 16C12 13 15 11 19 12"/>
+    </svg>
+    Twygie Timeline
+  </div>
+  <div class="hbtns">
+    <button class="hbtn" onclick="fitTimeline()">Fit to screen</button>
+    <a class="hbtn" href="/app">← Back to Tree</a>
+  </div>
+</div>
+
+<div id="timeline-wrap">
+  <div id="tl-canvas"></div>
+</div>
+
+<div id="legend"></div>
+
+<div id="zc">
+  <button class="zb" onclick="zoomTL(1.2)">+</button>
+  <button class="zb" onclick="zoomTL(0.8)">−</button>
+  <button class="zb" style="font-size:.65rem" onclick="fitTimeline()">⊡</button>
+</div>
+
+<div id="empty">
+  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity=".3">
+    <path d="M12 22V10"/><path d="M12 10C12 6 8 3.5 4 4.5"/><path d="M12 10C12 6 16 3.5 20 4.5"/>
+  </svg>
+  <div>No birth years recorded yet.</div>
+  <div style="font-size:.8rem">Add dates to your Twygs to see the timeline.</div>
+  <a class="hbtn" href="/app" style="margin-top:8px">← Back to Tree</a>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyBwtDMGEIphvwvq319MZIr62C32fvSSe-4",
+  authDomain: "twygie.firebaseapp.com",
+  projectId: "twygie",
+  storageBucket: "twygie.firebasestorage.app",
+  messagingSenderId: "654053569477",
+  appId: "1:654053569477:web:9296f441c285686d7c11ac"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db   = firebase.firestore();
+
+// ─── STATE ───
+let P=[], byId={}, currentUser=null, youngAge=17;
+const nodeColors={
+  you:'#f0efeb',spouse:'#e8a838',parent:'#7ab8e8',child:'#6ecb8a',
+  sibling:'#e87a5a',grandparent:'#b89ae8',extended:'#e8c87a',
+  deceased:'#6b9ec2',young:'#4ecdb4',default:'#f0b845'
+};
+
+// ─── ENCRYPTION ───
+async function deriveKey(uid){
+  const enc=new TextEncoder();
+  const km=await crypto.subtle.importKey('raw',enc.encode(uid),'PBKDF2',false,['deriveKey']);
+  return crypto.subtle.deriveKey(
+    {name:'PBKDF2',salt:enc.encode('twygie-encryption-v1'),iterations:100000,hash:'SHA-256'},
+    km,{name:'AES-GCM',length:256},false,['encrypt','decrypt']
+  );
+}
+async function decrypt(key,b64){
+  const bin=atob(b64);const raw=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) raw[i]=bin.charCodeAt(i);
+  const iv=raw.slice(0,12),ct=raw.slice(12);
+  const dec=await crypto.subtle.decrypt({name:'AES-GCM',iv},key,ct);
+  return JSON.parse(new TextDecoder().decode(dec));
+}
+
+// ─── HELPERS ───
+function fullName(p){return p.name||[(p.firstName||''),(p.lastName||'')].filter(Boolean).join(' ')||'Unknown'}
+function calcAge(p){
+  const by=parseInt(p.dob&&p.dob.year)||p.birth||null;if(!by)return null;
+  const dy=parseInt(p.dod&&p.dod.year)||p.death||null;
+  return (dy||new Date().getFullYear())-by;
+}
+function genderedRel(base,gender){
+  const m=gender==='male',f=gender==='female';
+  const map={'Parent':m?'Father':f?'Mother':'Parent','Child':m?'Son':f?'Daughter':'Child',
+    'Sibling':m?'Brother':f?'Sister':'Sibling','Spouse':m?'Husband':f?'Wife':'Partner',
+    'Grandparent':m?'Grandfather':f?'Grandmother':'Grandparent',
+    'Grandchild':m?'Grandson':f?'Granddaughter':'Grandchild'};
+  return map[base]||base;
+}
+function getRelToYou(id){
+  const you=P.find(p=>p.isYou);if(!you||id===you.id)return '';
+  const p=byId[id];if(!p)return '';
+  if((p.parents||[]).includes(you.id))return genderedRel('Child',p.gender);
+  if((you.parents||[]).includes(id))return genderedRel('Parent',p.gender);
+  if(p.spouseOf===you.id||you.spouseOf===id)return genderedRel('Spouse',p.gender);
+  const ycl=you.customLinks&&you.customLinks[id];
+  if(ycl)return typeof ycl==='string'?ycl:ycl.label;
+  const pcl=p.customLinks&&p.customLinks[you.id];
+  if(pcl)return typeof pcl==='string'?pcl:pcl.label;
+  if(p.relLabel)return p.relLabel;
+  const myP=new Set(you.parents||[]);
+  if(myP.size&&(p.parents||[]).some(pp=>myP.has(pp)))return genderedRel('Sibling',p.gender);
+  return '';
+}
+function relCategory(p){
+  if(p.isYou)return 'you';
+  if(p.death||(p.dod&&p.dod.year))return 'deceased';
+  const by=parseInt(p.dob&&p.dob.year)||p.birth||0;
+  if(by>0&&(new Date().getFullYear()-by)<=youngAge)return 'young';
+  const you=P.find(x=>x.isYou);if(!you)return 'default';
+  if((p.parents||[]).includes(you.id))return 'child';
+  if((you.parents||[]).includes(p.id))return 'parent';
+  if(p.spouseOf===you.id||you.spouseOf===p.id)return 'spouse';
+  const myP=new Set(you.parents||[]);
+  if(myP.size&&(p.parents||[]).some(pp=>myP.has(pp)))return 'sibling';
+  const ycl=you.customLinks&&you.customLinks[p.id];
+  if(ycl)return 'extended';
+  const pcl=p.customLinks&&p.customLinks[you.id];
+  if(pcl)return 'extended';
+  return 'default';
+}
+function col(p){return nodeColors[relCategory(p)]||nodeColors.default}
+function initials(p){return fullName(p).split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}
+
+// ─── GENERATION ASSIGNMENT ───
+function assignGenerations(){
+  const you=P.find(p=>p.isYou);if(!you)return {};
+  const gen={};const q=[{id:you.id,g:0}];const vis=new Set();
+  while(q.length){
+    const{id,g}=q.shift();if(vis.has(id))continue;vis.add(id);gen[id]=g;
+    const p=byId[id];if(!p)continue;
+    (p.parents||[]).forEach(pid=>{if(!vis.has(pid))q.push({id:pid,g:g-1})});
+    P.filter(x=>(x.parents||[]).includes(id)).forEach(c=>{if(!vis.has(c.id))q.push({id:c.id,g:g+1})});
+    if(p.spouseOf&&!vis.has(p.spouseOf))q.push({id:p.spouseOf,g});
+    const sp=P.find(x=>x.spouseOf===id);
+    if(sp&&!vis.has(sp.id))q.push({id:sp.id,g});
+  }
+  P.forEach(p=>{if(gen[p.id]===undefined)gen[p.id]=0});
+  return gen;
+}
+
+// ─── TIMELINE RENDERING ───
+const YEAR_WIDTH=80; // pixels per year
+const GEN_HEIGHT=160; // pixels per generation band
+const CARD_W=140, CARD_H=120;
+const PAD_LEFT=100, PAD_RIGHT=200, PAD_TOP=80, PAD_BOTTOM=80;
+
+let tlTx=0, tlTy=0, tlScale=1;
+
+function renderTimeline(){
+  const canvas=document.getElementById('tl-canvas');
+  const currentYear=new Date().getFullYear();
+
+  // Filter to members with birth years
+  const entries=P.filter(p=>{
+    const by=parseInt(p.dob&&p.dob.year)||p.birth||0;
+    return by>0;
+  });
+
+  if(!entries.length){
+    document.getElementById('empty').classList.add('show');
+    canvas.innerHTML='';
+    return;
+  }
+
+  const gen=assignGenerations();
+
+  // Calculate year range
+  const birthYears=entries.map(p=>parseInt(p.dob&&p.dob.year)||p.birth);
+  const deathYears=entries.map(p=>parseInt(p.dod&&p.dod.year)||p.death||0).filter(y=>y>0);
+  const minYear=Math.min(...birthYears)-2;
+  const maxYear=Math.max(currentYear,...deathYears)+2;
+
+  // Calculate generation range
+  const genValues=entries.map(p=>gen[p.id]||0);
+  const minGen=Math.min(...genValues);
+  const maxGen=Math.max(...genValues);
+  const genCount=maxGen-minGen+1;
+
+  // Canvas dimensions
+  const canvasW=PAD_LEFT+(maxYear-minYear)*YEAR_WIDTH+PAD_RIGHT;
+  const canvasH=PAD_TOP+genCount*GEN_HEIGHT+PAD_BOTTOM;
+  canvas.style.width=canvasW+'px';
+  canvas.style.height=canvasH+'px';
+
+  let html='';
+
+  // ── Year markers ──
+  for(let y=minYear;y<=maxYear;y++){
+    const x=PAD_LEFT+(y-minYear)*YEAR_WIDTH;
+    const isDecade=y%10===0;
+    const isFive=y%5===0;
+    if(!isFive)continue;
+    html+=`<div class="year-marker${isDecade?' decade':''}" style="left:${x}px;width:${YEAR_WIDTH}px">
+      <div class="year-line"></div>
+      <div class="year-label">${y}</div>
+    </div>`;
+  }
+
+  // ── Generation bands ──
+  const genLabels={'-4':'Great-Great-Grandparents','-3':'Great-Grandparents','-2':'Grandparents','-1':'Parents','0':'Your Generation','1':'Children','2':'Grandchildren','3':'Great-Grandchildren'};
+  for(let g=minGen;g<=maxGen;g++){
+    const bandY=PAD_TOP+(g-minGen)*GEN_HEIGHT;
+    const label=genLabels[String(g)]||`Generation ${g>0?'+':''}${g}`;
+    html+=`<div class="gen-band" style="top:${bandY}px;height:${GEN_HEIGHT}px">
+      <div class="gen-label">${label}</div>
+    </div>`;
+  }
+
+  // ── Track occupied slots to avoid overlaps ──
+  const slots={}; // key: "gen-yearBucket" → count
+
+  // ── Member cards + life span bars ──
+  entries.forEach(p=>{
+    const by=parseInt(p.dob&&p.dob.year)||p.birth;
+    const dy=parseInt(p.dod&&p.dod.year)||p.death||0;
+    const g=gen[p.id]||0;
+    const c=col(p);
+    const rel=p.isYou?'You':getRelToYou(p.id);
+    const age=calcAge(p);
+
+    // X position from birth year
+    const x=PAD_LEFT+(by-minYear)*YEAR_WIDTH;
+
+    // Y position from generation — offset within band to avoid overlaps
+    const bucket=`${g}-${Math.floor(by/3)}`;
+    slots[bucket]=(slots[bucket]||0);
+    const yOffset=slots[bucket]*30; // stagger within same gen/year bucket
+    slots[bucket]++;
+    const cardY=PAD_TOP+(g-minGen)*GEN_HEIGHT+20+yOffset;
+
+    // Life span bar
+    const endYear=dy||currentYear;
+    const barW=Math.max(8,(endYear-by)*YEAR_WIDTH);
+    html+=`<div class="tl-lifespan-bar" style="left:${x}px;top:${cardY+CARD_H-18}px;width:${barW}px;background:${c}"></div>`;
+
+    // Connector line from card to year axis
+    html+=`<div class="tl-connector" style="left:${x+CARD_W/2}px;top:${cardY+CARD_H-15}px;height:${canvasH-PAD_BOTTOM-(cardY+CARD_H-15)}px;background:${c}"></div>`;
+
+    // Photo
+    const photoHtml=p.photo
+      ?`<div class="tl-photo" style="border-color:${c}"><img src="${p.photo}"/></div>`
+      :`<div class="tl-photo" style="border-color:${c};color:${c}">${initials(p)}</div>`;
+
+    // Dates text
+    let dateStr=`${by}`;
+    if(dy)dateStr+=` – ${dy}`;
+    const ageStr=age!=null?(dy?`Lived ${age} yrs`:`Age ${age}`):'';
+
+    html+=`<div class="tl-card" style="left:${x}px;top:${cardY}px" onclick="window.location.href='/app#node-${p.id}'">
+      <div class="tl-card-inner">
+        ${photoHtml}
+        <div class="tl-card-name">${fullName(p)}</div>
+        ${rel?`<div class="tl-card-rel">${rel}</div>`:''}
+        <div class="tl-card-dates">${dateStr}</div>
+        ${ageStr?`<div class="tl-card-age">${ageStr}</div>`:''}
+      </div>
+    </div>`;
+  });
+
+  canvas.innerHTML=html;
+
+  // ── Legend ──
+  const cats=new Set(entries.map(p=>relCategory(p)));
+  const catLabels={you:'You',spouse:'Spouse',parent:'Parent',child:'Child',sibling:'Sibling',
+    grandparent:'Grandparent',extended:'Extended',deceased:'Deceased',young:'Young',default:'Other'};
+  let legHtml='';
+  cats.forEach(c=>{
+    legHtml+=`<div class="leg-item"><div class="leg-dot" style="background:${nodeColors[c]}"></div>${catLabels[c]||c}</div>`;
+  });
+  document.getElementById('legend').innerHTML=legHtml;
+
+  // Fit to screen on first render
+  fitTimeline();
+}
+
+// ─── PAN / ZOOM ───
+function applyTL(){
+  document.getElementById('tl-canvas').style.transform=`translate(${tlTx}px,${tlTy}px) scale(${tlScale})`;
+}
+
+function fitTimeline(){
+  const canvas=document.getElementById('tl-canvas');
+  const cw=parseFloat(canvas.style.width)||1;
+  const ch=parseFloat(canvas.style.height)||1;
+  const ww=window.innerWidth, wh=window.innerHeight;
+  tlScale=Math.min(ww/cw,wh/ch)*0.9;
+  tlTx=(ww-cw*tlScale)/2;
+  tlTy=(wh-ch*tlScale)/2;
+  applyTL();
+}
+
+function zoomTL(f){
+  const cx=window.innerWidth/2,cy=window.innerHeight/2;
+  tlTx=cx-(cx-tlTx)*f;tlTy=cy-(cy-tlTy)*f;
+  tlScale=Math.max(.05,Math.min(5,tlScale*f));applyTL();
+}
+
+// Pan
+const wrap=document.getElementById('timeline-wrap');
+let drag=false,dsx=0,dsy=0;
+wrap.addEventListener('mousedown',e=>{
+  if(e.target.closest('.tl-card'))return;
+  drag=true;dsx=e.clientX-tlTx;dsy=e.clientY-tlTy;
+  wrap.classList.add('grabbing');
+});
+window.addEventListener('mousemove',e=>{
+  if(!drag)return;tlTx=e.clientX-dsx;tlTy=e.clientY-dsy;applyTL();
+});
+window.addEventListener('mouseup',()=>{drag=false;wrap.classList.remove('grabbing')});
+
+// Scroll zoom
+wrap.addEventListener('wheel',e=>{
+  e.preventDefault();
+  const f=e.deltaY<0?1.1:.9;
+  const r=wrap.getBoundingClientRect();
+  const mx=e.clientX-r.left,my=e.clientY-r.top;
+  tlTx=mx-(mx-tlTx)*f;tlTy=my-(my-tlTy)*f;
+  tlScale=Math.max(.05,Math.min(5,tlScale*f));applyTL();
+},{passive:false});
+
+// Touch pan/pinch
+let tpan=false,tdsx=0,tdsy=0,ltD=0;
+wrap.addEventListener('touchstart',e=>{
+  if(e.target.closest('.tl-card'))return;
+  if(e.touches.length===1){tpan=true;tdsx=e.touches[0].clientX-tlTx;tdsy=e.touches[0].clientY-tlTy}
+  else if(e.touches.length===2){tpan=false;ltD=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY)}
+},{passive:true});
+wrap.addEventListener('touchmove',e=>{
+  if(e.touches.length===1&&tpan){tlTx=e.touches[0].clientX-tdsx;tlTy=e.touches[0].clientY-tdsy;applyTL()}
+  else if(e.touches.length===2){
+    const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+    if(ltD>0){const f=d/ltD;const cx=(e.touches[0].clientX+e.touches[1].clientX)/2;const cy=(e.touches[0].clientY+e.touches[1].clientY)/2;
+      tlTx=cx-(cx-tlTx)*f;tlTy=cy-(cy-tlTy)*f;tlScale=Math.max(.05,Math.min(5,tlScale*f));applyTL()}
+    ltD=d;
+  }
+},{passive:true});
+wrap.addEventListener('touchend',()=>{tpan=false;ltD=0});
+
+// ─── AUTH + LOAD ───
+auth.onAuthStateChanged(async user=>{
+  if(!user){window.location.href='login.html';return}
+  currentUser=user;
+  try{
+    // Load settings
+    const setSnap=await db.collection('userSettings').doc(user.uid).get();
+    if(setSnap.exists){
+      const d=setSnap.data();
+      if(d.nodeColors)Object.assign(nodeColors,d.nodeColors);
+      if(d.youngAge!=null)youngAge=parseInt(d.youngAge)||17;
+    }
+    // Load tree
+    const snap=await db.collection('familyTrees').doc(user.uid).get();
+    if(snap.exists){
+      const d=snap.data();
+      if(d.encryptedData){
+        const key=await deriveKey(user.uid);
+        P=await decrypt(key,d.encryptedData);
+      } else if(d.people&&d.people.length){
+        P=d.people;
+      }
+    }
+    byId={};P.forEach(p=>{if(!p.customLinks)p.customLinks={};byId[p.id]=p});
+    renderTimeline();
+  }catch(e){
+    console.error('Failed to load:',e);
+    document.getElementById('empty').classList.add('show');
+  }
+  // Hide loading
+  const ld=document.getElementById('loading');
+  ld.classList.add('fade');setTimeout(()=>ld.classList.add('gone'),400);
+});
+</script>
+</body>
+</html>
