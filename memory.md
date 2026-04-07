@@ -15,7 +15,9 @@ twygie/
 ├── family-tree.html   # Main app (authenticated tree view)
 ├── index.html         # Copy of family-tree.html (Vercel root)
 ├── login.html         # Login page
-├── vercel.json        # Route config
+├── timeline.html      # Horizontal timeline view (/timeline)
+├── vercel.json        # Route config (cleanUrls + rewrites)
+├── firestore.rules    # Firestore security rules (Phase 1)
 ├── plan.md            # Roadmap
 ├── memory.md          # This file
 └── journal.md         # Dev log
@@ -234,3 +236,64 @@ Used for explicit structural cascade assignments.
 - Spouse addition links co-parent to children in form submit (not dependent on autoAssignToYou)
 - Inference table: no more Step defaults, 3 bugs fixed, 11 rules added
 - cleanFalseConnections validates blood/in-law/sibling paths structurally
+
+---
+
+## Client-Side Encryption (Phase 2 — Session 10)
+
+**Algorithm**: AES-256-GCM via Web Crypto API
+**Key derivation**: PBKDF2 from Firebase UID (100k iterations, SHA-256, salt: 'twygie-encryption-v1')
+**IV**: 96-bit random per save, prepended to ciphertext
+
+**Save flow**: `people[]` → JSON → AES-GCM encrypt → base64 (chunked) → Firestore
+**Load flow**: Firestore → base64 → AES-GCM decrypt → JSON → `people[]`
+
+**Firestore document (post-encryption)**:
+```
+familyTrees/{uid}
+  encryptedData: "base64_blob"    // encrypted people[]
+  encryptionVersion: 1
+  ownerEmail: "user@example.com"  // plaintext
+  nodeCount: number               // plaintext
+  updatedAt: timestamp
+```
+
+**Migration**: auto-detects legacy `people` field → encrypts → saves as `encryptedData` → logs to console
+**Safety**: `treeLoaded` flag blocks saves until Firestore load succeeds. Demo mode blocks saves entirely.
+
+---
+
+## Export (Session 10)
+
+**PNG**: Clone SVG → set viewBox → embed styles + dark bg → render to canvas at 2x → download
+**PDF (jsPDF from CDN)**:
+- Page 1: Cover sheet (logo, family name, stats, date)
+- Page 2: Table of contents
+- Page 3: Tree visualization (auto landscape/portrait)
+- Page 4+: Member directory (photos, names, rels, DOB, age, DOD, stories, connections)
+- Footers + page numbers on all pages
+- Filters placeholder story text
+
+---
+
+## Timeline Page (Session 10)
+
+**File**: timeline.html → /timeline (cleanUrls)
+**Stack**: Same Firebase auth + encryption as main app
+
+**Layout**:
+- Single horizontal line at 68% height
+- Nodes above the line with connectors dropping down
+- Filled circles (photo or initials), first name below
+- Overlapping birth years → gold count badge → hover shows member list
+- Year markers every 5 years, decades emphasized, months when zoomed
+
+**Dual Scroll Bar System**:
+- Horizontal bar (bottom at 76%): scrubs chronologically, density-aware brightness, green "You" tick
+- Vertical bar (right at 32px): zoom depth (Overview→Decade→Year→Month), exponential scale
+- Both: dock-like hover magnification effect
+- Timeline range padded symmetrically around isYou for centered green tick
+
+**Zoom**: `yearPx = 15 * (800/15) ^ zoomLevel` where zoomLevel 0→1
+**Detail modal**: glass overlay (75% opacity, blur), mini family tree, clickable nodes, "View in Tree" link
+**Reset**: restores 0.5 zoom, re-centers on isYou

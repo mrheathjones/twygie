@@ -298,3 +298,46 @@ Auto-assign is mostly working. Remaining issues to revisit:
 - Auto-assign runs as "child of each parent" instead of "sibling of anchor"
 - Triggers full isDirChild cascade: grandparents, uncles, in-laws all connected
 - Previously siblings were orphaned with just a single customLink
+
+### Export Feature
+- Added Export dropdown button in header (Save as Image / Save as PDF)
+- PNG: clones SVG, calculates bounding box, renders at 2x resolution, downloads
+- PDF: multi-page document using jsPDF from CDN:
+  - Cover sheet: Twygie logo, family name, member count, generation count, date
+  - Table of contents with dotted leader lines
+  - Tree visualization (auto landscape/portrait)
+  - Member directory: photos, names, relationships, DOB, age, death dates, stories, connections
+  - Page numbers and footers on every page
+  - Filters out placeholder story text
+
+### Timeline Page (/timeline)
+Built as a separate HTML page (timeline.html) with:
+- Horizontal single-line timeline with nodes positioned by birth year
+- Filled circle dots (photo or initials) above the line with connectors
+- Overlapping birth years grouped into gold count badges with hover popup listing all members
+- Single members show hover popup with photo, name, relationship, dates, age, story
+
+#### Dual Scroll Bar System
+- **Horizontal bar (bottom)**: scrubs left/right through time chronologically
+  - Density-aware: bars glow brighter gold near birth year clusters
+  - Green glowing "You" tick marks isYou's position on the bar
+- **Vertical bar (right)**: controls zoom depth
+  - Overview (~15px/yr) → Decade (~50px/yr) → Year (~200px/yr) → Month (~800px/yr)
+  - Exponential scale: yearPx = 15 * (800/15)^zoomLevel
+  - Maintains center position when zooming
+  - Zoom label below bar (Overview/Decade/Year/Month)
+- Both bars: dock-like hover magnification effect (bars swell near cursor)
+- Timeline range padded symmetrically around isYou so green tick is centered
+
+#### Detail Modal
+- Click any node → glass overlay modal (75% opacity, 30px backdrop blur)
+- Shows: photo, name, relationship, birth/death dates, age, story
+- Mini family tree visualization: parents above, spouse beside, children below, siblings
+- Each mini node is clickable (navigate within modal)
+- "View in Tree →" link to return to main app
+
+#### Other Timeline Features
+- Reset button restores default zoom and centers on isYou
+- Same Firebase auth + AES-256 encryption as main app
+- Route: /timeline in vercel.json (cleanUrls handles mapping)
+- Responsive: touch pinch-to-zoom, drag-to-pan on mobile

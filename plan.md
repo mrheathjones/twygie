@@ -108,13 +108,15 @@ An interactive, beautiful family tree web app. Each family member is a "Twyg" �
 - [ ] Mobile layout polish
 - [x] Demo Mode for testing (Session 10)
 - [x] Data protection — treeLoaded flag prevents wipe on failed load (Session 10)
-- [ ] **Phase 1 — Firestore Security Rules** (lock down read/write per user)
+- [x] **Phase 1 — Firestore Security Rules** (Session 10)
+- [x] Export tree as Image/PDF (Session 10)
+- [x] Timeline view — horizontal timeline page with zoom (Session 10)
 
 ### Medium-term
-- [ ] **Phase 2 — Client-Side Encryption** (encrypt people[] before saving to Firestore)
-- [ ] Timeline view (by birth year)
+- [ ] **Phase 2 — Client-Side Encryption** ✅ DONE (Session 10)
+- [ ] Timeline view (by birth year) ✅ DONE (Session 10)
 - [ ] GEDCOM import
-- [ ] Export tree as image/PDF
+- [ ] Export tree as image/PDF ✅ DONE (Session 10)
 
 ### Long-term
 - [ ] **Phase 3 — Tree Linking** (bridge nodes, selective/full sharing between users)
