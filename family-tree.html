@@ -3168,8 +3168,9 @@ function submitMember(){
       }
     }
     else if(baseRel==='Sibling'){
-      // Only store customLink — do NOT copy parents (avoids false grandparent lines)
-      np.parents=[];
+      // Copy anchor's parents — siblings share the same parents
+      // This enables grandparent/uncle/in-law cascades to fire correctly
+      np.parents=[...(target?.parents||[])];
       if(!np.customLinks) np.customLinks={};
       if(!target.customLinks) target.customLinks={};
       const sibLabel=np.gender==='male'?'Brother':np.gender==='female'?'Sister':'Sibling';
@@ -3202,7 +3203,18 @@ function submitMember(){
   // Lightweight byId sync before auto-assign (full rebuild happens next)
   P.forEach(p=>{ if(!byId[p.id]) byId[p.id]=p; });
   // Auto-assign relationship to isYou if addFor is set
-  if(addFor && rel) autoAssignToYou(id, addFor, rel);
+  if(addFor && rel){
+    if(baseRel==='Sibling' && np.parents.length>0){
+      // For siblings: run auto-assign as child of each parent — triggers full
+      // isDirChild cascade (grandparents, uncles, in-laws, etc.)
+      np.parents.forEach(pid=>{
+        const childLabel=genderedRel('Child',np.gender);
+        autoAssignToYou(id, pid, childLabel);
+      });
+    } else {
+      autoAssignToYou(id, addFor, rel);
+    }
+  }
   rebuild([id]); closeModal(); render(); scheduleSave();
   setTimeout(()=>selectNode(id),90);
 }
