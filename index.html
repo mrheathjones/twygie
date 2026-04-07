@@ -148,6 +148,8 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-famil
 .bridge-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;background:rgba(200,168,75,.08);border:1px solid rgba(200,168,75,.15);border-radius:100px;font-size:.65rem;color:var(--gold);margin-top:4px}
 @keyframes bridge-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 .bridge-ring{animation:bridge-spin 20s linear infinite;transform-origin:0 0}
+@keyframes adopted-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+.adopted-ring{animation:adopted-spin 12s linear infinite;transform-origin:0 0}
 .fchip-edit-btn{background:transparent;border:none;cursor:pointer;color:rgba(200,168,75,.4);font-size:13px;padding:0 3px;line-height:1;transition:color .2s;flex-shrink:0}
 .fchip-edit-btn:hover{color:rgba(200,168,75,.9)}
 .fchip-edit-select{position:absolute;top:0;left:0;right:0;bottom:0;z-index:10;background:rgba(6,12,22,.97);border:1px solid rgba(200,168,75,.4);border-radius:10px;color:var(--text);font-family:'Outfit',sans-serif;font-size:.82rem;padding:0 10px;outline:none;cursor:pointer;width:100%;-webkit-appearance:none}
@@ -2309,15 +2311,19 @@ async function loadSharedNodes(){
   sharedNodes=[];
   if(!currentUser||!activeLinks.length) return;
 
-  // Build local node fingerprints for deduplication AND ID mapping
-  // Maps fingerprint → local node ID so shared children can remap to local parents
+  // Build local node fingerprints for deduplication
+  // Match on firstName+year, fullName+year, AND name-only (for missing years)
   const fpToLocalId={};
+  const nameOnlyToLocalId={};
   P.forEach(p=>{
     const fn=(p.firstName||fullName(p).split(' ')[0]||'').toLowerCase().trim();
     const full=fullName(p).toLowerCase().trim();
     const by=p.dob?.year||p.birth||'';
     if(fn&&by) fpToLocalId[`${fn}|${by}`]=p.id;
     if(full&&by) fpToLocalId[`${full}|${by}`]=p.id;
+    // Also store name-only for cases where one side has no year
+    if(fn) nameOnlyToLocalId[fn]=p.id;
+    if(full&&full!==fn) nameOnlyToLocalId[full]=p.id;
   });
 
   for(const link of activeLinks){
@@ -2340,8 +2346,10 @@ async function loadSharedNodes(){
           const nFull=(n.name||[n.firstName,n.lastName].filter(Boolean).join(' ')||'').toLowerCase().trim();
           const nFirst=(n.firstName||nFull.split(' ')[0]||'').toLowerCase().trim();
           const nBy=n.dob?.year||n.birth||'';
-          // Check if this node has a local duplicate
-          const localId=fpToLocalId[`${nFirst}|${nBy}`]||fpToLocalId[`${nFull}|${nBy}`];
+          // Check if this node has a local duplicate (by name+year or name-only)
+          const localId=fpToLocalId[`${nFirst}|${nBy}`]||fpToLocalId[`${nFull}|${nBy}`]
+            ||(nBy?null:nameOnlyToLocalId[nFirst]||nameOnlyToLocalId[nFull]) // fallback: name-only if no year
+            ||(nFirst?nameOnlyToLocalId[nFirst]:null); // aggressive: match first name alone
           if(localId) otherToLocal[n.id]=localId;
         });
 
@@ -3052,17 +3060,16 @@ function drawNodes(){
       const outerA=se('circle');
       outerA.setAttribute('r',String(R+10));
       outerA.setAttribute('fill','none');
-      outerA.setAttribute('stroke','rgba(200,168,75,0.35)');
-      outerA.setAttribute('stroke-width','1.5');
+      outerA.setAttribute('stroke','rgba(200,168,75,0.6)');
+      outerA.setAttribute('stroke-width','2');
       outerA.setAttribute('stroke-dasharray','6,4');
-      outerA.setAttribute('class','bridge-ring');
-      outerA.style.animationDuration='12s'; // faster spin
+      outerA.setAttribute('class','adopted-ring');
       G.appendChild(outerA);
       const innerA=se('circle');
       innerA.setAttribute('r',String(R+6));
       innerA.setAttribute('fill','none');
-      innerA.setAttribute('stroke','rgba(200,168,75,0.2)');
-      innerA.setAttribute('stroke-width','1');
+      innerA.setAttribute('stroke','rgba(200,168,75,0.35)');
+      innerA.setAttribute('stroke-width','1.5');
       G.appendChild(innerA);
     }
 
@@ -3140,7 +3147,7 @@ function drawNodes(){
       G.addEventListener('mouseenter',e=>{
         const tip=document.getElementById('tip');
         if(tip){
-          tip.textContent=`${sn.name||sn.firstName} · ${sn._sharedByName}'s tree`;
+          tip.textContent=`${sn.name||sn.firstName} · ${sn._sharedByName}'s ${sn.relLabel||'family'}`;
           tip.style.left=(e.clientX+12)+'px';tip.style.top=(e.clientY-24)+'px';
           tip.style.opacity='1';
         }
@@ -3163,7 +3170,7 @@ function drawNodes(){
         modal.innerHTML=`
           ${photoHtml}
           <div style="font-family:'Cormorant Garamond',serif;font-size:1.3rem;font-weight:600;color:var(--text);text-align:center">${nm}</div>
-          ${sn.relLabel?`<div style="font-size:.72rem;color:var(--gold);text-align:center;font-style:italic;margin-top:2px">${sn.relLabel}</div>`:''}
+          ${sn.relLabel?`<div style="font-size:.72rem;color:var(--gold);text-align:center;font-style:italic;margin-top:2px">${sn._sharedByName}'s ${sn.relLabel}</div>`:''}
           <div style="font-size:.72rem;color:var(--muted);text-align:center;margin-top:2px">From ${sn._sharedByName}'s tree</div>
           ${dateStr?`<div style="font-size:.72rem;color:var(--muted);text-align:center;margin-top:6px">${dateStr}</div>`:''}
           ${story?`<div style="font-size:.75rem;color:rgba(255,255,255,.35);font-style:italic;text-align:center;margin-top:10px;line-height:1.5">"${story}"</div>`:''}
