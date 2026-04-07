@@ -3147,7 +3147,7 @@ function drawNodes(){
       G.addEventListener('mouseenter',e=>{
         const tip=document.getElementById('tip');
         if(tip){
-          tip.textContent=`${sn.name||sn.firstName} · ${sn._sharedByName}'s ${sn.relLabel||'family'}`;
+          tip.textContent=`${sn.name||sn.firstName} · From ${sn._sharedByName}'s tree`;
           tip.style.left=(e.clientX+12)+'px';tip.style.top=(e.clientY-24)+'px';
           tip.style.opacity='1';
         }
@@ -3170,8 +3170,7 @@ function drawNodes(){
         modal.innerHTML=`
           ${photoHtml}
           <div style="font-family:'Cormorant Garamond',serif;font-size:1.3rem;font-weight:600;color:var(--text);text-align:center">${nm}</div>
-          ${sn.relLabel?`<div style="font-size:.72rem;color:var(--gold);text-align:center;font-style:italic;margin-top:2px">${sn._sharedByName}'s ${sn.relLabel}</div>`:''}
-          <div style="font-size:.72rem;color:var(--muted);text-align:center;margin-top:2px">From ${sn._sharedByName}'s tree</div>
+          ${sn.relLabel?`<div style="font-size:.68rem;color:rgba(200,168,75,.4);text-align:center;margin-top:2px;font-style:italic">${sn.relLabel} in ${sn._sharedByName}'s tree</div>`:''}
           ${dateStr?`<div style="font-size:.72rem;color:var(--muted);text-align:center;margin-top:6px">${dateStr}</div>`:''}
           ${story?`<div style="font-size:.75rem;color:rgba(255,255,255,.35);font-style:italic;text-align:center;margin-top:10px;line-height:1.5">"${story}"</div>`:''}
           <div style="height:16px"></div>
