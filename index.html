@@ -2376,14 +2376,10 @@ async function toggleShareLevel(linkId, newLevel){
 // ─── SHARED NODES (received from linked users) ──────────────────────────────
 let sharedNodes=[];
 
-// Auto-upload shared data if our shareLevel is 'all' but data isn't uploaded yet
-async function autoUploadSharedData(){
-
 // Batch-adopt shared nodes in parent→child order
 function adoptBatch(nodes){
   if(!nodes.length) return 0;
   let adopted=0;
-  // Sort: nodes whose parents are ALL already local come first
   const sorted=[...nodes];
   sorted.sort((a,b)=>{
     const aLocal=(a.parents||[]).every(pid=>byId[pid]);
@@ -2392,7 +2388,6 @@ function adoptBatch(nodes){
     if(!aLocal&&bLocal) return 1;
     return 0;
   });
-  // Multi-pass: keep adopting until no more can be adopted
   const remaining=new Set(sorted.map(n=>n.id));
   for(let pass=0;pass<5&&remaining.size;pass++){
     for(const sn of sorted){
@@ -2405,12 +2400,10 @@ function adoptBatch(nodes){
         note:sn.note||'',relLabel:sn.relLabel||'',parents:[],spouseOf:null,
         customLinks:{},isYou:false,_adopted:true,
         x:sn.x||Math.random()*400+200,y:sn.y||Math.random()*400+200};
-      // Only adopt if all parents are now local
       const parentIds=(sn.parents||[]).filter(pid=>byId[pid]);
       node.parents=parentIds;
       if(sn.spouseOf&&byId[sn.spouseOf]) node.spouseOf=sn.spouseOf;
       P.push(node);byId[newId]=node;
-      // Remap all references old→new
       sharedNodes.forEach(n=>{n.parents=(n.parents||[]).map(pid=>pid===oldId?newId:pid);if(n.spouseOf===oldId)n.spouseOf=newId});
       sorted.forEach(n=>{if(n.id!==oldId){n.parents=(n.parents||[]).map(pid=>pid===oldId?newId:pid);if(n.spouseOf===oldId)n.spouseOf=newId}});
       P.forEach(n=>{if(n.id===newId)return;n.parents=(n.parents||[]).map(pid=>pid===oldId?newId:pid);if(n.spouseOf===oldId)n.spouseOf=newId});
@@ -2422,6 +2415,9 @@ function adoptBatch(nodes){
   if(adopted){rebuild();scheduleSave();}
   return adopted;
 }
+
+// Auto-upload shared data if our shareLevel is 'all' but data isn't uploaded yet
+async function autoUploadSharedData(){
   if(!currentUser||!P.length) return;
   for(const link of activeLinks){
     const myLevel=link.shareLevel?.[currentUser.uid];
