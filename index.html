@@ -906,7 +906,7 @@ function inferRelToYou(anchorRelToYou, newRelToAnchor, gender) {
     if(isSibling(r))    return g('Great-uncle','Great-aunt','Great-aunt/Uncle');
     if(isParent(r))     return g('Great-grandfather','Great-grandmother','Great-grandparent');
     if(isChild(r))      return g('Uncle','Aunt','Aunt/Uncle');
-    if(isSpouse(r))     return g('Grandfather-in-law','Grandmother-in-law','Grandparent-in-law');
+    if(isSpouse(r))     return g('Grandfather','Grandmother','Grandparent');
     if(isGrandchild(r)) return 'First Cousin';
   }
   // ── Great-grandparent's relatives ─────────────────────────────────────────
@@ -914,6 +914,7 @@ function inferRelToYou(anchorRelToYou, newRelToAnchor, gender) {
     if(isSibling(r))    return g('Great-grand-uncle','Great-grand-aunt','Great-grand-aunt/Uncle');
     if(isParent(r))     return g('Great-great-grandfather','Great-great-grandmother','Great-great-grandparent');
     if(isChild(r))      return g('Great-uncle','Great-aunt','Great-aunt/Uncle');
+    if(isSpouse(r))     return g('Great-grandfather','Great-grandmother','Great-grandparent');
     if(isGrandchild(r)) return 'First Cousin Once Removed';
   }
   // ── Sibling's relatives ────────────────────────────────────────────────────
@@ -1141,7 +1142,10 @@ function autoAssignToYou(newNodeId, anchorId, relToAnchor){
       (newNode.parents||[]).includes(existing.id)||
       existing.spouseOf===newNodeId||newNode.spouseOf===existing.id||
       (existing.customLinks&&existing.customLinks[newNodeId])||
-      (newNode.customLinks&&newNode.customLinks[existing.id]);
+      (newNode.customLinks&&newNode.customLinks[existing.id])||
+      // Also skip if already connected through ancestor chain (grandparent/great-grandparent via parents[])
+      collectAncestors(existing.id, 6).has(newNodeId)||
+      collectAncestors(newNodeId, 6).has(existing.id);
     if(alreadyLinked) return;
 
     applyInferredRel(existing, newNode, inferred);
