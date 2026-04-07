@@ -18,7 +18,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-famil
 #loading.fade{opacity:0;pointer-events:none}#loading.gone{display:none}
 
 /* Timeline area */
-#tl-scroll{position:fixed;top:0;left:0;right:68px;bottom:0;overflow:hidden}
+#tl-scroll{position:fixed;top:0;left:0;right:84px;bottom:0;overflow:hidden}
 #tl-inner{position:relative;height:100%;will-change:transform}
 #tl-line{position:absolute;left:0;right:0;top:68%;height:2px;background:linear-gradient(to right,transparent 20px,rgba(200,168,75,.2) 60px,rgba(200,168,75,.2) calc(100% - 60px),transparent)}
 
@@ -77,7 +77,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-famil
 .sb-line{border-radius:99px;background:rgba(255,255,255,.08);transition:background-color .08s linear,transform .08s linear,box-shadow .08s linear;will-change:background-color,transform}
 
 /* Vertical bar (right) — ZOOM */
-#v-bar{top:50%;right:24px;transform:translateY(-50%);width:40px;padding:12px 0;flex-direction:column;align-items:center}
+#v-bar{top:50%;right:32px;transform:translateY(-50%);width:40px;padding:12px 0;flex-direction:column;align-items:center}
 #v-bar .sb-lines{flex-direction:column;gap:5px;align-items:center}
 #v-bar .sb-line{width:14px;height:2px}
 
@@ -88,7 +88,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-famil
 #you-tick{position:absolute;top:2px;bottom:2px;width:3px;border-radius:2px;background:#6ecb8a;box-shadow:0 0 8px rgba(110,203,138,.6),0 0 16px rgba(110,203,138,.3);z-index:5;pointer-events:none;transition:left .3s ease}
 
 /* Labels */
-#zoom-label{position:fixed;top:calc(50% + 135px);right:24px;z-index:50;font-size:.68rem;font-weight:500;color:var(--gold);text-align:center;width:40px;letter-spacing:.08em;text-transform:uppercase;opacity:.7}
+#zoom-label{position:fixed;top:calc(50% + 135px);right:18px;z-index:50;font-size:.68rem;font-weight:500;color:var(--gold);text-align:center;width:68px;letter-spacing:.08em;text-transform:uppercase;opacity:.7}
 #legend{position:fixed;bottom:14px;left:14px;z-index:50;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px 12px;backdrop-filter:blur(12px);display:flex;gap:10px;flex-wrap:wrap;font-size:.6rem}
 .leg-i{display:flex;align-items:center;gap:4px;color:var(--muted)}.leg-d{width:8px;height:8px;border-radius:50%}
 #empty{display:none;position:fixed;inset:0;z-index:10;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:12px;color:var(--muted);font-size:.95rem}
