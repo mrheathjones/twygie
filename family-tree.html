@@ -329,6 +329,19 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-famil
       Saved
     </div>
     <button class="hbtn" onclick="resetView()">Fit to screen</button>
+    <div style="position:relative;display:inline-block">
+      <button class="hbtn" onclick="toggleExportMenu()" id="export-btn">Export ▾</button>
+      <div id="export-menu" style="display:none;position:absolute;top:100%;right:0;margin-top:6px;background:#0d1520;border:1px solid var(--border);border-radius:10px;overflow:hidden;min-width:160px;box-shadow:0 12px 32px rgba(0,0,0,.5);z-index:500">
+        <button onclick="exportTree('png')" style="display:flex;align-items:center;gap:8px;width:100%;padding:10px 16px;border:none;background:transparent;color:var(--text);font-family:Outfit,sans-serif;font-size:.82rem;cursor:pointer;text-align:left;transition:background .15s" onmouseenter="this.style.background='rgba(255,255,255,.06)'" onmouseleave="this.style.background='transparent'">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+          Save as Image
+        </button>
+        <button onclick="exportTree('pdf')" style="display:flex;align-items:center;gap:8px;width:100%;padding:10px 16px;border:none;background:transparent;color:var(--text);font-family:Outfit,sans-serif;font-size:.82rem;cursor:pointer;text-align:left;transition:background .15s" onmouseenter="this.style.background='rgba(255,255,255,.06)'" onmouseleave="this.style.background='transparent'">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8M16 17H8M10 9H8"/></svg>
+          Save as PDF
+        </button>
+      </div>
+    </div>
     <button class="hbtn acc" onclick="openModal(null)">+ Add member</button>
     <button class="zb" onclick="openSettings()" title="Settings" style="width:30px;height:30px">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
@@ -3021,6 +3034,145 @@ function applyT(anim=false){
   if(anim){ tg.classList.add('anim'); setTimeout(()=>tg.classList.remove('anim'),700); }
   tg.style.transform=`translate(${tx}px,${ty}px) scale(${scale})`;
 }
+// ─── EXPORT ──────────────────────────────────────────────────────────────────
+
+function toggleExportMenu(){
+  const m=document.getElementById('export-menu');
+  m.style.display=m.style.display==='none'?'block':'none';
+  if(m.style.display==='block'){
+    setTimeout(()=>document.addEventListener('click',closeExportMenu,{once:true}),10);
+  }
+}
+function closeExportMenu(){ document.getElementById('export-menu').style.display='none'; }
+
+async function exportTree(format){
+  closeExportMenu();
+  if(!P.length){ alert('No Twygs to export.'); return; }
+
+  // 1. Calculate bounding box from node positions
+  const pad=120;
+  const xs=P.map(p=>p.x), ys=P.map(p=>p.y);
+  const x0=Math.min(...xs)-pad, y0=Math.min(...ys)-pad;
+  const x1=Math.max(...xs)+pad, y1=Math.max(...ys)+pad;
+  const w=x1-x0, h=y1-y0;
+
+  // 2. Clone the SVG
+  const origSvg=document.getElementById('svg');
+  const clone=origSvg.cloneNode(true);
+
+  // 3. Set proper dimensions and viewBox (remove pan/zoom)
+  clone.setAttribute('width',w);
+  clone.setAttribute('height',h);
+  clone.setAttribute('viewBox',`${x0} ${y0} ${w} ${h}`);
+  clone.style.width=w+'px';
+  clone.style.height=h+'px';
+
+  // 4. Remove the pan/zoom transform from the tg group
+  const tg=clone.querySelector('#tg');
+  if(tg) tg.style.transform='none';
+
+  // 5. Add dark background rect as first child
+  const bg=document.createElementNS('http://www.w3.org/2000/svg','rect');
+  bg.setAttribute('x',x0); bg.setAttribute('y',y0);
+  bg.setAttribute('width',w); bg.setAttribute('height',h);
+  bg.setAttribute('fill','#04070c');
+  clone.insertBefore(bg, clone.firstChild);
+
+  // 6. Embed CSS animations and styles inline
+  const styleEl=document.createElementNS('http://www.w3.org/2000/svg','style');
+  styleEl.textContent=`
+    @keyframes glow-amber{0%,100%{opacity:.8}50%{opacity:.35}}
+    @keyframes glow-blue{0%,100%{opacity:.65}50%{opacity:.25}}
+    @keyframes glow-you{0%,100%{opacity:1}50%{opacity:.55}}
+    @keyframes young-sparkle{0%{opacity:.6}15%{opacity:1}30%{opacity:.55}45%{opacity:.95}60%{opacity:.5}100%{opacity:.6}}
+    @keyframes young-outer-ring{0%{opacity:.12}25%{opacity:.22}50%{opacity:.1}75%{opacity:.2}100%{opacity:.12}}
+    .gp{animation-duration:3.4s;animation-iteration-count:infinite;animation-timing-function:ease-in-out}
+    .hi{animation-name:glow-amber}
+    .hi-b{animation-name:glow-blue}
+    .hi-y{animation-name:glow-you;animation-duration:2.5s}
+    .young-spark{animation-name:young-sparkle;animation-duration:1.8s}
+    .young-outer{animation-name:young-outer-ring;animation-duration:2.2s;animation-iteration-count:infinite;animation-timing-function:ease-in-out}
+    .nd text{font-family:'Outfit',sans-serif;fill:rgba(255,255,255,.85);font-size:13px;text-anchor:middle;pointer-events:none}
+  `;
+  clone.insertBefore(styleEl, clone.firstChild);
+
+  // 7. Remove interactive attributes (events, cursors)
+  clone.querySelectorAll('.nd').forEach(nd=>{
+    nd.style.cursor='default';
+    nd.removeAttribute('onclick');
+    nd.removeAttribute('onmouseenter');
+    nd.removeAttribute('onmouseleave');
+  });
+
+  // 8. Serialize SVG to data URL
+  const serializer=new XMLSerializer();
+  const svgStr=serializer.serializeToString(clone);
+  const svgBlob=new Blob([svgStr],{type:'image/svg+xml;charset=utf-8'});
+  const svgUrl=URL.createObjectURL(svgBlob);
+
+  // 9. Render to canvas
+  const dpr=2; // 2x resolution for crisp export
+  const canvas=document.createElement('canvas');
+  canvas.width=w*dpr; canvas.height=h*dpr;
+  const ctx=canvas.getContext('2d');
+  ctx.scale(dpr,dpr);
+
+  const img=new Image();
+  img.onload=async ()=>{
+    ctx.fillStyle='#04070c';
+    ctx.fillRect(0,0,w,h);
+    ctx.drawImage(img,0,0,w,h);
+    URL.revokeObjectURL(svgUrl);
+
+    if(format==='png'){
+      // Download as PNG
+      const link=document.createElement('a');
+      link.download=`twygie-tree-${new Date().toISOString().slice(0,10)}.png`;
+      link.href=canvas.toDataURL('image/png');
+      link.click();
+    } else if(format==='pdf'){
+      // Convert canvas to PDF
+      await exportCanvasToPDF(canvas, w, h);
+    }
+  };
+  img.onerror=()=>{
+    URL.revokeObjectURL(svgUrl);
+    // Fallback: try without data URLs (photos might cause CORS)
+    alert('Export failed — try removing photos from nodes and retrying.');
+  };
+  img.src=svgUrl;
+}
+
+async function exportCanvasToPDF(canvas, w, h){
+  // Load jsPDF from CDN
+  if(!window.jspdf){
+    try{
+      await new Promise((resolve,reject)=>{
+        const s=document.createElement('script');
+        s.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+        s.onload=resolve; s.onerror=reject;
+        document.head.appendChild(s);
+      });
+    }catch(e){
+      // Fallback: download as PNG instead
+      const link=document.createElement('a');
+      link.download=`twygie-tree-${new Date().toISOString().slice(0,10)}.png`;
+      link.href=canvas.toDataURL('image/png');
+      link.click();
+      alert('PDF export unavailable offline. Saved as PNG instead.');
+      return;
+    }
+  }
+  const {jsPDF}=window.jspdf;
+  const orientation=w>h?'landscape':'portrait';
+  const pdf=new jsPDF({orientation,unit:'px',format:[w,h]});
+  const imgData=canvas.toDataURL('image/png');
+  pdf.addImage(imgData,'PNG',0,0,w,h);
+  pdf.save(`twygie-tree-${new Date().toISOString().slice(0,10)}.pdf`);
+}
+
+// ─── VIEW ────────────────────────────────────────────────────────────────────
+
 function resetView(){
   if(!P.length) return;
   const xs=P.map(p=>p.x), ys=P.map(p=>p.y);
