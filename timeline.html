@@ -204,7 +204,20 @@ function renderTimeline(){
   if(!entries.length){document.getElementById('empty').classList.add('show');return}
 
   const bys=entries.map(p=>parseInt(p.dob&&p.dob.year)||p.birth);
-  minY=Math.min(...bys)-2; maxY=Math.max(curYr,...bys)+2;
+  let rawMin=Math.min(...bys)-2, rawMax=Math.max(curYr,...bys)+2;
+
+  // Pad range symmetrically around isYou so they appear centered on the h-bar
+  const youNode=you;
+  const youBY=youNode?(parseInt(youNode.dob&&youNode.dob.year)||youNode.birth||0):0;
+  if(youBY){
+    const distLeft=youBY-rawMin;
+    const distRight=rawMax-youBY;
+    const maxDist=Math.max(distLeft,distRight);
+    minY=youBY-maxDist;
+    maxY=youBY+maxDist;
+  } else {
+    minY=rawMin; maxY=rawMax;
+  }
   byYearCount={};entries.forEach(p=>{const by=parseInt(p.dob&&p.dob.year)||p.birth;byYearCount[by]=(byYearCount[by]||0)+1});
 
   const px=yearPx();
@@ -404,6 +417,30 @@ setupBar(document.getElementById('v-bar'),'y',p=>{
   renderBars();
 });
 
+// ─── HOVER MAGNIFICATION (dock-like effect) ───
+function addHoverMag(el, barsArr, axis){
+  el.addEventListener('mousemove',e=>{
+    const r=el.getBoundingClientRect();
+    const frac=axis==='x'
+      ?(e.clientX-r.left)/r.width
+      :(e.clientY-r.top)/r.height;
+    const hoverIdx=frac*(barsArr.length-1);
+    barsArr.forEach((bar,i)=>{
+      const dist=Math.abs(i-hoverIdx);
+      // Magnification: closer to hover = bigger
+      const mag=Math.max(1, 2.2-dist*0.35);
+      const prop=axis==='x'?'scaleY':'scaleX';
+      bar.style.transform=`${prop}(${mag})`;
+    });
+  });
+  el.addEventListener('mouseleave',()=>{
+    // Reset to normal — re-render will apply correct scales
+    renderBars();
+  });
+}
+addHoverMag(document.getElementById('h-bar'), hBars, 'x');
+addHoverMag(document.getElementById('v-bar'), vBars, 'y');
+
 function updateZoomLabel(){
   const px=yearPx();
   const label=document.getElementById('zoom-label');
@@ -544,7 +581,8 @@ function scrollToYou(){
   const viewW=area.clientWidth;
   const targetX=xOf(yby);
   const maxOffset=Math.max(0,totalW-viewW);
-  scrollPos=maxOffset>0?Math.min(1,Math.max(0,(targetX-viewW/2)/maxOffset)):0;
+  // Center isYou in viewport
+  scrollPos=maxOffset>0?Math.min(1,Math.max(0,(targetX-viewW/2)/maxOffset)):0.5;
   applyScroll();
 }
 
