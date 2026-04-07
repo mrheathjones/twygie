@@ -912,7 +912,8 @@ auth.onAuthStateChanged(async user => {
   else initEl.textContent=(user.displayName||user.email||'?')[0].toUpperCase();
   await loadTree();
   await loadActiveLinks();
-  subscribeActiveLinks(); // start real-time listener for link changes
+  await loadSharedNodes();
+  subscribeActiveLinks();
   hideLoading();
 });
 async function signOut(){ if(!confirm('Sign out?')) return; await auth.signOut(); window.location.href='login.html'; }
@@ -2004,16 +2005,35 @@ async function loadLinkedTrees(){
       const otherName=link.userA===currentUser.uid?link.userBName:link.userAName;
       const created=link.createdAt?.toDate?.();
       const dateStr=created?created.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'';
-      return `<div class="link-item">
-        <div style="width:30px;height:30px;border-radius:50%;background:rgba(200,168,75,.15);display:flex;align-items:center;justify-content:center;flex-shrink:0">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+      const myShareLevel=link.shareLevel?.[currentUser.uid]||'bridge';
+      const otherShareLevel=link.shareLevel?.[link.userA===currentUser.uid?link.userB:link.userA]||'bridge';
+      const isSharingAll=myShareLevel==='all';
+      const otherSharingAll=otherShareLevel==='all';
+      return `<div class="link-item" style="flex-direction:column;align-items:stretch;gap:8px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="width:30px;height:30px;border-radius:50%;background:rgba(200,168,75,.15);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          </div>
+          <div class="link-item-info">
+            <div class="link-item-name">${otherName||'Unknown user'}</div>
+            <div class="link-item-node">Bridge: ${link.bridgeNodeName}</div>
+            ${dateStr?`<div class="link-item-date">Linked ${dateStr}</div>`:''}
+          </div>
+          <button class="link-revoke" onclick="revokeLink('${link.id}')">Revoke</button>
         </div>
-        <div class="link-item-info">
-          <div class="link-item-name">${otherName||'Unknown user'}</div>
-          <div class="link-item-node">Bridge: ${link.bridgeNodeName}</div>
-          ${dateStr?`<div class="link-item-date">Linked ${dateStr}</div>`:''}
+        <div style="display:flex;gap:6px;align-items:center;padding:6px 0 2px">
+          <div style="flex:1;font-size:.68rem">
+            <div style="color:var(--muted)">Your sharing:</div>
+            <div style="display:flex;gap:4px;margin-top:4px">
+              <button onclick="toggleShareLevel('${link.id}','bridge')" style="flex:1;padding:5px 0;border-radius:6px;border:1px solid ${!isSharingAll?'rgba(200,168,75,.4)':'var(--border)'};background:${!isSharingAll?'rgba(200,168,75,.1)':'transparent'};color:${!isSharingAll?'var(--gold)':'var(--muted)'};font-size:.65rem;cursor:pointer;font-family:'Outfit',sans-serif">Bridge Only</button>
+              <button onclick="toggleShareLevel('${link.id}','all')" style="flex:1;padding:5px 0;border-radius:6px;border:1px solid ${isSharingAll?'rgba(110,203,138,.4)':'var(--border)'};background:${isSharingAll?'rgba(110,203,138,.1)':'transparent'};color:${isSharingAll?'rgba(110,203,138,.8)':'var(--muted)'};font-size:.65rem;cursor:pointer;font-family:'Outfit',sans-serif">Share All</button>
+            </div>
+          </div>
+          <div style="flex:1;font-size:.68rem">
+            <div style="color:var(--muted)">${otherName}'s sharing:</div>
+            <div style="margin-top:4px;font-size:.65rem;color:${otherSharingAll?'rgba(110,203,138,.7)':'rgba(255,255,255,.3)'};padding:5px 0">${otherSharingAll?'Sharing all':'Bridge only'}</div>
+          </div>
         </div>
-        <button class="link-revoke" onclick="revokeLink('${link.id}')">Revoke</button>
       </div>`;
     }).join('');
   }catch(e){
@@ -2054,7 +2074,7 @@ function subscribeActiveLinks(){
     activeLinks=combined;
     if(newJson!==oldJson){
       console.log('Tree links updated:',activeLinks.length,'active link(s)');
-      render(); // re-render tree to show/hide bridge badges
+      loadSharedNodes().then(()=>render());
     }
   };
 
@@ -2094,7 +2114,6 @@ async function loadActiveLinks(){
 }
 
 function getBridgeInfo(nodeId){
-  // Returns link info if this node is a bridge node, null otherwise
   for(const link of activeLinks){
     const myBridgeId=link.userA===currentUser.uid?link.bridgeNodeIdA:link.bridgeNodeIdB;
     if(myBridgeId===nodeId){
@@ -2103,6 +2122,120 @@ function getBridgeInfo(nodeId){
     }
   }
   return null;
+}
+
+// ─── PHASE 3C: SHARING TIERS ────────────────────────────────────────────────
+
+// Derive a shared encryption key from both UIDs (both sides get same key)
+async function deriveSharedKey(uidA, uidB){
+  const sorted=[uidA,uidB].sort().join('|');
+  const enc=new TextEncoder();
+  const km=await crypto.subtle.importKey('raw',enc.encode(sorted),'PBKDF2',false,['deriveKey']);
+  return crypto.subtle.deriveKey(
+    {name:'PBKDF2',salt:enc.encode('twygie-shared-v1'),iterations:100000,hash:'SHA-256'},
+    km,{name:'AES-GCM',length:256},false,['encrypt','decrypt']
+  );
+}
+
+async function encryptShared(key,data){
+  const enc=new TextEncoder();
+  const iv=crypto.getRandomValues(new Uint8Array(12));
+  const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},key,enc.encode(JSON.stringify(data)));
+  const combined=new Uint8Array(iv.length+ct.byteLength);
+  combined.set(iv);combined.set(new Uint8Array(ct),iv.length);
+  let bin='';const chunk=8192;
+  for(let i=0;i<combined.length;i+=chunk) bin+=String.fromCharCode.apply(null,combined.subarray(i,i+chunk));
+  return btoa(bin);
+}
+
+async function decryptShared(key,b64){
+  const bin=atob(b64);const raw=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) raw[i]=bin.charCodeAt(i);
+  const dec=await crypto.subtle.decrypt({name:'AES-GCM',iv:raw.slice(0,12)},key,raw.slice(12));
+  return JSON.parse(new TextDecoder().decode(dec));
+}
+
+// Toggle share level for a link
+async function toggleShareLevel(linkId, newLevel){
+  const link=activeLinks.find(l=>l.id===linkId);
+  if(!link) return;
+
+  try{
+    if(newLevel==='all'){
+      // Encrypt our people[] with the shared key and store in the link
+      const sharedKey=await deriveSharedKey(link.userA, link.userB);
+      // Share stripped-down node data (no customLinks internals, no isYou)
+      const sharedData=P.map(p=>({
+        id:p.id, name:fullName(p),
+        firstName:p.firstName||'', lastName:p.lastName||'',
+        gender:p.gender||'', photo:p.photo||null,
+        dob:p.dob||null, dod:p.dod||null,
+        birth:p.birth||null, death:p.death||null,
+        city:p.city||'', state:p.state||'',
+        note:p.note||'', relLabel:p.relLabel||'',
+        parents:p.parents||[], spouseOf:p.spouseOf||null,
+        isYou:p.isYou||false, x:p.x, y:p.y
+      }));
+      const encrypted=await encryptShared(sharedKey, sharedData);
+
+      await db.collection('treeLinks').doc(linkId).update({
+        [`shareLevel.${currentUser.uid}`]:'all',
+        [`sharedData.${currentUser.uid}`]:encrypted
+      });
+    } else {
+      // Bridge only — remove shared data
+      await db.collection('treeLinks').doc(linkId).update({
+        [`shareLevel.${currentUser.uid}`]:'bridge',
+        [`sharedData.${currentUser.uid}`]:firebase.firestore.FieldValue.delete()
+      });
+    }
+    await loadActiveLinks();
+    await loadSharedNodes();
+    render();
+    loadLinkedTrees();
+  }catch(e){
+    console.error('Failed to toggle share level:',e);
+    alert('Failed to update sharing. Please try again.');
+  }
+}
+
+// ─── SHARED NODES (received from linked users) ──────────────────────────────
+let sharedNodes=[]; // [{...node, _sharedBy, _sharedByName, _linkId}]
+
+async function loadSharedNodes(){
+  sharedNodes=[];
+  if(!currentUser||!activeLinks.length) return;
+
+  for(const link of activeLinks){
+    const otherUid=link.userA===currentUser.uid?link.userB:link.userA;
+    const otherName=link.userA===currentUser.uid?link.userBName:link.userAName;
+    const otherShareLevel=link.shareLevel?.[otherUid];
+    const otherData=link.sharedData?.[otherUid];
+
+    if(otherShareLevel==='all'&&otherData){
+      try{
+        const sharedKey=await deriveSharedKey(link.userA, link.userB);
+        const nodes=await decryptShared(sharedKey, otherData);
+        // Tag each node with source info and prefix IDs to avoid collision
+        const myBridgeId=link.userA===currentUser.uid?link.bridgeNodeIdA:link.bridgeNodeIdB;
+        const otherBridgeId=link.userA===currentUser.uid?link.bridgeNodeIdB:link.bridgeNodeIdA;
+        nodes.forEach(n=>{
+          // Skip the bridge node (we already have it)
+          if(n.id===otherBridgeId) return;
+          n._origId=n.id;
+          n.id=`shared_${link.id}_${n.id}`;
+          n._sharedBy=otherUid;
+          n._sharedByName=otherName;
+          n._linkId=link.id;
+          n._readOnly=true;
+          // Remap parent IDs
+          n.parents=(n.parents||[]).map(pid=>pid===otherBridgeId?myBridgeId:`shared_${link.id}_${pid}`);
+          if(n.spouseOf){n.spouseOf=n.spouseOf===otherBridgeId?myBridgeId:`shared_${link.id}_${n.spouseOf}`}
+          sharedNodes.push(n);
+        });
+      }catch(e){console.warn('Failed to decrypt shared nodes from',otherName,e)}
+    }
+  }
 }
 
 // ─── FIRESTORE ────────────────────────────────────────────────────────────────
@@ -2792,6 +2925,113 @@ function drawNodes(){
     G.addEventListener('mouseleave',hideTip);
     nG.appendChild(G);
   });
+
+  // ── Draw shared nodes (from linked users) — ghost/faded style ──
+  if(sharedNodes.length){
+    // Calculate offset: position shared nodes relative to our bridge node
+    sharedNodes.forEach(sn=>{
+      const link=activeLinks.find(l=>l.id===sn._linkId);
+      if(!link) return;
+      const myBridgeId=link.userA===currentUser.uid?link.bridgeNodeIdA:link.bridgeNodeIdB;
+      const myBridge=byId[myBridgeId];
+      if(!myBridge) return;
+
+      // Position shared nodes offset from bridge
+      const ox=myBridge.x+(sn.x||0)*0.6-300;
+      const oy=myBridge.y+(sn.y||0)*0.6-200;
+
+      const R=18; // smaller than normal nodes
+      const c='rgba(200,168,75,0.4)';
+
+      const G=se('g');
+      G.setAttribute('class','nd shared-node');
+      G.setAttribute('transform',`translate(${ox},${oy})`);
+      G.setAttribute('opacity','0.5');
+
+      // Dashed circle
+      const ring=se('circle');
+      ring.setAttribute('r',String(R));
+      ring.setAttribute('fill','rgba(200,168,75,0.06)');
+      ring.setAttribute('stroke','rgba(200,168,75,0.25)');
+      ring.setAttribute('stroke-width','1.5');
+      ring.setAttribute('stroke-dasharray','3,2');
+      G.appendChild(ring);
+
+      // Photo or initials
+      if(sn.photo){
+        const clipId=`cp-shared-${sn.id}`;
+        const cp=se('clipPath');cp.setAttribute('id',clipId);
+        const ci=se('circle');ci.setAttribute('r',String(R));cp.appendChild(ci);
+        defs.appendChild(cp);
+        const img=se('image');
+        img.setAttribute('href',sn.photo);
+        img.setAttribute('x',String(-R));img.setAttribute('y',String(-R));
+        img.setAttribute('width',String(R*2));img.setAttribute('height',String(R*2));
+        img.setAttribute('clip-path',`url(#${clipId})`);
+        img.setAttribute('preserveAspectRatio','xMidYMid slice');
+        img.setAttribute('opacity','0.6');
+        G.appendChild(img);
+      } else {
+        const txt=se('text');
+        txt.textContent=(sn.firstName||sn.name||'?').charAt(0).toUpperCase();
+        txt.setAttribute('text-anchor','middle');txt.setAttribute('dominant-baseline','central');
+        txt.setAttribute('fill','rgba(200,168,75,0.5)');txt.setAttribute('font-size','11');
+        txt.setAttribute('font-weight','600');txt.setAttribute('font-family','Outfit, sans-serif');
+        G.appendChild(txt);
+      }
+
+      // Label
+      const lbl=se('text');
+      lbl.textContent=sn.firstName||sn.name||'?';
+      lbl.setAttribute('text-anchor','middle');lbl.setAttribute('y',String(R+12));
+      lbl.setAttribute('fill','rgba(200,168,75,0.35)');lbl.setAttribute('font-size','9');
+      lbl.setAttribute('font-family','Outfit, sans-serif');
+      G.appendChild(lbl);
+
+      // Tooltip on hover
+      G.addEventListener('mouseenter',e=>{
+        const tip=document.getElementById('tip');
+        if(tip){
+          tip.textContent=`${sn.name||sn.firstName} · ${sn._sharedByName}'s tree`;
+          tip.style.left=(e.clientX+12)+'px';tip.style.top=(e.clientY-24)+'px';
+          tip.style.opacity='1';
+        }
+      });
+      G.addEventListener('mouseleave',hideTip);
+      // Click shared node — show read-only info
+      G.addEventListener('click',()=>{
+        const nm=sn.name||sn.firstName||'Unknown';
+        const by=sn.dob?.year||sn.birth||'';
+        alert(`${nm}${by?' (b. '+by+')':''}\nFrom ${sn._sharedByName}'s tree\n${sn.relLabel||''}`);
+      });
+
+      nG.appendChild(G);
+
+      // Draw connection line from shared node to its parent (if parent is bridge or another shared node)
+      const bG=document.getElementById('bG');
+      (sn.parents||[]).forEach(pid=>{
+        let parent=byId[pid]; // might be our bridge node
+        let px2,py2;
+        if(parent){px2=parent.x;py2=parent.y}
+        else{
+          const sp=sharedNodes.find(s=>s.id===pid);
+          if(!sp) return;
+          const spLink=activeLinks.find(l=>l.id===sp._linkId);
+          const spBridge=spLink?byId[spLink.userA===currentUser.uid?spLink.bridgeNodeIdA:spLink.bridgeNodeIdB]:null;
+          if(!spBridge) return;
+          px2=spBridge.x+(sp.x||0)*0.6-300;
+          py2=spBridge.y+(sp.y||0)*0.6-200;
+        }
+        const path=se('path');
+        path.setAttribute('d',`M ${ox} ${oy} L ${px2} ${py2}`);
+        path.setAttribute('stroke','rgba(200,168,75,0.15)');
+        path.setAttribute('stroke-width','1.5');
+        path.setAttribute('stroke-dasharray','4,3');
+        path.setAttribute('fill','none');
+        bG.appendChild(path);
+      });
+    });
+  }
 }
 
 // ─── NODE DRAG ────────────────────────────────────────────────────────────────
