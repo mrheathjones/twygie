@@ -2323,7 +2323,12 @@ async function decryptShared(key,b64){
 // Toggle share level for a link
 async function toggleShareLevel(linkId, newLevel){
   const link=activeLinks.find(l=>l.id===linkId);
-  if(!link) return;
+  if(!link){
+    console.warn('Link not found:',linkId,'activeLinks:',activeLinks.length);
+    appAlert('Link not found. Try closing and reopening the link manager.');
+    return;
+  }
+  console.log('toggleShareLevel:',linkId,newLevel,'userA:',link.userA,'userB:',link.userB,'me:',currentUser.uid);
 
   try{
     if(newLevel==='all'){
@@ -2331,21 +2336,21 @@ async function toggleShareLevel(linkId, newLevel){
       const sharedKey=await deriveSharedKey(link.userA, link.userB);
       // Share stripped-down node data (no customLinks internals, no isYou)
       const sharedData=P.map(p=>{
-        // Compute spouse bidirectionally (spouseOf is one-way)
         const spouseId=p.spouseOf||(P.find(x=>x.spouseOf===p.id)||{}).id||null;
         return {
           id:p.id, name:fullName(p),
           firstName:p.firstName||'', lastName:p.lastName||'',
-          gender:p.gender||'', photo:null, // photos omitted (Firestore 1MB limit)
+          gender:p.gender||'',
           dob:p.dob||null, dod:p.dod||null,
           birth:p.birth||null, death:p.death||null,
           city:p.city||'', state:p.state||'',
-          note:p.note||'', relLabel:getRelToYou(p.id)||p.relLabel||'',
+          relLabel:getRelToYou(p.id)||p.relLabel||'',
           parents:p.parents||[], spouseOf:spouseId,
           isYou:p.isYou||false, x:p.x, y:p.y
         };
       });
       const encrypted=await encryptShared(sharedKey, sharedData);
+      console.log('Shared data size:',encrypted.length,'chars for',P.length,'nodes');
 
       await db.collection('treeLinks').doc(linkId).update({
         [`shareLevel.${currentUser.uid}`]:'all',
@@ -2363,8 +2368,8 @@ async function toggleShareLevel(linkId, newLevel){
     render();
     loadLinkedTrees();
   }catch(e){
-    console.error('Failed to toggle share level:',e);
-    appAlert('Failed to update sharing. Please try again.');
+    console.error('Failed to toggle share level:',e.code,e.message,e);
+    appAlert(`Failed to update sharing.<br><span style="font-size:.72rem;color:var(--muted)">${e.message||e}</span>`);
   }
 }
 
@@ -2430,16 +2435,17 @@ function adoptBatch(nodes){
           return {
             id:p.id, name:fullName(p),
             firstName:p.firstName||'', lastName:p.lastName||'',
-            gender:p.gender||'', photo:null, // photos omitted (Firestore 1MB limit)
+            gender:p.gender||'',
             dob:p.dob||null, dod:p.dod||null,
             birth:p.birth||null, death:p.death||null,
             city:p.city||'', state:p.state||'',
-            note:p.note||'', relLabel:getRelToYou(p.id)||p.relLabel||'',
+            relLabel:getRelToYou(p.id)||p.relLabel||'',
             parents:p.parents||[], spouseOf:spouseId,
             isYou:p.isYou||false, x:p.x, y:p.y
           };
         });
         const encrypted=await encryptShared(sharedKey, sharedData);
+        console.log('Auto-upload shared data size:',encrypted.length,'chars for',P.length,'nodes');
         await db.collection('treeLinks').doc(link.id).update({
           [`sharedData.${currentUser.uid}`]:encrypted
         });
