@@ -92,15 +92,56 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-famil
 .leg-i{display:flex;align-items:center;gap:4px;color:var(--muted)}.leg-d{width:8px;height:8px;border-radius:50%}
 #empty{display:none;position:fixed;inset:0;z-index:10;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:12px;color:var(--muted);font-size:.95rem}
 #empty.show{display:flex}
+
+/* Reset button */
+#reset-btn{position:fixed;top:14px;right:80px;z-index:101}
+
+/* Detail Modal */
+#detail-bg{position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.7);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);opacity:0;pointer-events:none;transition:opacity .25s;display:flex;align-items:center;justify-content:center}
+#detail-bg.open{opacity:1;pointer-events:all}
+#detail-card{background:rgba(6,12,24,.97);border:1px solid rgba(200,168,75,.2);border-radius:18px;width:440px;max-width:92vw;max-height:85vh;overflow-y:auto;padding:28px;box-shadow:0 30px 80px rgba(0,0,0,.8);transform:translateY(12px) scale(.96);transition:transform .25s}
+#detail-bg.open #detail-card{transform:translateY(0) scale(1)}
+.dc-close{position:absolute;top:14px;right:14px;width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--muted);font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.dc-close:hover{color:var(--text);background:rgba(255,255,255,.1)}
+.dc-photo{width:72px;height:72px;border-radius:50%;overflow:hidden;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;font-weight:700}
+.dc-photo img{width:100%;height:100%;object-fit:cover}
+.dc-name{font-family:'Cormorant Garamond',serif;font-size:1.5rem;font-weight:700;color:var(--text);text-align:center}
+.dc-rel{font-size:.78rem;color:var(--gold);text-align:center;font-style:italic;margin-top:2px}
+.dc-dates{font-size:.78rem;color:var(--muted);text-align:center;margin-top:6px}
+.dc-story{font-size:.8rem;color:rgba(255,255,255,.4);font-style:italic;text-align:center;margin-top:10px;line-height:1.5}
+.dc-divider{height:1px;background:var(--border);margin:18px 0}
+
+/* Mini family tree */
+.dc-tree{display:flex;flex-direction:column;align-items:center;gap:4px;margin-top:6px}
+.dc-tree-label{font-size:.58rem;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin-bottom:4px}
+.dc-tree-row{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;position:relative}
+.dc-tree-line{width:1px;height:16px;background:rgba(200,168,75,.2)}
+.dc-tree-hline{width:30px;height:1px;background:rgba(100,140,220,.3)}
+.dc-mini{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;transition:transform .15s;padding:4px}
+.dc-mini:hover{transform:scale(1.1)}
+.dc-mini-dot{width:30px;height:30px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:.52rem;font-weight:700}
+.dc-mini-dot img{width:100%;height:100%;object-fit:cover}
+.dc-mini-name{font-size:.55rem;color:var(--muted);text-align:center;max-width:60px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dc-mini-rel{font-size:.48rem;color:var(--gold);text-align:center}
+.dc-link{display:inline-flex;align-items:center;gap:5px;margin-top:16px;padding:8px 16px;background:rgba(200,168,75,.08);border:1px solid rgba(200,168,75,.2);border-radius:100px;color:var(--gold);font-size:.76rem;cursor:pointer;transition:all .15s;text-decoration:none;justify-content:center;width:100%}
+.dc-link:hover{background:rgba(200,168,75,.15)}
 </style>
 </head>
 <body>
 <div id="loading">Loading timeline…</div>
 <div id="hdr">
   <div class="logo"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 22V10"/><path d="M12 10C12 6 8 3.5 4 4.5"/><path d="M12 10C12 6 16 3.5 20 4.5"/><path d="M12 16C12 13 9 11 5 12"/><path d="M12 16C12 13 15 11 19 12"/></svg> Twygie Timeline</div>
-  <a class="hbtn" href="/app">← Back to Tree</a>
+  <div style="display:flex;gap:8px">
+    <button class="hbtn" onclick="resetView()">Reset</button>
+    <a class="hbtn" href="/app">← Back to Tree</a>
+  </div>
 </div>
 <div id="tl-scroll"><div id="tl-inner"><div id="tl-line"></div></div></div>
+
+<!-- Detail Modal -->
+<div id="detail-bg" onclick="if(event.target===this)closeDetail()">
+  <div id="detail-card"></div>
+</div>
 
 <!-- Vertical bar = ZOOM -->
 <div class="scroll-bar" id="v-bar"><div class="sb-lines" id="vb-lines"></div></div>
@@ -203,7 +244,7 @@ function renderTimeline(){
       const ag=age!=null?(dy?`Lived ${age} years`:`Age ${age}`):'';
       const pp=p.photo?`<div class="tl-pp" style="background:${c}"><img src="${p.photo}"/></div>`:`<div class="tl-pp" style="background:${c};color:#04070c">${initials(p)}</div>`;
 
-      html+=`<div class="tl-node" style="left:${x}px;bottom:32%" onclick="window.location.href='/app#node-${p.id}'">
+      html+=`<div class="tl-node" style="left:${x}px;bottom:32%" onclick="openDetail('${p.id}')">
         <div class="tl-popup"><div class="tl-pop">${pp}<div class="tl-pn">${nm}</div>${rel?`<div class="tl-pr">${rel}</div>`:''}<div class="tl-pd">${ds}</div>${ag?`<div class="tl-pa">${ag}</div>`:''}${story?`<div class="tl-ps">${story}</div>`:''}</div></div>
         <div class="tl-dot" style="background:${c};color:#04070c">${dot}</div>
         <div class="tl-nm">${nm.split(' ')[0]}</div>
@@ -216,7 +257,7 @@ function renderTimeline(){
         const dy=parseInt(p.dod&&p.dod.year)||p.death||0;let ds=`${year}`;if(dy)ds+=` – ${dy}`;
         const ag=age!=null?(dy?`${age} yrs`:`Age ${age}`):'';
         const ph=p.photo?`<div class="tl-gc-p" style="background:${c}"><img src="${p.photo}"/></div>`:`<div class="tl-gc-p" style="background:${c};color:#04070c">${initials(p)}</div>`;
-        cards+=`<div class="tl-gc" onclick="event.stopPropagation();window.location.href='/app#node-${p.id}'">${ph}<div style="flex:1;min-width:0"><div class="tl-gc-n">${nm}</div>${rel?`<div class="tl-gc-r">${rel}</div>`:''}<div class="tl-gc-m">${ds}${ag?' · '+ag:''}</div></div></div>`});
+        cards+=`<div class="tl-gc" onclick="event.stopPropagation();openDetail('${p.id}')">${ph}<div style="flex:1;min-width:0"><div class="tl-gc-n">${nm}</div>${rel?`<div class="tl-gc-r">${rel}</div>`:''}<div class="tl-gc-m">${ds}${ag?' · '+ag:''}</div></div></div>`});
 
       html+=`<div class="tl-group" style="left:${x}px;bottom:32%">
         <div class="tl-gpop"><div class="tl-gpi">${cards}</div></div>
@@ -347,6 +388,127 @@ function updateZoomLabel(){
   else if(px>=120) label.textContent='Year';
   else if(px>=35) label.textContent='Decade';
   else label.textContent='Overview';
+}
+
+// ─── RESET VIEW ───
+function resetView(){
+  zoomLevel=0.3;
+  renderTimeline();
+  scrollToYou();
+  renderBars();
+  updateZoomLabel();
+}
+
+// ─── DETAIL MODAL ───
+function closeDetail(){document.getElementById('detail-bg').classList.remove('open')}
+
+function openDetail(id){
+  const p=byId[id];if(!p)return;
+  const c=col(p);
+  const rel=p.isYou?'You':getRelToYou(p.id);
+  const age=calcAge(p);
+  const nm=fullName(p);
+  const by=parseInt(p.dob&&p.dob.year)||p.birth||0;
+  const dy=parseInt(p.dod&&p.dod.year)||p.death||0;
+  const story=(p.note&&!p.note.includes('Tap Edit'))?p.note:'';
+
+  // Photo
+  const photoHtml=p.photo
+    ?`<div class="dc-photo" style="border:3px solid ${c}"><img src="${p.photo}"/></div>`
+    :`<div class="dc-photo" style="background:${c};color:#04070c">${initials(p)}</div>`;
+
+  // Dates
+  let dateStr='';
+  if(by){
+    const months=['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const bParts=[];
+    if(p.dob&&p.dob.month)bParts.push(months[parseInt(p.dob.month)]||'');
+    if(p.dob&&p.dob.day)bParts.push(p.dob.day);
+    bParts.push(by);
+    dateStr='Born '+bParts.join(' ');
+    if(age!=null) dateStr+=` · ${dy?'Lived '+age+' years':'Age '+age}`;
+    if(dy){
+      const dParts=[];
+      if(p.dod&&p.dod.month)dParts.push(months[parseInt(p.dod.month)]||'');
+      if(p.dod&&p.dod.day)dParts.push(p.dod.day);
+      dParts.push(dy);
+      dateStr+='<br>Died '+dParts.join(' ');
+    }
+  }
+
+  // ── Build mini family tree ──
+  let treeHtml='';
+
+  // Parents
+  const parents=(p.parents||[]).map(pid=>byId[pid]).filter(Boolean);
+  if(parents.length){
+    treeHtml+='<div class="dc-tree-label">Parents</div><div class="dc-tree-row">';
+    parents.forEach(par=>{
+      const pc=col(par);
+      const dot=par.photo?`<img src="${par.photo}"/>`:`<span>${initials(par)}</span>`;
+      treeHtml+=`<div class="dc-mini" onclick="openDetail('${par.id}')"><div class="dc-mini-dot" style="background:${pc};color:#04070c">${dot}</div><div class="dc-mini-name">${fullName(par).split(' ')[0]}</div></div>`;
+    });
+    treeHtml+='</div><div class="dc-tree-line"></div>';
+  }
+
+  // Spouse + Self row
+  const spouse=p.spouseOf?byId[p.spouseOf]:P.find(x=>x.spouseOf===p.id);
+  treeHtml+='<div class="dc-tree-row">';
+  if(spouse){
+    const sc=col(spouse);
+    const sdot=spouse.photo?`<img src="${spouse.photo}"/>`:`<span>${initials(spouse)}</span>`;
+    treeHtml+=`<div class="dc-mini" onclick="openDetail('${spouse.id}')"><div class="dc-mini-dot" style="background:${sc};color:#04070c">${sdot}</div><div class="dc-mini-name">${fullName(spouse).split(' ')[0]}</div><div class="dc-mini-rel">${genderedRel('Spouse',spouse.gender)}</div></div>`;
+    treeHtml+='<div class="dc-tree-hline"></div>';
+  }
+  const selfDot=p.photo?`<img src="${p.photo}"/>`:`<span>${initials(p)}</span>`;
+  treeHtml+=`<div class="dc-mini" style="opacity:1"><div class="dc-mini-dot" style="background:${c};color:#04070c;box-shadow:0 0 12px ${c}">${selfDot}</div><div class="dc-mini-name" style="color:var(--text);font-weight:600">${nm.split(' ')[0]}</div></div>`;
+  treeHtml+='</div>';
+
+  // Children
+  const children=P.filter(x=>(x.parents||[]).includes(p.id));
+  if(children.length){
+    treeHtml+='<div class="dc-tree-line"></div><div class="dc-tree-label">Children</div><div class="dc-tree-row">';
+    children.forEach(ch=>{
+      const cc=col(ch);
+      const cdot=ch.photo?`<img src="${ch.photo}"/>`:`<span>${initials(ch)}</span>`;
+      treeHtml+=`<div class="dc-mini" onclick="openDetail('${ch.id}')"><div class="dc-mini-dot" style="background:${cc};color:#04070c">${cdot}</div><div class="dc-mini-name">${fullName(ch).split(' ')[0]}</div></div>`;
+    });
+    treeHtml+='</div>';
+  }
+
+  // Siblings
+  const myP=new Set(p.parents||[]);
+  const siblings=myP.size?P.filter(x=>x.id!==p.id&&(x.parents||[]).some(pp=>myP.has(pp))):[];
+  // Also check customLinks for siblings
+  const clSibs=Object.keys(p.customLinks||{}).filter(tid=>{
+    const v=p.customLinks[tid];const lt=typeof v==='string'?'labeled':v.lineType;
+    return lt==='sibling'&&!siblings.find(s=>s.id===tid);
+  }).map(tid=>byId[tid]).filter(Boolean);
+  const allSibs=[...siblings,...clSibs];
+  if(allSibs.length){
+    treeHtml+='<div style="height:8px"></div><div class="dc-tree-label">Siblings</div><div class="dc-tree-row">';
+    allSibs.forEach(sib=>{
+      const sc=col(sib);
+      const sdot=sib.photo?`<img src="${sib.photo}"/>`:`<span>${initials(sib)}</span>`;
+      treeHtml+=`<div class="dc-mini" onclick="openDetail('${sib.id}')"><div class="dc-mini-dot" style="background:${sc};color:#04070c">${sdot}</div><div class="dc-mini-name">${fullName(sib).split(' ')[0]}</div></div>`;
+    });
+    treeHtml+='</div>';
+  }
+
+  // Assemble card
+  const card=document.getElementById('detail-card');
+  card.innerHTML=`
+    <button class="dc-close" onclick="closeDetail()">✕</button>
+    ${photoHtml}
+    <div class="dc-name">${nm}</div>
+    ${rel?`<div class="dc-rel">${rel}</div>`:''}
+    ${dateStr?`<div class="dc-dates">${dateStr}</div>`:''}
+    ${story?`<div class="dc-story">"${story}"</div>`:''}
+    <div class="dc-divider"></div>
+    <div class="dc-tree">${treeHtml}</div>
+    <a class="dc-link" href="/app#node-${p.id}">View in Tree →</a>
+  `;
+  document.getElementById('detail-bg').classList.add('open');
 }
 
 // ─── INITIAL SCROLL TO isYou ───
