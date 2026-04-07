@@ -449,7 +449,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-famil
   <div class="lr"><div class="ld" id="ln-child"   style="background:#6ecb8a"></div>Child</div>
   <div class="lr"><div class="ld" id="ln-sibling" style="background:#e87a5a"></div>Sibling</div>
   <div class="lr"><div class="ld" id="ln-extended" style="background:#e8c87a"></div>Extended</div>
-  <div class="lr"><div class="ld" style="background:transparent;border:1.5px dashed rgba(200,168,75,.7);box-shadow:none"></div>Linked</div>
+  <div class="lr"><div class="ld" style="background:transparent;border:1.5px dashed rgba(200,168,75,.7);box-shadow:none;width:10px;height:10px"></div>Linked</div>
   <div style="height:1px;background:var(--border);margin:8px 0"></div>
   <div style="font-size:.6rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:6px">Lines</div>
   <div class="lr"><div id="leg-parentChild" style="width:18px;height:3px;background:#64b464;border-radius:2px"></div>Parent / Child</div>
@@ -2412,7 +2412,7 @@ function adoptBatch(nodes){
       adopted++;
     }
   }
-  if(adopted){rebuild();scheduleSave();}
+  if(adopted){rebuild();recalcAllRelationships();scheduleSave();}
   return adopted;
 }
 
@@ -2865,11 +2865,11 @@ function orb(a,b){
 
 function dobDisplay(p){
   if(p.dob && (p.dob.month||p.dob.day||p.dob.year)){
-    const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const months=['January','February','March','April','May','June','July','August','September','October','November','December'];
     const {month,day,year}=p.dob;
     const parts=[];
     if(month) parts.push(months[parseInt(month)-1]);
-    if(day) parts.push(day);
+    if(day) parts.push(day+(year?',':''));
     if(year) parts.push(year);
     return `b. ${parts.join(' ')}`;
   }
@@ -3204,29 +3204,16 @@ function drawNodes(){
 
     // Connection count → pulse intensity
     const cc=connCount(p);
-    const isYoung=relCategory(p)==='young';
     // Scale opacity with connections (more = brighter glow)
     const baseOp=Math.min(0.45, 0.18 + cc*0.04);
 
-    if(isYoung){
-      // Young nodes: outer shimmer ring
-      const outerRing=se('circle');
-      outerRing.setAttribute('r',String(GR+14));
-      outerRing.setAttribute('fill',c);
-      outerRing.setAttribute('fill-opacity','0.1');
-      outerRing.setAttribute('filter',`url(#${gfilt(p)})`);
-      outerRing.setAttribute('class','gp young-outer');
-      outerRing.style.animationDelay=`-${(parseFloat(delay)*0.7).toFixed(2)}s`;
-      G.appendChild(outerRing);
-    }
-
-    // Pulsing halo — young uses faster sparkle class, others use standard
+    // Pulsing halo — standard for all nodes
     const halo=se('circle');
     halo.setAttribute('r',String(GR));
     halo.setAttribute('fill',c);
     halo.setAttribute('fill-opacity',String(baseOp.toFixed(2)));
     halo.setAttribute('filter',`url(#${gfilt(p)})`);
-    halo.setAttribute('class',`gp hi ${isYoung?'young-spark':gclass(p)}`);
+    halo.setAttribute('class',`gp hi ${gclass(p)}`);
     halo.style.animationDelay=`-${delay}s`;
 
     // Soft inner ring — brighter for highly-connected nodes
@@ -3599,13 +3586,15 @@ function fillCard(p){
   let html='';
   if(p.note) html+=`<div class="csec">Story</div><p class="cbio">${p.note}</p>`;
   if(conns.length){
-    html+=`<div class="csec">Connections</div><div class="frow">`;
-    conns.forEach(({p:cp,rel,targetId,connType})=>{
+    html+=`<div class="csec">Connections</div><div class="frow" id="conn-list-${p.id}">`;
+    const MAX_SHOW=5;
+    conns.forEach(({p:cp,rel,targetId,connType},idx)=>{
       const cc=col(cp);
       const chipPhoto=cp.photo
         ?`<div class="fchip-photo"><img src="${cp.photo}"/></div>`
         :`<div class="fdot" style="background:${cc};box-shadow:0 0 5px ${cc}"></div>`;
-      html+=`<div class="fchip" id="chip-${p.id}-${cp.id}" style="position:relative">
+      const hidden=idx>=MAX_SHOW?` style="position:relative;display:none" data-extra-conn`:`style="position:relative"`;
+      html+=`<div class="fchip" id="chip-${p.id}-${cp.id}" ${hidden}>
         <div style="flex:1;display:flex;align-items:center;gap:8px;cursor:pointer" onclick="selectNode('${cp.id}')">
           ${chipPhoto}
           <div class="fi2"><div class="fn2">${fullName(cp)}</div><div class="frel" id="frel-${p.id}-${cp.id}">${rel}</div></div>
@@ -3615,6 +3604,9 @@ function fillCard(p){
         <button onclick="removeConnFromCard('${p.id}','${cp.id}','${connType||'labeled'}');event.stopPropagation()" title="Remove this connection" style="background:transparent;border:none;cursor:pointer;color:rgba(200,100,100,.35);font-size:16px;padding:0 4px;line-height:1;flex-shrink:0;transition:color .2s" onmouseover="this.style.color='rgba(220,120,120,.9)'" onmouseout="this.style.color='rgba(200,100,100,.35)'">×</button>
       </div>`;
     });
+    if(conns.length>MAX_SHOW){
+      html+=`<button id="see-more-${p.id}" onclick="document.querySelectorAll('#conn-list-${p.id} [data-extra-conn]').forEach(el=>el.style.display='');this.remove()" style="width:100%;padding:8px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;color:var(--gold);font-size:.76rem;cursor:pointer;font-family:'Outfit',sans-serif">See all ${conns.length} connections</button>`;
+    }
     html+=`</div>`;
   }
 
