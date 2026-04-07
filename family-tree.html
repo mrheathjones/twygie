@@ -988,6 +988,7 @@ auth.onAuthStateChanged(async user => {
   await loadActiveLinks();
   await loadSharedNodes();
   subscribeActiveLinks();
+  window._appReady=true; // enable auto-adopt only after initial load
   hideLoading();
 });
 async function signOut(){ if(!await appConfirm('Sign out of Twygie?','Sign Out','Stay')) return; await auth.signOut(); window.location.href='login.html'; }
@@ -2577,7 +2578,8 @@ async function loadSharedNodes(){
   }
 
   // Auto-adopt trigger: if preference is set and we have shared nodes, adopt them
-  if(sharedNodes.length&&currentUser){
+  // Only run after initial load is complete (appReady flag)
+  if(sharedNodes.length&&currentUser&&window._appReady){
     for(const link of activeLinks){
       if(link.autoAdopt?.[currentUser.uid]){
         const toAdopt=[...sharedNodes.filter(sn=>sn._linkId===link.id)];
