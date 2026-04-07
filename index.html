@@ -1965,6 +1965,8 @@ async function acceptLinkCode(){
     msg.style.color='rgba(110,203,138,.8)';
     msg.textContent=`Linked! "${invite.bridgeNodeName}" now bridges your trees.`;
     input.value='';
+    await loadActiveLinks(); // refresh cache so bridge badges appear immediately
+    render(); // re-render tree to show any visual changes
     loadLinkedTrees();
   }catch(e){
     console.error('Failed to accept link:',e);
@@ -2020,6 +2022,8 @@ async function revokeLink(linkId){
   if(!confirm('Revoke this tree link? The other user will lose access to your shared data.')) return;
   try{
     await db.collection('treeLinks').doc(linkId).update({status:'revoked'});
+    await loadActiveLinks();
+    render();
     loadLinkedTrees();
   }catch(e){
     console.error('Failed to revoke:',e);
