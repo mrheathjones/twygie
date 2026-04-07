@@ -2206,6 +2206,14 @@ async function loadSharedNodes(){
   sharedNodes=[];
   if(!currentUser||!activeLinks.length) return;
 
+  // Build local node fingerprints for deduplication (name+birthYear)
+  const localFingerprints=new Set();
+  P.forEach(p=>{
+    const name=fullName(p).toLowerCase().trim();
+    const by=p.dob?.year||p.birth||'';
+    localFingerprints.add(`${name}|${by}`);
+  });
+
   for(const link of activeLinks){
     const otherUid=link.userA===currentUser.uid?link.userB:link.userA;
     const otherName=link.userA===currentUser.uid?link.userBName:link.userAName;
@@ -2216,12 +2224,16 @@ async function loadSharedNodes(){
       try{
         const sharedKey=await deriveSharedKey(link.userA, link.userB);
         const nodes=await decryptShared(sharedKey, otherData);
-        // Tag each node with source info and prefix IDs to avoid collision
         const myBridgeId=link.userA===currentUser.uid?link.bridgeNodeIdA:link.bridgeNodeIdB;
         const otherBridgeId=link.userA===currentUser.uid?link.bridgeNodeIdB:link.bridgeNodeIdA;
         nodes.forEach(n=>{
           // Skip the bridge node (we already have it)
           if(n.id===otherBridgeId) return;
+          // Skip duplicates — if we already have a node with the same name+birthYear
+          const nName=(n.name||[n.firstName,n.lastName].filter(Boolean).join(' ')||'').toLowerCase().trim();
+          const nBy=n.dob?.year||n.birth||'';
+          if(localFingerprints.has(`${nName}|${nBy}`)) return;
+
           n._origId=n.id;
           n.id=`shared_${link.id}_${n.id}`;
           n._sharedBy=otherUid;
@@ -3221,10 +3233,10 @@ function fillCard(p){
       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
       Add Connection
     </button>
-    <button class="btn-sm" onclick="generateLinkCode('${p.id}')" style="background:rgba(200,168,75,.08);border-color:rgba(200,168,75,.2);color:var(--gold)">
+    ${p.isYou?`<button class="btn-sm" onclick="generateLinkCode('${p.id}')" style="background:rgba(200,168,75,.08);border-color:rgba(200,168,75,.2);color:var(--gold)">
       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
       Link Trees
-    </button>
+    </button>`:''}
     ${!p.isYou?`<button class="btn-sm btn-del" onclick="removePerson('${p.id}')">Remove</button>`:''}
   </div>`;
 
