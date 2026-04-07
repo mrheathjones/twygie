@@ -418,28 +418,28 @@ setupBar(document.getElementById('v-bar'),'y',p=>{
 });
 
 // ─── HOVER MAGNIFICATION (dock-like effect) ───
-function addHoverMag(el, barsArr, axis){
+function addHoverMag(el, getBars, axis){
   el.addEventListener('mousemove',e=>{
+    const bars=getBars();
+    if(!bars.length)return;
     const r=el.getBoundingClientRect();
     const frac=axis==='x'
       ?(e.clientX-r.left)/r.width
       :(e.clientY-r.top)/r.height;
-    const hoverIdx=frac*(barsArr.length-1);
-    barsArr.forEach((bar,i)=>{
+    const hoverIdx=frac*(bars.length-1);
+    bars.forEach((bar,i)=>{
       const dist=Math.abs(i-hoverIdx);
-      // Magnification: closer to hover = bigger
       const mag=Math.max(1, 2.2-dist*0.35);
       const prop=axis==='x'?'scaleY':'scaleX';
       bar.style.transform=`${prop}(${mag})`;
     });
   });
   el.addEventListener('mouseleave',()=>{
-    // Reset to normal — re-render will apply correct scales
     renderBars();
   });
 }
-addHoverMag(document.getElementById('h-bar'), hBars, 'x');
-addHoverMag(document.getElementById('v-bar'), vBars, 'y');
+addHoverMag(document.getElementById('h-bar'), ()=>hBars, 'x');
+addHoverMag(document.getElementById('v-bar'), ()=>vBars, 'y');
 
 function updateZoomLabel(){
   const px=yearPx();
@@ -566,7 +566,7 @@ function openDetail(id){
     ${story?`<div class="dc-story">"${story}"</div>`:''}
     <div class="dc-divider"></div>
     <div class="dc-tree">${treeHtml}</div>
-    <a class="dc-link" href="/app#node-${p.id}">View in Tree →</a>
+    <a class="dc-link" href="/app">View in Tree →</a>
   `;
   document.getElementById('detail-bg').classList.add('open');
 }
