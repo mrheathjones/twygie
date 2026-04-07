@@ -45,17 +45,26 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-famil
 .gen-band{position:absolute;left:0;right:0;border-top:1px solid rgba(200,168,75,.06);pointer-events:none}
 .gen-label{position:absolute;left:16px;top:4px;font-size:.58rem;text-transform:uppercase;letter-spacing:.15em;color:var(--gold);opacity:.35;font-weight:600}
 
-/* Member cards */
-.tl-card{position:absolute;width:140px;cursor:pointer;transition:transform .2s,box-shadow .2s}
-.tl-card:hover{transform:scale(1.05);z-index:10}
-.tl-card-inner{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:0 4px 20px rgba(0,0,0,.4)}
-.tl-card:hover .tl-card-inner{border-color:rgba(200,168,75,.3);box-shadow:0 8px 32px rgba(0,0,0,.6)}
-.tl-photo{width:40px;height:40px;border-radius:50%;overflow:hidden;margin:0 auto 8px;background:rgba(255,255,255,.06);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:600}
-.tl-photo img{width:100%;height:100%;object-fit:cover}
-.tl-card-name{font-size:.78rem;font-weight:600;color:var(--text);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tl-card-rel{font-size:.62rem;color:var(--gold);text-align:center;font-style:italic;margin-top:1px}
-.tl-card-dates{font-size:.62rem;color:var(--muted);text-align:center;margin-top:3px}
-.tl-card-age{font-size:.58rem;color:var(--muted);text-align:center;margin-top:1px}
+/* Member nodes — compact dots, expand on hover */
+.tl-node{position:absolute;cursor:pointer;z-index:2;transition:z-index 0s}
+.tl-node:hover{z-index:20}
+.tl-dot{width:36px;height:36px;border-radius:50%;overflow:hidden;background:rgba(255,255,255,.06);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:600;transition:transform .2s,box-shadow .2s}
+.tl-dot img{width:100%;height:100%;object-fit:cover}
+.tl-node:hover .tl-dot{transform:scale(1.15);box-shadow:0 0 16px rgba(200,168,75,.3)}
+.tl-dot-name{position:absolute;top:40px;left:50%;transform:translateX(-50%);font-size:.58rem;color:var(--muted);white-space:nowrap;text-align:center;pointer-events:none;opacity:.7}
+
+/* Hover popup card */
+.tl-popup{position:absolute;bottom:48px;left:50%;transform:translateX(-50%) scale(.9);opacity:0;pointer-events:none;transition:all .2s ease;z-index:30;width:180px}
+.tl-node:hover .tl-popup{opacity:1;transform:translateX(-50%) scale(1);pointer-events:all}
+.tl-popup-inner{background:rgba(8,16,30,.96);border:1px solid rgba(200,168,75,.25);border-radius:12px;padding:12px;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);box-shadow:0 8px 32px rgba(0,0,0,.6)}
+.tl-popup-inner::after{content:'';position:absolute;bottom:-6px;left:50%;transform:translateX(-50%) rotate(45deg);width:10px;height:10px;background:rgba(8,16,30,.96);border-right:1px solid rgba(200,168,75,.25);border-bottom:1px solid rgba(200,168,75,.25)}
+.tl-popup-photo{width:48px;height:48px;border-radius:50%;overflow:hidden;margin:0 auto 8px;background:rgba(255,255,255,.06);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:600}
+.tl-popup-photo img{width:100%;height:100%;object-fit:cover}
+.tl-popup-name{font-size:.82rem;font-weight:600;color:var(--text);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tl-popup-rel{font-size:.65rem;color:var(--gold);text-align:center;font-style:italic;margin-top:2px}
+.tl-popup-dates{font-size:.65rem;color:var(--muted);text-align:center;margin-top:4px}
+.tl-popup-age{font-size:.6rem;color:var(--muted);text-align:center;margin-top:1px}
+.tl-popup-story{font-size:.6rem;color:rgba(255,255,255,.35);font-style:italic;text-align:center;margin-top:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 
 /* Life span bar */
 .tl-lifespan-bar{position:absolute;height:3px;border-radius:2px;opacity:.45;pointer-events:none}
@@ -226,10 +235,9 @@ function assignGenerations(){
 }
 
 // ─── TIMELINE RENDERING ───
-const YEAR_WIDTH=80; // pixels per year
-const GEN_HEIGHT=160; // pixels per generation band
-const CARD_W=140, CARD_H=120;
-const PAD_LEFT=100, PAD_RIGHT=200, PAD_TOP=80, PAD_BOTTOM=80;
+const YEAR_WIDTH=24; // pixels per year — compact
+const GEN_HEIGHT=100; // pixels per generation band
+const PAD_LEFT=80, PAD_RIGHT=80, PAD_TOP=60, PAD_BOTTOM=70;
 
 let tlTx=0, tlTy=0, tlScale=1;
 
@@ -296,7 +304,7 @@ function renderTimeline(){
   // ── Track occupied slots to avoid overlaps ──
   const slots={}; // key: "gen-yearBucket" → count
 
-  // ── Member cards + life span bars ──
+  // ── Member nodes + life span bars ──
   entries.forEach(p=>{
     const by=parseInt(p.dob&&p.dob.year)||p.birth;
     const dy=parseInt(p.dod&&p.dod.year)||p.death||0;
@@ -304,42 +312,57 @@ function renderTimeline(){
     const c=col(p);
     const rel=p.isYou?'You':getRelToYou(p.id);
     const age=calcAge(p);
+    const name=fullName(p);
 
     // X position from birth year
     const x=PAD_LEFT+(by-minYear)*YEAR_WIDTH;
 
-    // Y position from generation — offset within band to avoid overlaps
-    const bucket=`${g}-${Math.floor(by/3)}`;
+    // Y position from generation — stagger within band
+    const bucket=`${g}-${Math.floor(by/5)}`;
     slots[bucket]=(slots[bucket]||0);
-    const yOffset=slots[bucket]*30; // stagger within same gen/year bucket
+    const yOffset=slots[bucket]*44;
     slots[bucket]++;
-    const cardY=PAD_TOP+(g-minGen)*GEN_HEIGHT+20+yOffset;
+    const nodeY=PAD_TOP+(g-minGen)*GEN_HEIGHT+20+yOffset;
 
     // Life span bar
     const endYear=dy||currentYear;
-    const barW=Math.max(8,(endYear-by)*YEAR_WIDTH);
-    html+=`<div class="tl-lifespan-bar" style="left:${x}px;top:${cardY+CARD_H-18}px;width:${barW}px;background:${c}"></div>`;
+    const barW=Math.max(4,(endYear-by)*YEAR_WIDTH);
+    html+=`<div class="tl-lifespan-bar" style="left:${x+18}px;top:${nodeY+16}px;width:${barW}px;background:${c}"></div>`;
 
-    // Connector line from card to year axis
-    html+=`<div class="tl-connector" style="left:${x+CARD_W/2}px;top:${cardY+CARD_H-15}px;height:${canvasH-PAD_BOTTOM-(cardY+CARD_H-15)}px;background:${c}"></div>`;
+    // Connector line
+    html+=`<div class="tl-connector" style="left:${x+18}px;top:${nodeY+20}px;height:${canvasH-PAD_BOTTOM-(nodeY+20)}px;background:${c}"></div>`;
 
-    // Photo
-    const photoHtml=p.photo
-      ?`<div class="tl-photo" style="border-color:${c}"><img src="${p.photo}"/></div>`
-      :`<div class="tl-photo" style="border-color:${c};color:${c}">${initials(p)}</div>`;
+    // Compact dot (photo or initials)
+    const dotContent=p.photo
+      ?`<img src="${p.photo}"/>`
+      :`<span style="color:${c}">${initials(p)}</span>`;
 
-    // Dates text
+    // Dates text for popup
     let dateStr=`${by}`;
     if(dy)dateStr+=` – ${dy}`;
-    const ageStr=age!=null?(dy?`Lived ${age} yrs`:`Age ${age}`):'';
+    const ageStr=age!=null?(dy?`Lived ${age} years`:`Age ${age}`):'';
 
-    html+=`<div class="tl-card" style="left:${x}px;top:${cardY}px" onclick="window.location.href='/app#node-${p.id}'">
-      <div class="tl-card-inner">
-        ${photoHtml}
-        <div class="tl-card-name">${fullName(p)}</div>
-        ${rel?`<div class="tl-card-rel">${rel}</div>`:''}
-        <div class="tl-card-dates">${dateStr}</div>
-        ${ageStr?`<div class="tl-card-age">${ageStr}</div>`:''}
+    // Story for popup
+    const story=(p.note&&!p.note.includes('Tap Edit to add your story'))?p.note:'';
+    const storyHtml=story?`<div class="tl-popup-story">${story}</div>`:'';
+
+    // Popup photo
+    const popupPhoto=p.photo
+      ?`<div class="tl-popup-photo" style="border-color:${c}"><img src="${p.photo}"/></div>`
+      :`<div class="tl-popup-photo" style="border-color:${c};color:${c}">${initials(p)}</div>`;
+
+    html+=`<div class="tl-node" style="left:${x}px;top:${nodeY}px" onclick="window.location.href='/app#node-${p.id}'">
+      <div class="tl-dot" style="border-color:${c}">${dotContent}</div>
+      <div class="tl-dot-name">${name.split(' ')[0]}</div>
+      <div class="tl-popup">
+        <div class="tl-popup-inner">
+          ${popupPhoto}
+          <div class="tl-popup-name">${name}</div>
+          ${rel?`<div class="tl-popup-rel">${rel}</div>`:''}
+          <div class="tl-popup-dates">${dateStr}</div>
+          ${ageStr?`<div class="tl-popup-age">${ageStr}</div>`:''}
+          ${storyHtml}
+        </div>
       </div>
     </div>`;
   });
