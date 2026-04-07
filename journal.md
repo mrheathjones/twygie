@@ -360,3 +360,10 @@ Built as a separate HTML page (timeline.html) with:
 - 380px wide, max 92vw, max 88vh, gold-tinted border, rounded corners
 - Scale + fade animation on open/close
 - Backdrop blur (6px) on scrim behind card
+
+### Phase 3b — Bridge Display (Session 10)
+- Gold dashed ring around bridge nodes on the SVG tree (slowly rotating, 20s)
+- "Linked" entry added to the node legend with matching dashed gold circle
+- Chain icon badge removed (ring alone is sufficient)
+- Bridge badge on node card: "Linked with [name]'s tree" (from Phase 3a)
+- All indicators update in real-time via onSnapshot listeners

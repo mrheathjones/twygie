@@ -350,3 +350,10 @@ treeLinks/{linkId}
 ### Seed Page
 - `/seed-maddy`: creates test account with Maddy + Hank(1967) + Mary(1966) + Heath(1980)
 - Same encryption as main app — tree saved as AES-256-GCM encrypted blob
+
+### Phase 3b — Bridge Display (Session 10)
+- Gold dashed ring (`stroke-dasharray:4,3`, `stroke:rgba(200,168,75,0.5)`) around bridge nodes
+- Slowly rotating animation (20s `bridge-spin` keyframes)
+- "Linked" entry in node legend with matching dashed gold circle
+- Bridge badge on card: "Linked with [name]'s tree" below relationship badge
+- All visual indicators driven by `activeLinks` array (real-time via onSnapshot)
