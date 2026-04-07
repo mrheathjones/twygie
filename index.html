@@ -797,7 +797,7 @@ function makeDefaultTree(user) {
 }
 
 // ─── AUTH ─────────────────────────────────────────────────────────────────────
-let currentUser=null, saveTimer=null;
+let currentUser=null, saveTimer=null, treeLoaded=false;
 auth.onAuthStateChanged(async user => {
   if (!user){ window.location.href='login.html'; return; }
   currentUser=user;
@@ -1694,14 +1694,27 @@ function userDoc(){ return db.collection('familyTrees').doc(currentUser.uid); }
 async function loadTree(){
   try{
     const snap=await userDoc().get();
-    if(snap.exists && snap.data().people && snap.data().people.length) P=snap.data().people;
-    else { P=makeDefaultTree(currentUser); await saveTree(false); }
-  }catch(e){ P=makeDefaultTree(currentUser||{displayName:''}); }
+    if(snap.exists && snap.data().people && snap.data().people.length){
+      P=snap.data().people;
+      treeLoaded=true;
+    } else {
+      P=makeDefaultTree(currentUser);
+      treeLoaded=true;
+      await saveTree(false);
+    }
+  }catch(e){
+    console.error('Failed to load tree from Firestore:',e);
+    P=makeDefaultTree(currentUser||{displayName:''});
+    // Do NOT set treeLoaded — prevents saving default tree over real data
+    // Show warning so user knows data didn't load
+    setTimeout(()=>alert('Could not load your tree — you may be offline. Your saved data is safe. Please refresh to try again.'),500);
+  }
   await loadSettings();
   rebuild(); render(); setTimeout(()=>{setTreeMode(treeMode||'simple'); resetView();},90);
 }
 async function saveTree(ind=true){
   if(!currentUser) return;
+  if(!treeLoaded){ console.warn('Save blocked — tree not loaded from Firestore yet'); return; }
   try{
     await userDoc().set({ people:P, updatedAt:firebase.firestore.FieldValue.serverTimestamp(), ownerEmail:currentUser.email||'' });
     if(ind) flashSaved();
