@@ -1,0 +1,46 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── Family tree data — owner only ───────────────────────────────
+    // Each user can only read/write their own tree
+    match /familyTrees/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // ─── User settings — owner only ──────────────────────────────────
+    // Preferences, theme, toggles — private per user
+    match /userSettings/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // ─── Tree links — both participants can access ───────────────────
+    // (Phase 3 — not yet in use, but rules ready)
+    match /treeLinks/{linkId} {
+      allow read: if request.auth != null &&
+        (request.auth.uid == resource.data.userA ||
+         request.auth.uid == resource.data.userB);
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null &&
+        (request.auth.uid == resource.data.userA ||
+         request.auth.uid == resource.data.userB);
+    }
+
+    // ─── Link invites — creator and redeemer ─────────────────────────
+    // (Phase 3 — not yet in use, but rules ready)
+    match /linkInvites/{code} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null &&
+        (request.auth.uid == resource.data.createdBy ||
+         resource.data.usedBy == null);
+      allow delete: if request.auth != null &&
+        request.auth.uid == resource.data.createdBy;
+    }
+
+    // ─── Deny everything else ────────────────────────────────────────
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

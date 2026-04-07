@@ -106,20 +106,187 @@ An interactive, beautiful family tree web app. Each family member is a "Twyg" �
 ### Near-term
 - [ ] Connect twygie.com to Vercel + add to Firebase authorized domains
 - [ ] Mobile layout polish
-- [ ] Share tree (read-only link)
-- [ ] Export tree as image/PDF
+- [x] Demo Mode for testing (Session 10)
+- [x] Data protection — treeLoaded flag prevents wipe on failed load (Session 10)
+- [ ] **Phase 1 — Firestore Security Rules** (lock down read/write per user)
 
 ### Medium-term
-- [ ] Collaborative trees (invite family members)
+- [ ] **Phase 2 — Client-Side Encryption** (encrypt people[] before saving to Firestore)
 - [ ] Timeline view (by birth year)
 - [ ] GEDCOM import
-- [ ] Auto-assign propagates beyond isYou + spouse (to grandparents, siblings, etc.)
+- [ ] Export tree as image/PDF
 
 ### Long-term
+- [ ] **Phase 3 — Tree Linking** (bridge nodes, selective/full sharing between users)
 - [ ] Mobile app (iOS/Android)
 - [ ] AI story generation from notes
 - [ ] Birthday/anniversary notifications
-- [ ] Private family spaces with roles
+- [ ] Targeted communications (email campaigns to users)
+
+---
+
+## Privacy & Security Architecture
+
+### Design Philosophy
+Follow Apple's privacy approach: data minimization, on-device processing, encryption by default, user control, transparency. Users should be able to trust that nobody — not even Twygie's admin — can read their family data.
+
+### What's Private vs. What's Visible to Admin
+
+| Data | Encrypted? | Admin can see? | Purpose |
+|---|---|---|---|
+| Email address | No | Yes | User comms, support, marketing |
+| Display name | No | Yes | Account identification |
+| Auth provider (Google/Apple/Email) | No | Yes | Support, analytics |
+| Account creation / last login | No | Yes | Engagement metrics |
+| App settings (theme, toggles) | No | Yes | Support, debugging |
+| Tree stats (node count, generations) | No | Yes | Usage analytics |
+| **Family member names** | **Yes** | **No** | Privacy |
+| **Dates of birth / death** | **Yes** | **No** | Privacy |
+| **Birthplaces, stories, photos** | **Yes** | **No** | Privacy |
+| **Relationship labels & connections** | **Yes** | **No** | Privacy |
+
+### Phase 1 — Lock Down Firestore (NOW)
+
+**Goal**: Each user can only read/write their own data. No code changes needed.
+
+**Firestore Security Rules**:
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Family tree data — owner only
+    match /familyTrees/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    // User settings — owner only
+    match /userSettings/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    // Tree links — both linked users can read; only participants can write
+    match /treeLinks/{linkId} {
+      allow read: if request.auth != null &&
+        (request.auth.uid == resource.data.userA || request.auth.uid == resource.data.userB);
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null &&
+        (request.auth.uid == resource.data.userA || request.auth.uid == resource.data.userB);
+    }
+    // Deny everything else
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+```
+
+**Status**: Ready to deploy in Firebase Console → Firestore → Rules.
+
+### Phase 2 — Client-Side Encryption (MEDIUM-TERM)
+
+**Goal**: Encrypt the `people[]` array in the browser before saving to Firestore. Firestore only stores encrypted blobs. Zero-knowledge architecture.
+
+**How it works**:
+1. User logs in → encryption key derived from credentials via Web Crypto API (PBKDF2)
+2. On save: `people[]` → JSON.stringify → AES-GCM encrypt → base64 → Firestore
+3. On load: Firestore → base64 → AES-GCM decrypt → JSON.parse → `people[]`
+4. Key never leaves the browser. Firestore never sees plaintext family data.
+
+**Firestore document structure (post-encryption)**:
+```
+familyTrees/{uid}
+  encryptedData: "base64_encrypted_blob"   // the people[] array
+  encryptionVersion: 1                     // for future key rotation
+  ownerEmail: "user@example.com"           // plaintext — for admin/comms
+  nodeCount: 47                            // plaintext — for analytics
+  generationCount: 5                       // plaintext — for analytics
+  updatedAt: timestamp                     // plaintext
+```
+
+**Key management considerations**:
+- Key derived from Firebase Auth UID + a user-chosen passphrase (optional)
+- If no passphrase: key derived from UID alone (encrypted at rest, but admin with UID could theoretically derive key)
+- If passphrase: true zero-knowledge (even with UID, data is unreadable without passphrase)
+- Recovery: passphrase-based recovery key (like Apple's recovery key for iCloud)
+- Key rotation: bump encryptionVersion, re-encrypt on next save
+
+**Migration path**: On first load after encryption ships, detect unencrypted data (no `encryptedData` field), encrypt it, save encrypted version, delete plaintext `people` field.
+
+### Phase 3 — Tree Linking (LONG-TERM)
+
+**Goal**: Let users connect their trees through shared family members without exposing private data.
+
+#### The Bridge Node Model
+
+Each user's tree stays fully encrypted and private. Linking happens through **bridge nodes** — minimal shared reference points where two trees overlap.
+
+#### Linking Flow
+
+**Step 1 — Invite**: User A taps "Link Trees" on a node (e.g., Grandma Dorothy). Twygie generates a link code: `TWYG-A8F3-XK2P`. The code contains only a hash of Dorothy's name + DOB — enough to verify identity, not enough to reconstruct data.
+
+**Step 2 — Accept**: User B enters the code. Twygie checks: "Do you have a node matching this hash?" If yes, confirms the link. If no, shows "No matching Twyg found."
+
+**Step 3 — Bridge Created**: Both trees now have a bridge at Dorothy. Each user sees "Also in [other user's name]'s tree" on Dorothy's card. Neither can see the other's tree yet.
+
+#### Three Sharing Tiers (Asymmetric)
+
+Each user controls their own side independently. You can Share All while the other person shares nothing.
+
+**Tier 1 — Bridge Only (default)**:
+- Only the bridge node is visible to the other user
+- Shows: name, DOB, relationship label on the bridge node
+- Everything else in your tree is invisible
+
+**Tier 2 — Share Specific Nodes**:
+- You select individual nodes to share with the linked user
+- Each shared node appears in their tree as a read-only "linked node"
+- Visual indicator (chain icon, different glow) distinguishes linked vs. owned nodes
+- Shared fields are opt-in per node (name always shared; DOB, story, photo optional)
+
+**Tier 3 — Share All**:
+- One toggle: "Share entire tree with [user]"
+- Every node in your tree becomes visible as read-only linked nodes
+- Their tree and your tree visually merge
+- Relationship lines connect across both trees
+- Indirect connections become visible (your wife's cousin = their neighbor's son)
+
+#### Sharing is Revocable
+
+- Share All → Share Specific → Bridge Only at any time
+- Revoking removes shared data from the other user's view immediately
+- Deleting your account revokes all links and deletes all encrypted data
+
+#### Data Model
+
+```
+treeLinks/{linkId}
+  userA: uid
+  userB: uid
+  bridgeNodeHash: "sha256(name+dob)"       // for matching
+  shareLevel: {
+    [userA_uid]: 'bridge' | 'selective' | 'all',
+    [userB_uid]: 'bridge' | 'selective' | 'all'
+  }
+  sharedNodes: {
+    [userA_uid]: ['nodeId1', 'nodeId2'],    // only used when 'selective'
+    [userB_uid]: []
+  }
+  status: 'pending' | 'active' | 'revoked'
+  createdAt, updatedAt
+
+linkInvites/{code}
+  createdBy: uid
+  bridgeNodeHash: "sha256(name+dob)"
+  bridgeNodeName: "encrypted_name"          // encrypted with invite-specific key
+  expiresAt: timestamp                      // 7 days default
+  usedBy: uid | null
+```
+
+#### Encryption for Shared Data
+
+When sharing nodes with a linked user, the data is re-encrypted with a **shared key** derived from both users' keys (Diffie-Hellman key exchange via Web Crypto API). This means:
+- Shared data is encrypted in transit and at rest
+- Only the two linked users can decrypt it
+- Twygie admin cannot read shared data
+- If either user revokes the link, the shared key is discarded
 
 ---
 
