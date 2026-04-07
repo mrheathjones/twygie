@@ -909,25 +909,54 @@ function appAlert(msg){
   return new Promise(resolve=>{
     const bg=document.getElementById('app-modal-bg');
     document.getElementById('app-modal-msg').innerHTML=msg;
-    document.getElementById('app-modal-btns').innerHTML=`<button onclick="document.getElementById('app-modal-bg').classList.remove('open');(${resolve})()" style="flex:1;padding:8px 16px;background:var(--gold);border:none;border-radius:100px;color:#04070c;font-family:'Outfit',sans-serif;font-size:.82rem;font-weight:600;cursor:pointer">OK</button>`;
-    bg.classList.add('open');
-  });
-}
-function appConfirm(msg){
-  return new Promise(resolve=>{
-    const bg=document.getElementById('app-modal-bg');
-    document.getElementById('app-modal-msg').innerHTML=msg;
-    const close=(val)=>{bg.classList.remove('open');resolve(val)};
-    document.getElementById('app-modal-btns').innerHTML='';
-    const cancelBtn=document.createElement('button');
-    cancelBtn.textContent='Cancel';
-    cancelBtn.style.cssText='flex:1;padding:8px 16px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:100px;color:var(--muted);font-family:Outfit,sans-serif;font-size:.82rem;cursor:pointer';
-    cancelBtn.onclick=()=>close(false);
+    const btns=document.getElementById('app-modal-btns');
+    btns.innerHTML='';
     const okBtn=document.createElement('button');
     okBtn.textContent='OK';
     okBtn.style.cssText='flex:1;padding:8px 16px;background:var(--gold);border:none;border-radius:100px;color:#04070c;font-family:Outfit,sans-serif;font-size:.82rem;font-weight:600;cursor:pointer';
-    okBtn.onclick=()=>close(true);
-    document.getElementById('app-modal-btns').append(cancelBtn,okBtn);
+    okBtn.onclick=()=>{bg.classList.remove('open');resolve()};
+    btns.appendChild(okBtn);
+    bg.classList.add('open');
+  });
+}
+function appConfirm(msg,okText,cancelText){
+  return new Promise(resolve=>{
+    const bg=document.getElementById('app-modal-bg');
+    document.getElementById('app-modal-msg').innerHTML=msg;
+    const btns=document.getElementById('app-modal-btns');
+    btns.innerHTML='';
+    const cancelBtn=document.createElement('button');
+    cancelBtn.textContent=cancelText||'Cancel';
+    cancelBtn.style.cssText='flex:1;padding:8px 16px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:100px;color:var(--muted);font-family:Outfit,sans-serif;font-size:.82rem;cursor:pointer';
+    cancelBtn.onclick=()=>{bg.classList.remove('open');resolve(false)};
+    const okBtn=document.createElement('button');
+    okBtn.textContent=okText||'OK';
+    okBtn.style.cssText='flex:1;padding:8px 16px;background:var(--gold);border:none;border-radius:100px;color:#04070c;font-family:Outfit,sans-serif;font-size:.82rem;font-weight:600;cursor:pointer';
+    okBtn.onclick=()=>{bg.classList.remove('open');resolve(true)};
+    btns.append(cancelBtn,okBtn);
+    bg.classList.add('open');
+  });
+}
+// 3-button dialog: returns 'a','b', or false (cancel)
+function appChoice(msg,btnA,btnB,cancelText){
+  return new Promise(resolve=>{
+    const bg=document.getElementById('app-modal-bg');
+    document.getElementById('app-modal-msg').innerHTML=msg;
+    const btns=document.getElementById('app-modal-btns');
+    btns.innerHTML='';btns.style.flexWrap='wrap';
+    const cancelBtn=document.createElement('button');
+    cancelBtn.textContent=cancelText||'Cancel';
+    cancelBtn.style.cssText='flex:1 1 100%;padding:8px 16px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:100px;color:var(--muted);font-family:Outfit,sans-serif;font-size:.82rem;cursor:pointer;order:3;margin-top:4px';
+    cancelBtn.onclick=()=>{bg.classList.remove('open');btns.style.flexWrap='';resolve(false)};
+    const aBtn=document.createElement('button');
+    aBtn.textContent=btnA;
+    aBtn.style.cssText='flex:1;padding:8px 12px;background:var(--gold);border:none;border-radius:100px;color:#04070c;font-family:Outfit,sans-serif;font-size:.78rem;font-weight:600;cursor:pointer';
+    aBtn.onclick=()=>{bg.classList.remove('open');btns.style.flexWrap='';resolve('a')};
+    const bBtn=document.createElement('button');
+    bBtn.textContent=btnB;
+    bBtn.style.cssText='flex:1;padding:8px 12px;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:100px;color:var(--text);font-family:Outfit,sans-serif;font-size:.78rem;cursor:pointer';
+    bBtn.onclick=()=>{bg.classList.remove('open');btns.style.flexWrap='';resolve('b')};
+    btns.append(aBtn,bBtn,cancelBtn);
     bg.classList.add('open');
   });
 }
@@ -961,7 +990,7 @@ auth.onAuthStateChanged(async user => {
   subscribeActiveLinks();
   hideLoading();
 });
-async function signOut(){ if(!await appConfirm('Sign out?')) return; await auth.signOut(); window.location.href='login.html'; }
+async function signOut(){ if(!await appConfirm('Sign out of Twygie?','Sign Out','Stay')) return; await auth.signOut(); window.location.href='login.html'; }
 
 function toggleSection(id){
   const body=document.getElementById(id);
@@ -2010,6 +2039,8 @@ async function acceptLinkCode(){
 
     // Create the tree link
     msg.textContent='Creating link…';
+    const autoAdoptCheck=document.getElementById('link-auto-adopt');
+    const wantsAutoAdopt=autoAdoptCheck&&autoAdoptCheck.checked;
     const linkId=`${invite.createdBy}_${currentUser.uid}_${Date.now()}`;
     await db.collection('treeLinks').doc(linkId).set({
       userA:invite.createdBy,
@@ -2022,6 +2053,7 @@ async function acceptLinkCode(){
       bridgeNodeIdB:matchedNode.id,
       shareLevel:{[invite.createdBy]:'bridge',[currentUser.uid]:'bridge'},
       sharedNodes:{[invite.createdBy]:[],[currentUser.uid]:[]},
+      autoAdopt:{[currentUser.uid]:wantsAutoAdopt},
       status:'active',
       createdAt:firebase.firestore.FieldValue.serverTimestamp()
     });
@@ -2149,7 +2181,7 @@ async function loadLinkedTrees(){
 }
 
 async function revokeLink(linkId){
-  if(!await appConfirm('Revoke this tree link?<br><span style="font-size:.78rem;color:var(--muted)">The other user will lose access to your shared data.</span>')) return;
+  if(!await appConfirm('Unlink this tree?<br><span style="font-size:.78rem;color:var(--muted)">Shared data will be removed for both sides.</span>','Unlink','Keep Link')) return;
   try{
     await db.collection('treeLinks').doc(linkId).update({status:'revoked'});
     await loadActiveLinks();
@@ -2181,8 +2213,36 @@ function subscribeActiveLinks(){
     activeLinks=combined;
     if(newJson!==oldJson){
       console.log('Tree links updated:',activeLinks.length,'active link(s)');
-      // Auto-upload our shared data if shareLevel is 'all' but data is missing
-      autoUploadSharedData().then(()=>loadSharedNodes()).then(()=>render());
+      autoUploadSharedData().then(()=>loadSharedNodes()).then(()=>{
+        // Auto-adopt if preference is set and shared nodes are available
+        for(const link of activeLinks){
+          if(link.autoAdopt?.[currentUser.uid]&&sharedNodes.length){
+            const toAdopt=[...sharedNodes.filter(sn=>sn._linkId===link.id)];
+            if(!toAdopt.length) continue;
+            console.log('Auto-adopting',toAdopt.length,'nodes from link',link.id);
+            for(const sn of toAdopt){
+              const newId='n'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
+              const oldId=sn.id;
+              const adopted={id:newId,name:sn.name||'',firstName:sn.firstName||'',lastName:sn.lastName||'',
+                gender:sn.gender||'',photo:sn.photo||null,dob:sn.dob||null,dod:sn.dod||null,
+                birth:sn.birth||null,death:sn.death||null,city:sn.city||'',state:sn.state||'',
+                note:sn.note||'',relLabel:sn.relLabel||'',parents:[],spouseOf:null,
+                customLinks:{},isYou:false,_adopted:true,
+                x:sn.x||Math.random()*400+200,y:sn.y||Math.random()*400+200};
+              (sn.parents||[]).forEach(pid=>{if(byId[pid])adopted.parents.push(pid)});
+              if(sn.spouseOf&&byId[sn.spouseOf])adopted.spouseOf=sn.spouseOf;
+              P.push(adopted);byId[newId]=adopted;
+              sharedNodes.forEach(n=>{n.parents=(n.parents||[]).map(pid=>pid===oldId?newId:pid);if(n.spouseOf===oldId)n.spouseOf=newId});
+              P.forEach(n=>{if(n.id===newId)return;n.parents=(n.parents||[]).map(pid=>pid===oldId?newId:pid);if(n.spouseOf===oldId)n.spouseOf=newId});
+              sharedNodes=sharedNodes.filter(n=>n.id!==oldId);
+            }
+            // Clear auto-adopt flag so it doesn't re-run
+            db.collection('treeLinks').doc(link.id).update({[`autoAdopt.${currentUser.uid}`]:false}).catch(()=>{});
+            rebuild();scheduleSave();
+          }
+        }
+        render();
+      });
     }
   };
 
@@ -3626,21 +3686,22 @@ async function removePerson(id){
   
   let cascade=false;
   if(children.length){
-    const choice=await appConfirm(
-      `Remove ${fullName(p)} from the tree?\n\nOK = Remove only ${fullName(p).split(' ')[0]} (their connections will be unlinked)\nCancel = Keep them`
-    );
-    if(!choice) return;
-    // Ask about descendants separately
     const descendants=[];
     function countDesc(pid){ P.filter(x=>(x.parents||[]).includes(pid)).forEach(x=>{descendants.push(x.id);countDesc(x.id);}); }
     countDesc(id);
+
     if(descendants.length){
-      cascade=await appConfirm(
-        `Also remove ${descendants.length} connected Twyg${descendants.length>1?'s':''} below ${fullName(p).split(' ')[0]}?\n\nOK = Remove all\nCancel = Keep them (they'll become unlinked)`
+      const choice=await appChoice(
+        `Remove <strong>${fullName(p)}</strong> from the tree?<br><br><span style="font-size:.78rem;color:var(--muted)">${fullName(p)} has ${descendants.length} connected Twyg${descendants.length>1?'s':''} below them.</span>`,
+        'Remove All','Remove Only '+fullName(p).split(' ')[0],'Cancel'
       );
+      if(!choice) return;
+      cascade=(choice==='a');
+    } else {
+      if(!await appConfirm(`Remove <strong>${fullName(p)}</strong> from the tree?`,'Remove','Cancel')) return;
     }
   } else {
-    if(!await appConfirm(`Remove ${fullName(p)} from the tree?`)) return;
+    if(!await appConfirm(`Remove <strong>${fullName(p)}</strong> from the tree?`,'Remove','Cancel')) return;
   }
 
   const rm=new Set([id]);
@@ -3757,7 +3818,7 @@ function saveEditedConnRel(fromId, toId, connType, newLabel){
 }
 
 async function removeConnFromCard(fromId, toId, connType){
-  if(!await appConfirm('Remove this connection?')) return;
+  if(!await appConfirm('Remove this connection?','Remove','Keep')) return;
   // Always get fresh references from P (byId may be stale)
   const from=P.find(p=>p.id===fromId);
   const to=P.find(p=>p.id===toId);
