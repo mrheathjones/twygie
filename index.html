@@ -1217,18 +1217,13 @@ function getRelToYou_for(targetId, fromId){
     }
   }
 
-  // ── 7. Explicit customLinks (from's stored label for target) ─────────────
+  // ── 7. Explicit customLinks — from's own stored label for target only ───────
+  // (NOT t.customLinks[fromId] — that's target's perspective, which can mislead)
+  // (NOT t.relLabel — that's a global label from isYou's perspective, not from's)
   if(from.customLinks&&from.customLinks[targetId]){
     const v=from.customLinks[targetId];
     return typeof v==='string'?v:v.label;
   }
-
-  // ── 8. Last resort: target's stored label for from (may be inverse) ──────
-  if(t.customLinks&&t.customLinks[fromId]){
-    const v=t.customLinks[fromId];
-    return typeof v==='string'?v:v.label;
-  }
-  if(t.relLabel) return t.relLabel;
   return '';
 }
 
@@ -1804,7 +1799,7 @@ function getRelToYou(id){
       if(spSibs.some(s=>s.id===id)) return genderedRel('Sibling',p.gender)+'-in-law';
     }
   }
-  return 'Family';
+  return '';
 }
 
 const NS='http://www.w3.org/2000/svg';
