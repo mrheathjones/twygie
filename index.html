@@ -3182,29 +3182,43 @@ function drawNodes(){
 
       nG.appendChild(G);
 
-      // Draw connection line from shared node to its parent (if parent is bridge or another shared node)
+      // Draw connection lines from shared node to parents and spouse
       const bG=document.getElementById('bG');
-      (sn.parents||[]).forEach(pid=>{
-        let parent=byId[pid]; // might be our bridge node
-        let px2,py2;
-        if(parent){px2=parent.x;py2=parent.y}
-        else{
-          const sp=sharedNodes.find(s=>s.id===pid);
-          if(!sp) return;
-          const spLink=activeLinks.find(l=>l.id===sp._linkId);
-          const spBridge=spLink?byId[spLink.userA===currentUser.uid?spLink.bridgeNodeIdA:spLink.bridgeNodeIdB]:null;
-          if(!spBridge) return;
-          px2=spBridge.x+(sp.x||0)*0.6-300;
-          py2=spBridge.y+(sp.y||0)*0.6-200;
-        }
+      const drawSharedLine=(tx,ty,color)=>{
         const path=se('path');
-        path.setAttribute('d',`M ${ox} ${oy} L ${px2} ${py2}`);
-        path.setAttribute('stroke','rgba(200,168,75,0.15)');
+        path.setAttribute('d',`M ${ox} ${oy} L ${tx} ${ty}`);
+        path.setAttribute('stroke',color||'rgba(200,168,75,0.15)');
         path.setAttribute('stroke-width','1.5');
         path.setAttribute('stroke-dasharray','4,3');
         path.setAttribute('fill','none');
         bG.appendChild(path);
+      };
+
+      // Parent connections
+      (sn.parents||[]).forEach(pid=>{
+        let parent=byId[pid];
+        if(parent){drawSharedLine(parent.x,parent.y,'rgba(100,180,100,0.2)');return}
+        const sp=sharedNodes.find(s=>s.id===pid);
+        if(!sp) return;
+        const spLink=activeLinks.find(l=>l.id===sp._linkId);
+        const spBridge=spLink?byId[spLink.userA===currentUser.uid?spLink.bridgeNodeIdA:spLink.bridgeNodeIdB]:null;
+        if(!spBridge) return;
+        drawSharedLine(spBridge.x+(sp.x||0)*0.6-300, spBridge.y+(sp.y||0)*0.6-200);
       });
+
+      // Spouse connection
+      if(sn.spouseOf){
+        const spouse=byId[sn.spouseOf];
+        if(spouse){drawSharedLine(spouse.x,spouse.y,'rgba(100,140,220,0.2)')}
+        else{
+          const sp=sharedNodes.find(s=>s.id===sn.spouseOf);
+          if(sp){
+            const spLink=activeLinks.find(l=>l.id===sp._linkId);
+            const spBridge=spLink?byId[spLink.userA===currentUser.uid?spLink.bridgeNodeIdA:spLink.bridgeNodeIdB]:null;
+            if(spBridge) drawSharedLine(spBridge.x+(sp.x||0)*0.6-300, spBridge.y+(sp.y||0)*0.6-200,'rgba(100,140,220,0.2)');
+          }
+        }
+      }
     });
   }
 }
