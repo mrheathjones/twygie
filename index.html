@@ -909,6 +909,7 @@ auth.onAuthStateChanged(async user => {
   else initEl.textContent=(user.displayName||user.email||'?')[0].toUpperCase();
   await loadTree();
   await loadActiveLinks();
+  subscribeActiveLinks(); // start real-time listener for link changes
   hideLoading();
 });
 async function signOut(){ if(!confirm('Sign out?')) return; await auth.signOut(); window.location.href='login.html'; }
@@ -2033,6 +2034,49 @@ async function revokeLink(linkId){
 
 // Check if a node is a bridge node (linked with another user's tree)
 let activeLinks=[];
+let linkUnsubA=null, linkUnsubB=null;
+
+function subscribeActiveLinks(){
+  if(!currentUser) return;
+  // Unsubscribe from any previous listeners
+  if(linkUnsubA) linkUnsubA();
+  if(linkUnsubB) linkUnsubB();
+
+  const rebuild=()=>{
+    // Merge both listener results
+    const combined=[...linksA,...linksB];
+    // Only update and re-render if something actually changed
+    const newJson=JSON.stringify(combined.map(l=>l.id).sort());
+    const oldJson=JSON.stringify(activeLinks.map(l=>l.id).sort());
+    activeLinks=combined;
+    if(newJson!==oldJson){
+      console.log('Tree links updated:',activeLinks.length,'active link(s)');
+      render(); // re-render tree to show/hide bridge badges
+    }
+  };
+
+  let linksA=[], linksB=[];
+
+  // Real-time listener: links where I'm userA
+  linkUnsubA=db.collection('treeLinks')
+    .where('userA','==',currentUser.uid).where('status','==','active')
+    .onSnapshot(snap=>{
+      linksA=[];
+      snap.forEach(doc=>linksA.push({id:doc.id,...doc.data()}));
+      rebuild();
+    },err=>console.warn('Link listener A error:',err));
+
+  // Real-time listener: links where I'm userB
+  linkUnsubB=db.collection('treeLinks')
+    .where('userB','==',currentUser.uid).where('status','==','active')
+    .onSnapshot(snap=>{
+      linksB=[];
+      snap.forEach(doc=>linksB.push({id:doc.id,...doc.data()}));
+      rebuild();
+    },err=>console.warn('Link listener B error:',err));
+}
+
+// Keep loadActiveLinks as a manual refresh for immediate use after creating/revoking
 async function loadActiveLinks(){
   if(!currentUser) return;
   try{
