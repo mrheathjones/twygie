@@ -126,6 +126,26 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-famil
 .frel{font-size:.68rem;color:var(--muted);font-style:italic}
 .fyr{font-size:.72rem;color:var(--muted);flex-shrink:0}
 .card-actions{display:flex;gap:6px;margin-top:14px;flex-wrap:wrap}
+
+/* LINK CODE MODAL */
+#link-bg{position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);opacity:0;pointer-events:none;transition:opacity .25s;display:flex;align-items:center;justify-content:center}
+#link-bg.open{opacity:1;pointer-events:all}
+#link-modal{background:#080f1d;border:1px solid rgba(200,168,75,.2);border-radius:16px;width:380px;max-width:92vw;padding:28px;box-shadow:0 30px 60px rgba(0,0,0,.6);text-align:center}
+.link-code{font-family:'Cormorant Garamond',serif;font-size:1.8rem;font-weight:700;color:var(--gold);letter-spacing:.15em;margin:18px 0;user-select:all}
+.link-copy{padding:8px 20px;background:rgba(200,168,75,.12);border:1px solid rgba(200,168,75,.3);border-radius:100px;color:var(--gold);font-family:'Outfit',sans-serif;font-size:.8rem;cursor:pointer;transition:all .15s}
+.link-copy:hover{background:rgba(200,168,75,.2)}
+.link-expires{font-size:.7rem;color:var(--muted);margin-top:12px}
+.link-input-row{display:flex;gap:6px;margin-top:8px}
+.link-input{flex:1;padding:8px 12px;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'Outfit',sans-serif;font-size:.88rem;outline:none;letter-spacing:.08em;text-transform:uppercase}
+.link-input:focus{border-color:rgba(200,168,75,.4)}
+.link-accept{padding:8px 16px;background:var(--gold);border:none;border-radius:8px;color:#04070c;font-family:'Outfit',sans-serif;font-size:.82rem;font-weight:600;cursor:pointer}
+.link-item{display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;background:rgba(255,255,255,.03);margin-bottom:6px}
+.link-item-info{flex:1;min-width:0}
+.link-item-name{font-size:.82rem;color:var(--text);font-weight:500}
+.link-item-node{font-size:.68rem;color:var(--gold);font-style:italic}
+.link-item-date{font-size:.62rem;color:var(--muted)}
+.link-revoke{padding:4px 10px;background:rgba(180,80,80,.1);border:1px solid rgba(180,80,80,.25);border-radius:6px;color:rgba(200,100,100,.7);font-size:.68rem;cursor:pointer;white-space:nowrap}
+.bridge-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;background:rgba(200,168,75,.08);border:1px solid rgba(200,168,75,.15);border-radius:100px;font-size:.65rem;color:var(--gold);margin-top:4px}
 .fchip-edit-btn{background:transparent;border:none;cursor:pointer;color:rgba(200,168,75,.4);font-size:13px;padding:0 3px;line-height:1;transition:color .2s;flex-shrink:0}
 .fchip-edit-btn:hover{color:rgba(200,168,75,.9)}
 .fchip-edit-select{position:absolute;top:0;left:0;right:0;bottom:0;z-index:10;background:rgba(6,12,22,.97);border:1px solid rgba(200,168,75,.4);border-radius:10px;color:var(--text);font-family:'Outfit',sans-serif;font-size:.82rem;padding:0 10px;outline:none;cursor:pointer;width:100%;-webkit-appearance:none}
@@ -476,6 +496,13 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-famil
   </div>
 </div>
 
+<!-- LINK CODE MODAL -->
+<div id="link-bg" onclick="if(event.target===this)closeLinkModal()">
+  <div id="link-modal">
+    <div id="link-modal-content"></div>
+  </div>
+</div>
+
 <!-- SETTINGS PANEL -->
 <div id="settings-panel">
   <div class="sp-head">
@@ -518,6 +545,29 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-famil
           <div class="sp-option-check"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#04070c" stroke-width="3" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg></div>
         </div>
         <div style="height:12px"></div>
+      </div>
+    </div>
+
+    <!-- LINKED TREES -->
+    <div>
+      <div class="sp-collapse-hdr" onclick="toggleSection('sec-links')">
+        <span class="sp-collapse-title">Linked Trees</span>
+        <span class="sp-collapse-icon" id="icon-sec-links">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+        </span>
+      </div>
+      <div class="sp-collapse-body" id="sec-links">
+        <div style="font-size:.78rem;color:var(--muted);margin-bottom:10px;line-height:1.5">Connect your tree with other Twygie users through shared family members.</div>
+        <div style="font-size:.72rem;color:var(--muted);margin-bottom:6px">Enter a link code</div>
+        <div class="link-input-row">
+          <input class="link-input" id="link-code-input" placeholder="TWYG-XXXX-XXXX" maxlength="14"/>
+          <button class="link-accept" onclick="acceptLinkCode()">Link</button>
+        </div>
+        <div id="link-accept-msg" style="font-size:.72rem;margin-top:6px;min-height:16px"></div>
+        <div style="height:10px"></div>
+        <div style="font-size:.72rem;color:var(--muted);margin-bottom:6px">Active links</div>
+        <div id="linked-trees-list"><div style="font-size:.72rem;color:var(--muted);opacity:.5;padding:8px 0">No linked trees yet</div></div>
+        <div style="height:8px"></div>
       </div>
     </div>
 
@@ -861,6 +911,7 @@ auth.onAuthStateChanged(async user => {
   if(user.photoURL){ initEl.style.display='none'; const img=document.createElement('img'); img.src=user.photoURL; avatarEl.appendChild(img); }
   else initEl.textContent=(user.displayName||user.email||'?')[0].toUpperCase();
   await loadTree();
+  await loadActiveLinks();
   hideLoading();
 });
 async function signOut(){ if(!confirm('Sign out?')) return; await auth.signOut(); window.location.href='login.html'; }
@@ -1749,6 +1800,7 @@ function openSettings(){
   if(yaInput) yaInput.value=youngAge;
   syncAutoConnToggle();
   syncDemoToggle();
+  loadLinkedTrees();
   document.getElementById('settings-panel').classList.add('open');
   document.getElementById('scrim').classList.add('on');
 }
@@ -1757,6 +1809,230 @@ function closeSettings(){
   document.getElementById('settings-panel').classList.remove('open');
   if(!selId&&!document.getElementById('members-panel').classList.contains('open'))
     document.getElementById('scrim').classList.remove('on');
+}
+
+// ─── TREE LINKING (Phase 3) ──────────────────────────────────────────────────
+
+function closeLinkModal(){ document.getElementById('link-bg').classList.remove('open'); }
+
+// Generate a SHA-256 hash of name+DOB for bridge node matching
+async function hashNode(p){
+  const raw=`${fullName(p).toLowerCase().trim()}|${p.dob?.year||''}|${p.dob?.month||''}|${p.dob?.day||''}`;
+  const enc=new TextEncoder();
+  const buf=await crypto.subtle.digest('SHA-256',enc.encode(raw));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+// Generate a random link code: TWYG-XXXX-XXXX
+function makeLinkCode(){
+  const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no I,O,0,1 to avoid confusion
+  const seg=()=>Array.from({length:4},()=>chars[Math.floor(Math.random()*chars.length)]).join('');
+  return `TWYG-${seg()}-${seg()}`;
+}
+
+// Generate link code for a node and save invite to Firestore
+async function generateLinkCode(nodeId){
+  const p=byId[nodeId]; if(!p) return;
+  const nm=fullName(p);
+  const code=makeLinkCode();
+  const nodeHash=await hashNode(p);
+
+  // Show modal with loading
+  const modal=document.getElementById('link-modal-content');
+  modal.innerHTML=`<div style="color:var(--muted);padding:20px">Generating link code…</div>`;
+  document.getElementById('link-bg').classList.add('open');
+
+  try{
+    // Save invite to Firestore
+    const expiresAt=new Date();
+    expiresAt.setDate(expiresAt.getDate()+7); // 7 day expiry
+    await db.collection('linkInvites').doc(code).set({
+      createdBy:currentUser.uid,
+      creatorName:currentUser.displayName||currentUser.email||'',
+      bridgeNodeHash:nodeHash,
+      bridgeNodeName:nm,
+      bridgeNodeId:nodeId,
+      expiresAt:firebase.firestore.Timestamp.fromDate(expiresAt),
+      usedBy:null,
+      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    // Show code
+    modal.innerHTML=`
+      <div style="font-size:.82rem;color:var(--muted);margin-bottom:4px">Link code for</div>
+      <div style="font-family:'Cormorant Garamond',serif;font-size:1.2rem;font-weight:600;color:var(--text)">${nm}</div>
+      <div class="link-code">${code}</div>
+      <div style="font-size:.75rem;color:var(--muted);margin-bottom:16px;line-height:1.5">
+        Share this code with another Twygie user who has<br><strong>${nm}</strong> in their tree to link your trees.
+      </div>
+      <button class="link-copy" onclick="copyLinkCode('${code}')">Copy Code</button>
+      <div class="link-expires">Expires in 7 days</div>
+      <div style="height:14px"></div>
+      <button onclick="closeLinkModal()" style="padding:6px 16px;background:transparent;border:1px solid var(--border);border-radius:100px;color:var(--muted);font-family:'Outfit',sans-serif;font-size:.76rem;cursor:pointer">Close</button>
+    `;
+  }catch(e){
+    console.error('Failed to create link invite:',e);
+    modal.innerHTML=`
+      <div style="color:rgba(200,100,100,.8);padding:20px">Failed to generate code. Please try again.</div>
+      <button onclick="closeLinkModal()" style="padding:6px 16px;background:transparent;border:1px solid var(--border);border-radius:100px;color:var(--muted);font-family:'Outfit',sans-serif;font-size:.76rem;cursor:pointer;margin-top:10px">Close</button>
+    `;
+  }
+}
+
+function copyLinkCode(code){
+  navigator.clipboard.writeText(code).then(()=>{
+    const btn=document.querySelector('.link-copy');
+    if(btn){btn.textContent='Copied!';setTimeout(()=>{btn.textContent='Copy Code'},2000)}
+  }).catch(()=>{});
+}
+
+// Accept a link code — match against own nodes and create treeLink
+async function acceptLinkCode(){
+  const input=document.getElementById('link-code-input');
+  const msg=document.getElementById('link-accept-msg');
+  const code=(input.value||'').trim().toUpperCase();
+  if(!code||code.length<10){msg.style.color='rgba(200,100,100,.8)';msg.textContent='Enter a valid link code.';return}
+
+  msg.style.color='var(--muted)';msg.textContent='Looking up code…';
+
+  try{
+    // Fetch the invite
+    const inviteSnap=await db.collection('linkInvites').doc(code).get();
+    if(!inviteSnap.exists){msg.style.color='rgba(200,100,100,.8)';msg.textContent='Code not found. Check the code and try again.';return}
+    const invite=inviteSnap.data();
+
+    // Check if expired
+    if(invite.expiresAt&&invite.expiresAt.toDate()<new Date()){msg.style.color='rgba(200,100,100,.8)';msg.textContent='This code has expired.';return}
+    // Check if already used
+    if(invite.usedBy){msg.style.color='rgba(200,100,100,.8)';msg.textContent='This code has already been used.';return}
+    // Can't link to yourself
+    if(invite.createdBy===currentUser.uid){msg.style.color='rgba(200,100,100,.8)';msg.textContent='You cannot link to your own tree.';return}
+
+    // Find matching node in our tree
+    msg.textContent='Searching for matching Twyg…';
+    let matchedNode=null;
+    for(const p of P){
+      const h=await hashNode(p);
+      if(h===invite.bridgeNodeHash){matchedNode=p;break}
+    }
+
+    if(!matchedNode){
+      msg.style.color='rgba(200,100,100,.8)';
+      msg.textContent=`No matching Twyg found for "${invite.bridgeNodeName}". You need this person in your tree to link.`;
+      return;
+    }
+
+    // Create the tree link
+    msg.textContent='Creating link…';
+    const linkId=`${invite.createdBy}_${currentUser.uid}_${Date.now()}`;
+    await db.collection('treeLinks').doc(linkId).set({
+      userA:invite.createdBy,
+      userAName:invite.creatorName,
+      userB:currentUser.uid,
+      userBName:currentUser.displayName||currentUser.email||'',
+      bridgeNodeHash:invite.bridgeNodeHash,
+      bridgeNodeName:invite.bridgeNodeName,
+      bridgeNodeIdA:invite.bridgeNodeId,
+      bridgeNodeIdB:matchedNode.id,
+      shareLevel:{[invite.createdBy]:'bridge',[currentUser.uid]:'bridge'},
+      sharedNodes:{[invite.createdBy]:[],[currentUser.uid]:[]},
+      status:'active',
+      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    // Mark invite as used
+    await db.collection('linkInvites').doc(code).update({usedBy:currentUser.uid});
+
+    msg.style.color='rgba(110,203,138,.8)';
+    msg.textContent=`Linked! "${invite.bridgeNodeName}" now bridges your trees.`;
+    input.value='';
+    loadLinkedTrees();
+  }catch(e){
+    console.error('Failed to accept link:',e);
+    msg.style.color='rgba(200,100,100,.8)';
+    msg.textContent='Something went wrong. Please try again.';
+  }
+}
+
+// Load active linked trees for Settings display
+async function loadLinkedTrees(){
+  const list=document.getElementById('linked-trees-list');
+  if(!list||!currentUser) return;
+
+  try{
+    // Query links where current user is either userA or userB
+    const [snapA,snapB]=await Promise.all([
+      db.collection('treeLinks').where('userA','==',currentUser.uid).where('status','==','active').get(),
+      db.collection('treeLinks').where('userB','==',currentUser.uid).where('status','==','active').get()
+    ]);
+
+    const links=[];
+    snapA.forEach(doc=>links.push({id:doc.id,...doc.data()}));
+    snapB.forEach(doc=>links.push({id:doc.id,...doc.data()}));
+
+    if(!links.length){
+      list.innerHTML='<div style="font-size:.72rem;color:var(--muted);opacity:.5;padding:8px 0">No linked trees yet</div>';
+      return;
+    }
+
+    list.innerHTML=links.map(link=>{
+      const otherName=link.userA===currentUser.uid?link.userBName:link.userAName;
+      const created=link.createdAt?.toDate?.();
+      const dateStr=created?created.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'';
+      return `<div class="link-item">
+        <div style="width:30px;height:30px;border-radius:50%;background:rgba(200,168,75,.15);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        </div>
+        <div class="link-item-info">
+          <div class="link-item-name">${otherName||'Unknown user'}</div>
+          <div class="link-item-node">Bridge: ${link.bridgeNodeName}</div>
+          ${dateStr?`<div class="link-item-date">Linked ${dateStr}</div>`:''}
+        </div>
+        <button class="link-revoke" onclick="revokeLink('${link.id}')">Revoke</button>
+      </div>`;
+    }).join('');
+  }catch(e){
+    console.error('Failed to load links:',e);
+    list.innerHTML='<div style="font-size:.72rem;color:rgba(200,100,100,.6);padding:8px 0">Failed to load links</div>';
+  }
+}
+
+async function revokeLink(linkId){
+  if(!confirm('Revoke this tree link? The other user will lose access to your shared data.')) return;
+  try{
+    await db.collection('treeLinks').doc(linkId).update({status:'revoked'});
+    loadLinkedTrees();
+  }catch(e){
+    console.error('Failed to revoke:',e);
+    alert('Failed to revoke link. Please try again.');
+  }
+}
+
+// Check if a node is a bridge node (linked with another user's tree)
+let activeLinks=[];
+async function loadActiveLinks(){
+  if(!currentUser) return;
+  try{
+    const [snapA,snapB]=await Promise.all([
+      db.collection('treeLinks').where('userA','==',currentUser.uid).where('status','==','active').get(),
+      db.collection('treeLinks').where('userB','==',currentUser.uid).where('status','==','active').get()
+    ]);
+    activeLinks=[];
+    snapA.forEach(doc=>activeLinks.push({id:doc.id,...doc.data()}));
+    snapB.forEach(doc=>activeLinks.push({id:doc.id,...doc.data()}));
+  }catch(e){ console.warn('Failed to load active links:',e); }
+}
+
+function getBridgeInfo(nodeId){
+  // Returns link info if this node is a bridge node, null otherwise
+  for(const link of activeLinks){
+    const myBridgeId=link.userA===currentUser.uid?link.bridgeNodeIdA:link.bridgeNodeIdB;
+    if(myBridgeId===nodeId){
+      const otherName=link.userA===currentUser.uid?link.userBName:link.userAName;
+      return {linkId:link.id, otherUserName:otherName, bridgeName:link.bridgeNodeName};
+    }
+  }
+  return null;
 }
 
 // ─── FIRESTORE ────────────────────────────────────────────────────────────────
@@ -2555,6 +2831,15 @@ function fillCard(p){
   const relBadge=document.getElementById('crel-badge');
   relBadge.innerHTML=(!p.isYou&&rel)?`<span class="crel-badge">${rel}</span>`:'';
 
+  // Bridge badge — show if this node is linked to another user's tree
+  const bridge=getBridgeInfo(p.id);
+  if(bridge){
+    relBadge.innerHTML+= `<div class="bridge-badge">
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+      Linked with ${bridge.otherUserName}'s tree
+    </div>`;
+  }
+
   // Connections
   const parentsArr=(p.parents||[]).map(pid=>{
     const par=byId[pid]; if(!par) return null;
@@ -2612,6 +2897,10 @@ function fillCard(p){
     <button class="btn-sm btn-conn" onclick="openConnModal('${p.id}')">
       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
       Add Connection
+    </button>
+    <button class="btn-sm" onclick="generateLinkCode('${p.id}')" style="background:rgba(200,168,75,.08);border-color:rgba(200,168,75,.2);color:var(--gold)">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+      Link Trees
     </button>
     ${!p.isYou?`<button class="btn-sm btn-del" onclick="removePerson('${p.id}')">Remove</button>`:''}
   </div>`;
