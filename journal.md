@@ -341,3 +341,22 @@ Built as a separate HTML page (timeline.html) with:
 - Same Firebase auth + AES-256 encryption as main app
 - Route: /timeline in vercel.json (cleanUrls handles mapping)
 - Responsive: touch pinch-to-zoom, drag-to-pan on mobile
+
+### Phase 3a — Tree Linking (Session 10)
+- "Link Trees" button on node cards generates TWYG-XXXX-XXXX codes
+- SHA-256 hash of name + birth year for bridge node matching
+- Link code stored in Firestore linkInvites/{code} with 7-day expiry
+- "Enter link code" UI in Settings → Linked Trees → Manage Linked Trees modal
+- Validates: exists, not expired, not used, not self-link
+- Matches bridge node by hashing all local nodes against invite hash
+- Creates treeLinks/{linkId} document with both user IDs + bridge info
+- Active links list with revoke capability
+- Bridge badge on node cards: "Linked with [name]'s tree"
+- Real-time sync via Firestore onSnapshot — both sides update instantly
+- Seed page created for Maddy test account (/seed-maddy) with shared family
+
+### Settings Card Overlay (Session 10)
+- Settings converted from slide-in side panel to centered overlay card
+- 380px wide, max 92vw, max 88vh, gold-tinted border, rounded corners
+- Scale + fade animation on open/close
+- Backdrop blur (6px) on scrim behind card

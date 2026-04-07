@@ -119,7 +119,9 @@ An interactive, beautiful family tree web app. Each family member is a "Twyg" �
 - [ ] Export tree as image/PDF ✅ DONE (Session 10)
 
 ### Long-term
-- [ ] **Phase 3 — Tree Linking** (bridge nodes, selective/full sharing between users)
+- [x] **Phase 3a — Tree Linking infrastructure** (Session 10) — link codes, bridge nodes, real-time sync
+- [ ] **Phase 3b — Bridge Display** — shared node visibility, visual indicators on tree
+- [ ] **Phase 3c — Sharing Tiers** — Bridge Only / Selective / Share All toggles
 - [ ] Mobile app (iOS/Android)
 - [ ] AI story generation from notes
 - [ ] Birthday/anniversary notifications

@@ -297,3 +297,56 @@ familyTrees/{uid}
 **Zoom**: `yearPx = 15 * (800/15) ^ zoomLevel` where zoomLevel 0→1
 **Detail modal**: glass overlay (75% opacity, blur), mini family tree, clickable nodes, "View in Tree" link
 **Reset**: restores 0.5 zoom, re-centers on isYou
+
+---
+
+## Tree Linking — Phase 3a (Session 10)
+
+### Link Code Generation
+- Button: "Link Trees" on every node card
+- Code format: `TWYG-XXXX-XXXX` (no I/O/0/1 to avoid confusion)
+- Bridge hash: `SHA-256(fullName.lowercase + '|' + birthYear)` — name + year only (not month/day)
+- Stored in `linkInvites/{code}` with 7-day expiry
+
+### Link Acceptance Flow
+1. User enters code in Settings → Linked Trees → Manage Linked Trees
+2. Fetch invite from Firestore, validate (exists, not expired, not used, not self)
+3. Hash all local nodes, find one matching `invite.bridgeNodeHash`
+4. Create `treeLinks/{linkId}` with both UIDs + bridge node IDs
+5. Mark invite as used
+
+### Firestore Collections
+```
+linkInvites/{code}
+  createdBy, creatorName, bridgeNodeHash, bridgeNodeName,
+  bridgeNodeId, expiresAt (7 days), usedBy, createdAt
+
+treeLinks/{linkId}
+  userA, userAName, userB, userBName,
+  bridgeNodeHash, bridgeNodeName, bridgeNodeIdA, bridgeNodeIdB,
+  shareLevel: {[uid]: 'bridge'|'selective'|'all'},
+  sharedNodes: {[uid]: []},
+  status: 'active'|'revoked', createdAt
+```
+
+### Real-Time Sync
+- `subscribeActiveLinks()`: two Firestore `onSnapshot` listeners (userA + userB queries)
+- Auto-merges results, only re-renders if link set actually changed
+- Both sides see bridge badges appear/disappear instantly — no page refresh needed
+- `loadActiveLinks()` kept as manual refresh for immediate post-action use
+
+### Bridge Detection
+- `getBridgeInfo(nodeId)`: checks `activeLinks` array for matching bridge node ID
+- Returns `{linkId, otherUserName, bridgeName}` or null
+- Bridge badge shown on node card: "Linked with [name]'s tree"
+
+### Settings UI
+- Settings panel: centered overlay card (not slide-in panel)
+  - 380px wide, gold border, 18px radius, backdrop blur scrim
+  - Scale+fade animation on open/close
+- Linked Trees section: "Manage Linked Trees" button opens link modal
+- Link modal: enter code input, status messages, active links list, revoke buttons
+
+### Seed Page
+- `/seed-maddy`: creates test account with Maddy + Hank(1967) + Mary(1966) + Heath(1980)
+- Same encryption as main app — tree saved as AES-256-GCM encrypted blob
