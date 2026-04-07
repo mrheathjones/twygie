@@ -2336,7 +2336,7 @@ async function toggleShareLevel(linkId, newLevel){
         return {
           id:p.id, name:fullName(p),
           firstName:p.firstName||'', lastName:p.lastName||'',
-          gender:p.gender||'', photo:p.photo||null,
+          gender:p.gender||'', photo:null, // photos omitted (Firestore 1MB limit)
           dob:p.dob||null, dod:p.dod||null,
           birth:p.birth||null, death:p.death||null,
           city:p.city||'', state:p.state||'',
@@ -2430,7 +2430,7 @@ function adoptBatch(nodes){
           return {
             id:p.id, name:fullName(p),
             firstName:p.firstName||'', lastName:p.lastName||'',
-            gender:p.gender||'', photo:p.photo||null,
+            gender:p.gender||'', photo:null, // photos omitted (Firestore 1MB limit)
             dob:p.dob||null, dod:p.dod||null,
             birth:p.birth||null, death:p.death||null,
             city:p.city||'', state:p.state||'',
