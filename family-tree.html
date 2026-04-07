@@ -1812,6 +1812,27 @@ function closeSettings(){
 
 function closeLinkModal(){ document.getElementById('link-bg').classList.remove('open'); }
 
+function openLinkCard(){
+  const modal=document.getElementById('link-modal-content');
+  modal.innerHTML=`
+    <div style="font-family:'Cormorant Garamond',serif;font-size:1.3rem;font-weight:600;color:var(--text);margin-bottom:4px">Linked Trees</div>
+    <div style="font-size:.78rem;color:var(--muted);margin-bottom:18px;line-height:1.5">Connect your tree with other Twygie users through shared family members.</div>
+    <div style="font-size:.72rem;color:var(--muted);margin-bottom:6px">Enter a link code</div>
+    <div class="link-input-row">
+      <input class="link-input" id="link-code-input" placeholder="TWYG-XXXX-XXXX" maxlength="14"/>
+      <button class="link-accept" onclick="acceptLinkCode()">Link</button>
+    </div>
+    <div id="link-accept-msg" style="font-size:.72rem;margin-top:6px;min-height:16px"></div>
+    <div style="height:14px"></div>
+    <div style="font-size:.72rem;color:var(--muted);margin-bottom:6px">Active links</div>
+    <div id="linked-trees-list"><div style="font-size:.72rem;color:var(--muted);opacity:.5;padding:8px 0">Loading…</div></div>
+    <div style="height:14px"></div>
+    <button onclick="closeLinkModal()" style="width:100%;padding:8px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:100px;color:var(--muted);font-family:'Outfit',sans-serif;font-size:.76rem;cursor:pointer">Close</button>
+  `;
+  document.getElementById('link-bg').classList.add('open');
+  loadLinkedTrees();
+}
+
 // Generate a SHA-256 hash of name+DOB for bridge node matching
 async function hashNode(p){
   const birthYear=p.dob?.year||p.birth||'';
