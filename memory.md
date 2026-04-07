@@ -357,3 +357,32 @@ treeLinks/{linkId}
 - "Linked" entry in node legend with matching dashed gold circle
 - Bridge badge on card: "Linked with [name]'s tree" below relationship badge
 - All visual indicators driven by `activeLinks` array (real-time via onSnapshot)
+
+### Phase 3c — Sharing Tiers (Session 10)
+
+**Share Toggle**: Per-link toggle in Manage Linked Trees: Bridge Only ↔ Share All
+**Asymmetric**: each user controls their own side independently
+
+**Shared Key**: `PBKDF2(sort([uidA,uidB]).join('|'), 'twygie-shared-v1')` — both sides compute independently
+**Encryption**: AES-256-GCM with shared key, stored in `treeLinks/{linkId}.sharedData.{uid}`
+
+**Shared data fields** (stripped for size):
+- id, name, firstName, lastName, gender, dob, dod, birth, death, city, state, relLabel, parents, spouseOf, isYou, x, y
+- NO photos (base64 too large), NO notes/stories, NO customLinks
+
+**Deduplication**: Two-level fingerprinting
+- Primary: firstName+birthYear OR fullName+birthYear → maps otherID→localID
+- Aggressive fallback: firstName-only match
+- All duplicate mappings used for parent/spouse ID remapping (two-pass)
+
+**Auto-adopt**: `adoptBatch()` — standalone global function
+- Sorts parents-first, multi-pass (up to 5) adoption
+- Remaps old→new IDs across sharedNodes, sorted, and P[] after each adopt
+- Adopted nodes flagged `_adopted:true` → double-ring visual on tree
+- Preference stored on `treeLinks.autoAdopt.{uid}`, triggered at end of `loadSharedNodes()`
+- `window._appReady` guard prevents auto-adopt during initial boot
+
+**Branded Modals**: `appAlert(msg)`, `appConfirm(msg,okText,cancelText)`, `appChoice(msg,btnA,btnB,cancelText)`
+- All browser confirm()/alert() replaced — dark glass aesthetic matching app
+
+**Known gotcha**: Function scoping — never define functions inside other functions via str_replace. Always ensure closing `}` before starting new function.

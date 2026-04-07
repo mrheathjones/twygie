@@ -121,7 +121,7 @@ An interactive, beautiful family tree web app. Each family member is a "Twyg" �
 ### Long-term
 - [x] **Phase 3a — Tree Linking infrastructure** (Session 10) — link codes, bridge nodes, real-time sync
 - [x] **Phase 3b — Bridge Display** (Session 10) — gold dashed ring on tree nodes, legend entry
-- [ ] **Phase 3c — Sharing Tiers** — Bridge Only / Selective / Share All toggles
+- [x] **Phase 3c — Sharing Tiers** (Session 10) — Share All/Bridge Only, auto-adopt, shared encryption, branded modals
 - [ ] Mobile app (iOS/Android)
 - [ ] AI story generation from notes
 - [ ] Birthday/anniversary notifications

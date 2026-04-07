@@ -367,3 +367,40 @@ Built as a separate HTML page (timeline.html) with:
 - Chain icon badge removed (ring alone is sufficient)
 - Bridge badge on node card: "Linked with [name]'s tree" (from Phase 3a)
 - All indicators update in real-time via onSnapshot listeners
+
+### Phase 3c — Sharing Tiers (Session 10)
+- Share All / Bridge Only toggle per link in Manage Linked Trees
+- Shared encryption key: PBKDF2(sort([uidA,uidB]).join('|'), 'twygie-shared-v1')
+- Shared data encrypted with AES-256-GCM, stored in treeLinks.sharedData.{uid}
+- Photos and notes stripped from shared data (Firestore 1MB limit)
+- Bidirectional spouse detection when building shared data
+- getRelToYou() used for accurate relationship labels at share-time
+- Share All checkbox during link code generation (autoShareAll flag on invite)
+- Auto-upload: onSnapshot detects shareLevel='all' + no data → auto-encrypts
+
+#### Shared Node Rendering
+- Ghost/faded gold dashed circles at 50% opacity
+- Positioned relative to bridge node (scaled + offset)
+- Dashed connection lines: green for parent-child, blue for spouse
+- Hover tooltip: "Name · From [user]'s tree"
+- Click opens styled popup card (not browser alert)
+- Deduplication: name+birthYear fingerprinting, aggressive firstName-only fallback
+
+#### Auto-Adopt
+- Checkbox in link card: "Auto-adopt unique nodes from their tree"
+- adoptBatch() sorts parents-first, multi-pass (up to 5) adoption
+- Properly remaps parent/spouse IDs as each node is adopted
+- Adopted nodes get double-ring visual (inner solid + outer dashed spinning 12s)
+- Auto-adopt flag stored on treeLink, triggered inside loadSharedNodes
+- appReady guard prevents auto-adopt during initial boot
+
+#### Node Card Buttons
+- isYou: "Link Tree" (generate code) + "Unlink" (multi-select modal)
+- Other nodes: "Link Twyg" (opens code entry) + "Unlink" on bridge nodes
+- Unlink modal: checkbox list of linked users, Unlink Selected, Unlink All, Cancel
+
+#### Branded Modals
+- appAlert(msg): single OK button, dark glass aesthetic
+- appConfirm(msg, okText, cancelText): two buttons with custom labels
+- appChoice(msg, btnA, btnB, cancelText): three buttons, returns 'a'/'b'/false
+- All browser confirm()/alert() calls replaced throughout the app
