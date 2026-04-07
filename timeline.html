@@ -18,7 +18,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-famil
 #loading.fade{opacity:0;pointer-events:none}#loading.gone{display:none}
 
 /* Timeline area */
-#tl-scroll{position:fixed;top:0;left:0;right:56px;bottom:56px;overflow:hidden}
+#tl-scroll{position:fixed;top:0;left:0;right:56px;bottom:0;overflow:hidden}
 #tl-inner{position:relative;height:100%;will-change:transform}
 #tl-line{position:absolute;left:0;right:0;top:68%;height:2px;background:linear-gradient(to right,transparent 20px,rgba(200,168,75,.2) 60px,rgba(200,168,75,.2) calc(100% - 60px),transparent)}
 
@@ -81,14 +81,14 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-famil
 #v-bar .sb-lines{flex-direction:column;gap:5px;align-items:center}
 #v-bar .sb-line{width:14px;height:2px}
 
-/* Horizontal bar (bottom) — SCROLL */
-#h-bar{bottom:12px;left:50%;transform:translateX(-50%);height:40px;padding:0 12px;align-items:center}
+/* Horizontal bar (bottom) — SCROLL — positioned just below timeline */
+#h-bar{top:76%;left:50%;transform:translateX(-50%);height:40px;padding:0 12px;align-items:center}
 #h-bar .sb-lines{flex-direction:row;gap:5px;align-items:center}
 #h-bar .sb-line{width:2px;height:14px}
 
 /* Labels */
-#zoom-label{position:fixed;bottom:56px;right:12px;z-index:50;font-size:.55rem;color:rgba(200,168,75,.4);text-align:center;width:40px;letter-spacing:.06em;text-transform:uppercase}
-#legend{position:fixed;bottom:56px;left:14px;z-index:50;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px 12px;backdrop-filter:blur(12px);display:flex;gap:10px;flex-wrap:wrap;font-size:.6rem}
+#zoom-label{position:fixed;top:calc(50% + 130px);right:12px;z-index:50;font-size:.55rem;color:rgba(200,168,75,.4);text-align:center;width:40px;letter-spacing:.06em;text-transform:uppercase}
+#legend{position:fixed;bottom:14px;left:14px;z-index:50;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px 12px;backdrop-filter:blur(12px);display:flex;gap:10px;flex-wrap:wrap;font-size:.6rem}
 .leg-i{display:flex;align-items:center;gap:4px;color:var(--muted)}.leg-d{width:8px;height:8px;border-radius:50%}
 #empty{display:none;position:fixed;inset:0;z-index:10;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:12px;color:var(--muted);font-size:.95rem}
 #empty.show{display:flex}
@@ -99,7 +99,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-famil
 /* Detail Modal */
 #detail-bg{position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.7);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);opacity:0;pointer-events:none;transition:opacity .25s;display:flex;align-items:center;justify-content:center}
 #detail-bg.open{opacity:1;pointer-events:all}
-#detail-card{background:rgba(6,12,24,.97);border:1px solid rgba(200,168,75,.2);border-radius:18px;width:440px;max-width:92vw;max-height:85vh;overflow-y:auto;padding:28px;box-shadow:0 30px 80px rgba(0,0,0,.8);transform:translateY(12px) scale(.96);transition:transform .25s}
+#detail-card{background:rgba(6,12,24,.75);border:1px solid rgba(200,168,75,.15);border-radius:18px;width:440px;max-width:92vw;max-height:85vh;overflow-y:auto;padding:28px;box-shadow:0 30px 80px rgba(0,0,0,.5);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);transform:translateY(12px) scale(.96);transition:transform .25s}
 #detail-bg.open #detail-card{transform:translateY(0) scale(1)}
 .dc-close{position:absolute;top:14px;right:14px;width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--muted);font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s}
 .dc-close:hover{color:var(--text);background:rgba(255,255,255,.1)}
@@ -178,8 +178,8 @@ function col(p){return NC[relCat(p)]||NC.default}
 
 // ─── TIMELINE STATE ───
 const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-let scrollPos=0; // 0-1 horizontal position
-let zoomLevel=0.3; // 0=overview, 1=month-level
+let scrollPos=0.5; // 0-1 horizontal position — start centered
+let zoomLevel=0.5; // 0=overview, 1=month-level — start mid-bar
 let minY=1950, maxY=2030, byYearCount={};
 
 // Zoom → pixels per year
@@ -392,7 +392,7 @@ function updateZoomLabel(){
 
 // ─── RESET VIEW ───
 function resetView(){
-  zoomLevel=0.3;
+  zoomLevel=0.5;
   renderTimeline();
   scrollToYou();
   renderBars();
