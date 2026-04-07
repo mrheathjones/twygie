@@ -7,477 +7,191 @@
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --bg:#04070c;--surface:rgba(10,18,32,.95);--border:rgba(255,255,255,.08);
-  --text:rgba(255,255,255,.88);--muted:rgba(255,255,255,.4);--gold:#c8a84b;
-  --cream:#f0efeb;
-}
+:root{--bg:#04070c;--surface:rgba(10,18,32,.96);--border:rgba(255,255,255,.08);--text:rgba(255,255,255,.88);--muted:rgba(255,255,255,.4);--gold:#c8a84b;--cream:#f0efeb}
 html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-family:'Outfit',sans-serif;color:var(--text)}
-
-/* Header */
-#hdr{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:14px 24px;background:linear-gradient(to bottom,var(--bg) 70%,transparent);pointer-events:none}
-#hdr>*{pointer-events:all}
-.logo{font-family:'Cormorant Garamond',serif;font-size:1.15rem;font-weight:700;color:var(--text);display:flex;align-items:center;gap:7px;letter-spacing:.01em}
-.hbtns{display:flex;align-items:center;gap:8px}
+#hdr{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:14px 24px;background:linear-gradient(to bottom,var(--bg) 80%,transparent)}
+.logo{font-family:'Cormorant Garamond',serif;font-size:1.15rem;font-weight:700;color:var(--text);display:flex;align-items:center;gap:7px}
 .hbtn{padding:6px 14px;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:100px;color:var(--muted);font-family:'Outfit',sans-serif;font-size:.76rem;cursor:pointer;transition:all .2s;white-space:nowrap;text-decoration:none;display:inline-flex;align-items:center;gap:5px}
 .hbtn:hover{background:rgba(255,255,255,.1);color:var(--text)}
-
-/* Loading */
 #loading{position:fixed;inset:0;z-index:999;background:var(--bg);display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:1.2rem;color:var(--muted);transition:opacity .4s}
-#loading.fade{opacity:0;pointer-events:none}
-#loading.gone{display:none}
-
-/* Timeline container */
-#timeline-wrap{position:fixed;top:0;left:0;right:0;bottom:0;overflow:hidden;cursor:grab}
-#timeline-wrap.grabbing{cursor:grabbing}
-
-/* Timeline content - transformed for pan/zoom */
-#tl-canvas{position:absolute;top:0;left:0;transform-origin:0 0;will-change:transform}
-
-/* Year axis */
-.year-marker{position:absolute;bottom:0;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;pointer-events:none}
-.year-line{width:1px;flex:1;background:linear-gradient(to bottom,transparent 60px,rgba(200,168,75,.08) 60px,rgba(200,168,75,.15) calc(100% - 50px),transparent)}
-.year-label{font-size:.7rem;color:var(--gold);font-weight:600;letter-spacing:.05em;padding:12px 0;opacity:.6}
-.year-marker.decade .year-line{background:linear-gradient(to bottom,transparent 60px,rgba(200,168,75,.15) 60px,rgba(200,168,75,.25) calc(100% - 50px),transparent)}
-.year-marker.decade .year-label{opacity:1;font-size:.78rem}
-
-/* Generation bands */
-.gen-band{position:absolute;left:0;right:0;border-top:1px solid rgba(200,168,75,.06);pointer-events:none}
-.gen-label{position:absolute;left:16px;top:4px;font-size:.58rem;text-transform:uppercase;letter-spacing:.15em;color:var(--gold);opacity:.35;font-weight:600}
-
-/* Member nodes — compact dots, expand on hover */
-.tl-node{position:absolute;cursor:pointer;z-index:2;transition:z-index 0s}
+#loading.fade{opacity:0;pointer-events:none}#loading.gone{display:none}
+#tl-scroll{position:fixed;top:0;left:0;right:0;bottom:0;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;scrollbar-color:rgba(200,168,75,.3) transparent}
+#tl-scroll::-webkit-scrollbar{height:6px}#tl-scroll::-webkit-scrollbar-track{background:transparent}#tl-scroll::-webkit-scrollbar-thumb{background:rgba(200,168,75,.3);border-radius:3px}
+#tl-inner{position:relative;height:100%;min-width:100vw;display:flex;align-items:center}
+#tl-line{position:absolute;left:0;right:0;top:50%;height:2px;background:linear-gradient(to right,transparent 20px,rgba(200,168,75,.25),rgba(200,168,75,.25) calc(100% - 20px),transparent)}
+.yr{position:absolute;top:50%;transform:translateX(-50%);pointer-events:none;display:flex;flex-direction:column;align-items:center}
+.yr-tick{width:1px;height:12px;background:rgba(200,168,75,.2);margin-top:8px}
+.yr-label{font-size:.62rem;color:rgba(200,168,75,.4);margin-top:4px;letter-spacing:.04em}
+.yr.decade .yr-tick{height:20px;background:rgba(200,168,75,.4)}
+.yr.decade .yr-label{font-size:.72rem;color:var(--gold);font-weight:600;opacity:.7}
+.tl-node{position:absolute;top:50%;transform:translate(-50%,-50%);cursor:pointer;z-index:2;display:flex;flex-direction:column;align-items:center;gap:3px}
 .tl-node:hover{z-index:20}
-.tl-dot{width:36px;height:36px;border-radius:50%;overflow:hidden;background:rgba(255,255,255,.06);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:600;transition:transform .2s,box-shadow .2s}
+.tl-dot{width:40px;height:40px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:700;transition:transform .2s,box-shadow .2s}
 .tl-dot img{width:100%;height:100%;object-fit:cover}
-.tl-node:hover .tl-dot{transform:scale(1.15);box-shadow:0 0 16px rgba(200,168,75,.3)}
-.tl-dot-name{position:absolute;top:40px;left:50%;transform:translateX(-50%);font-size:.58rem;color:var(--muted);white-space:nowrap;text-align:center;pointer-events:none;opacity:.7}
-
-/* Hover popup card */
-.tl-popup{position:absolute;bottom:48px;left:50%;transform:translateX(-50%) scale(.9);opacity:0;pointer-events:none;transition:all .2s ease;z-index:30;width:180px}
+.tl-node:hover .tl-dot{transform:scale(1.2);box-shadow:0 0 20px rgba(200,168,75,.35)}
+.tl-name{font-size:.58rem;color:var(--muted);white-space:nowrap;max-width:70px;overflow:hidden;text-overflow:ellipsis;text-align:center}
+.tl-ytag{font-size:.5rem;color:rgba(200,168,75,.45)}
+.tl-group{position:absolute;top:50%;transform:translate(-50%,-50%);cursor:pointer;z-index:3;display:flex;flex-direction:column;align-items:center;gap:3px}
+.tl-group:hover{z-index:25}
+.tl-badge{width:44px;height:44px;border-radius:50%;background:rgba(200,168,75,.18);border:2px solid var(--gold);display:flex;align-items:center;justify-content:center;font-size:.9rem;font-weight:700;color:var(--gold);transition:transform .2s,box-shadow .2s}
+.tl-group:hover .tl-badge{transform:scale(1.15);box-shadow:0 0 24px rgba(200,168,75,.3);background:rgba(200,168,75,.3)}
+.tl-stack{display:flex;margin-top:-2px}.tl-stack-dot{width:10px;height:10px;border-radius:50%;margin-left:-3px;border:1px solid rgba(0,0,0,.5)}.tl-stack-dot:first-child{margin-left:0}
+.tl-popup{position:absolute;bottom:calc(100% + 10px);left:50%;transform:translateX(-50%) scale(.9);opacity:0;pointer-events:none;transition:all .2s;z-index:30;width:200px}
 .tl-node:hover .tl-popup{opacity:1;transform:translateX(-50%) scale(1);pointer-events:all}
-.tl-popup-inner{background:rgba(8,16,30,.96);border:1px solid rgba(200,168,75,.25);border-radius:12px;padding:12px;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);box-shadow:0 8px 32px rgba(0,0,0,.6)}
-.tl-popup-inner::after{content:'';position:absolute;bottom:-6px;left:50%;transform:translateX(-50%) rotate(45deg);width:10px;height:10px;background:rgba(8,16,30,.96);border-right:1px solid rgba(200,168,75,.25);border-bottom:1px solid rgba(200,168,75,.25)}
-.tl-popup-photo{width:48px;height:48px;border-radius:50%;overflow:hidden;margin:0 auto 8px;background:rgba(255,255,255,.06);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:600}
-.tl-popup-photo img{width:100%;height:100%;object-fit:cover}
-.tl-popup-name{font-size:.82rem;font-weight:600;color:var(--text);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tl-popup-rel{font-size:.65rem;color:var(--gold);text-align:center;font-style:italic;margin-top:2px}
-.tl-popup-dates{font-size:.65rem;color:var(--muted);text-align:center;margin-top:4px}
-.tl-popup-age{font-size:.6rem;color:var(--muted);text-align:center;margin-top:1px}
-.tl-popup-story{font-size:.6rem;color:rgba(255,255,255,.35);font-style:italic;text-align:center;margin-top:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-
-/* Life span bar */
-.tl-lifespan-bar{position:absolute;height:3px;border-radius:2px;opacity:.45;pointer-events:none}
-
-/* Connector line from card to axis */
-.tl-connector{position:absolute;width:1px;opacity:.2;pointer-events:none}
-
-/* Legend */
-#legend{position:fixed;bottom:16px;left:16px;z-index:50;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px;backdrop-filter:blur(12px);display:flex;gap:12px;flex-wrap:wrap;font-size:.65rem}
-.leg-item{display:flex;align-items:center;gap:4px;color:var(--muted)}
-.leg-dot{width:8px;height:8px;border-radius:50%}
-
-/* Zoom controls */
-#zc{position:fixed;bottom:16px;right:16px;z-index:50;display:flex;flex-direction:column;gap:4px}
-.zb{width:32px;height:32px;border-radius:8px;background:var(--surface);border:1px solid var(--border);color:var(--muted);font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s}
-.zb:hover{background:rgba(255,255,255,.08);color:var(--text)}
-
-/* Empty state */
+.tl-pop{background:rgba(8,16,30,.97);border:1px solid rgba(200,168,75,.25);border-radius:14px;padding:14px;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);box-shadow:0 12px 40px rgba(0,0,0,.7)}
+.tl-pop::after{content:'';position:absolute;bottom:-6px;left:50%;transform:translateX(-50%) rotate(45deg);width:10px;height:10px;background:rgba(8,16,30,.97);border-right:1px solid rgba(200,168,75,.25);border-bottom:1px solid rgba(200,168,75,.25)}
+.tl-pp{width:50px;height:50px;border-radius:50%;overflow:hidden;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:600}
+.tl-pp img{width:100%;height:100%;object-fit:cover}
+.tl-pn{font-size:.86rem;font-weight:600;color:var(--text);text-align:center}
+.tl-pr{font-size:.66rem;color:var(--gold);text-align:center;font-style:italic;margin-top:2px}
+.tl-pd{font-size:.66rem;color:var(--muted);text-align:center;margin-top:4px}
+.tl-pa{font-size:.6rem;color:var(--muted);text-align:center;margin-top:1px}
+.tl-ps{font-size:.6rem;color:rgba(255,255,255,.3);font-style:italic;text-align:center;margin-top:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.tl-gpop{position:absolute;bottom:calc(100% + 10px);left:50%;transform:translateX(-50%) scale(.9);opacity:0;pointer-events:none;transition:all .2s;z-index:30;width:230px}
+.tl-group:hover .tl-gpop{opacity:1;transform:translateX(-50%) scale(1);pointer-events:all}
+.tl-gpop-in{background:rgba(8,16,30,.97);border:1px solid rgba(200,168,75,.25);border-radius:14px;padding:8px;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);box-shadow:0 12px 40px rgba(0,0,0,.7);max-height:320px;overflow-y:auto}
+.tl-gpop-in::after{content:'';position:absolute;bottom:-6px;left:50%;transform:translateX(-50%) rotate(45deg);width:10px;height:10px;background:rgba(8,16,30,.97);border-right:1px solid rgba(200,168,75,.25);border-bottom:1px solid rgba(200,168,75,.25)}
+.tl-gc{display:flex;align-items:center;gap:10px;padding:8px 6px;border-radius:8px;cursor:pointer;transition:background .15s}
+.tl-gc:hover{background:rgba(255,255,255,.05)}
+.tl-gc+.tl-gc{border-top:1px solid rgba(255,255,255,.04)}
+.tl-gc-ph{width:32px;height:32px;border-radius:50%;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.58rem;font-weight:600}
+.tl-gc-ph img{width:100%;height:100%;object-fit:cover}
+.tl-gc-i{flex:1;min-width:0}
+.tl-gc-n{font-size:.78rem;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tl-gc-r{font-size:.58rem;color:var(--gold);font-style:italic}
+.tl-gc-m{font-size:.56rem;color:var(--muted);margin-top:1px}
 #empty{display:none;position:fixed;inset:0;z-index:10;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:12px;color:var(--muted);font-size:.95rem}
 #empty.show{display:flex}
+#legend{position:fixed;bottom:14px;left:14px;z-index:50;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px 12px;backdrop-filter:blur(12px);display:flex;gap:10px;flex-wrap:wrap;font-size:.6rem}
+.leg-i{display:flex;align-items:center;gap:4px;color:var(--muted)}.leg-d{width:8px;height:8px;border-radius:50%}
 </style>
 </head>
 <body>
-
 <div id="loading">Loading timeline…</div>
-
 <div id="hdr">
   <div class="logo">
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
-      <path d="M12 22V10"/><path d="M12 10C12 6 8 3.5 4 4.5"/><path d="M12 10C12 6 16 3.5 20 4.5"/>
-      <path d="M12 16C12 13 9 11 5 12"/><path d="M12 16C12 13 15 11 19 12"/>
-    </svg>
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 22V10"/><path d="M12 10C12 6 8 3.5 4 4.5"/><path d="M12 10C12 6 16 3.5 20 4.5"/><path d="M12 16C12 13 9 11 5 12"/><path d="M12 16C12 13 15 11 19 12"/></svg>
     Twygie Timeline
   </div>
-  <div class="hbtns">
-    <button class="hbtn" onclick="fitTimeline()">Fit to screen</button>
-    <a class="hbtn" href="/app">← Back to Tree</a>
-  </div>
+  <a class="hbtn" href="/app">← Back to Tree</a>
 </div>
-
-<div id="timeline-wrap">
-  <div id="tl-canvas"></div>
-</div>
-
+<div id="tl-scroll"><div id="tl-inner"><div id="tl-line"></div></div></div>
 <div id="legend"></div>
-
-<div id="zc">
-  <button class="zb" onclick="zoomTL(1.2)">+</button>
-  <button class="zb" onclick="zoomTL(0.8)">−</button>
-  <button class="zb" style="font-size:.65rem" onclick="fitTimeline()">⊡</button>
-</div>
-
 <div id="empty">
-  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity=".3">
-    <path d="M12 22V10"/><path d="M12 10C12 6 8 3.5 4 4.5"/><path d="M12 10C12 6 16 3.5 20 4.5"/>
-  </svg>
+  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity=".3"><path d="M12 22V10"/><path d="M12 10C12 6 8 3.5 4 4.5"/><path d="M12 10C12 6 16 3.5 20 4.5"/></svg>
   <div>No birth years recorded yet.</div>
   <div style="font-size:.8rem">Add dates to your Twygs to see the timeline.</div>
   <a class="hbtn" href="/app" style="margin-top:8px">← Back to Tree</a>
 </div>
-
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 <script>
-const firebaseConfig = {
-  apiKey: "AIzaSyBwtDMGEIphvwvq319MZIr62C32fvSSe-4",
-  authDomain: "twygie.firebaseapp.com",
-  projectId: "twygie",
-  storageBucket: "twygie.firebasestorage.app",
-  messagingSenderId: "654053569477",
-  appId: "1:654053569477:web:9296f441c285686d7c11ac"
-};
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db   = firebase.firestore();
+const firebaseConfig={apiKey:"AIzaSyBwtDMGEIphvwvq319MZIr62C32fvSSe-4",authDomain:"twygie.firebaseapp.com",projectId:"twygie",storageBucket:"twygie.firebasestorage.app",messagingSenderId:"654053569477",appId:"1:654053569477:web:9296f441c285686d7c11ac"};
+firebase.initializeApp(firebaseConfig);const auth=firebase.auth(),db=firebase.firestore();
+let P=[],byId={},currentUser=null,youngAge=17;
+const NC={you:'#f0efeb',spouse:'#e8a838',parent:'#7ab8e8',child:'#6ecb8a',sibling:'#e87a5a',grandparent:'#b89ae8',extended:'#e8c87a',deceased:'#6b9ec2',young:'#4ecdb4',default:'#f0b845'};
 
-// ─── STATE ───
-let P=[], byId={}, currentUser=null, youngAge=17;
-const nodeColors={
-  you:'#f0efeb',spouse:'#e8a838',parent:'#7ab8e8',child:'#6ecb8a',
-  sibling:'#e87a5a',grandparent:'#b89ae8',extended:'#e8c87a',
-  deceased:'#6b9ec2',young:'#4ecdb4',default:'#f0b845'
-};
+async function deriveKey(uid){const e=new TextEncoder();const km=await crypto.subtle.importKey('raw',e.encode(uid),'PBKDF2',false,['deriveKey']);return crypto.subtle.deriveKey({name:'PBKDF2',salt:e.encode('twygie-encryption-v1'),iterations:100000,hash:'SHA-256'},km,{name:'AES-GCM',length:256},false,['encrypt','decrypt'])}
+async function decrypt(key,b64){const bin=atob(b64);const raw=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)raw[i]=bin.charCodeAt(i);const dec=await crypto.subtle.decrypt({name:'AES-GCM',iv:raw.slice(0,12)},key,raw.slice(12));return JSON.parse(new TextDecoder().decode(dec))}
 
-// ─── ENCRYPTION ───
-async function deriveKey(uid){
-  const enc=new TextEncoder();
-  const km=await crypto.subtle.importKey('raw',enc.encode(uid),'PBKDF2',false,['deriveKey']);
-  return crypto.subtle.deriveKey(
-    {name:'PBKDF2',salt:enc.encode('twygie-encryption-v1'),iterations:100000,hash:'SHA-256'},
-    km,{name:'AES-GCM',length:256},false,['encrypt','decrypt']
-  );
-}
-async function decrypt(key,b64){
-  const bin=atob(b64);const raw=new Uint8Array(bin.length);
-  for(let i=0;i<bin.length;i++) raw[i]=bin.charCodeAt(i);
-  const iv=raw.slice(0,12),ct=raw.slice(12);
-  const dec=await crypto.subtle.decrypt({name:'AES-GCM',iv},key,ct);
-  return JSON.parse(new TextDecoder().decode(dec));
-}
-
-// ─── HELPERS ───
 function fullName(p){return p.name||[(p.firstName||''),(p.lastName||'')].filter(Boolean).join(' ')||'Unknown'}
-function calcAge(p){
-  const by=parseInt(p.dob&&p.dob.year)||p.birth||null;if(!by)return null;
-  const dy=parseInt(p.dod&&p.dod.year)||p.death||null;
-  return (dy||new Date().getFullYear())-by;
-}
-function genderedRel(base,gender){
-  const m=gender==='male',f=gender==='female';
-  const map={'Parent':m?'Father':f?'Mother':'Parent','Child':m?'Son':f?'Daughter':'Child',
-    'Sibling':m?'Brother':f?'Sister':'Sibling','Spouse':m?'Husband':f?'Wife':'Partner',
-    'Grandparent':m?'Grandfather':f?'Grandmother':'Grandparent',
-    'Grandchild':m?'Grandson':f?'Granddaughter':'Grandchild'};
-  return map[base]||base;
-}
-function getRelToYou(id){
-  const you=P.find(p=>p.isYou);if(!you||id===you.id)return '';
-  const p=byId[id];if(!p)return '';
-  if((p.parents||[]).includes(you.id))return genderedRel('Child',p.gender);
-  if((you.parents||[]).includes(id))return genderedRel('Parent',p.gender);
-  if(p.spouseOf===you.id||you.spouseOf===id)return genderedRel('Spouse',p.gender);
-  const ycl=you.customLinks&&you.customLinks[id];
-  if(ycl)return typeof ycl==='string'?ycl:ycl.label;
-  const pcl=p.customLinks&&p.customLinks[you.id];
-  if(pcl)return typeof pcl==='string'?pcl:pcl.label;
-  if(p.relLabel)return p.relLabel;
-  const myP=new Set(you.parents||[]);
-  if(myP.size&&(p.parents||[]).some(pp=>myP.has(pp)))return genderedRel('Sibling',p.gender);
-  return '';
-}
-function relCategory(p){
-  if(p.isYou)return 'you';
-  if(p.death||(p.dod&&p.dod.year))return 'deceased';
-  const by=parseInt(p.dob&&p.dob.year)||p.birth||0;
-  if(by>0&&(new Date().getFullYear()-by)<=youngAge)return 'young';
-  const you=P.find(x=>x.isYou);if(!you)return 'default';
-  if((p.parents||[]).includes(you.id))return 'child';
-  if((you.parents||[]).includes(p.id))return 'parent';
-  if(p.spouseOf===you.id||you.spouseOf===p.id)return 'spouse';
-  const myP=new Set(you.parents||[]);
-  if(myP.size&&(p.parents||[]).some(pp=>myP.has(pp)))return 'sibling';
-  const ycl=you.customLinks&&you.customLinks[p.id];
-  if(ycl)return 'extended';
-  const pcl=p.customLinks&&p.customLinks[you.id];
-  if(pcl)return 'extended';
-  return 'default';
-}
-function col(p){return nodeColors[relCategory(p)]||nodeColors.default}
 function initials(p){return fullName(p).split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}
+function calcAge(p){const by=parseInt(p.dob&&p.dob.year)||p.birth||null;if(!by)return null;const dy=parseInt(p.dod&&p.dod.year)||p.death||null;return(dy||new Date().getFullYear())-by}
+function genderedRel(b,g){const m=g==='male',f=g==='female';const map={'Parent':m?'Father':f?'Mother':'Parent','Child':m?'Son':f?'Daughter':'Child','Sibling':m?'Brother':f?'Sister':'Sibling','Spouse':m?'Husband':f?'Wife':'Partner','Grandparent':m?'Grandfather':f?'Grandmother':'Grandparent','Grandchild':m?'Grandson':f?'Granddaughter':'Grandchild'};return map[b]||b}
+function getRelToYou(id){const you=P.find(p=>p.isYou);if(!you||id===you.id)return'';const p=byId[id];if(!p)return'';if((p.parents||[]).includes(you.id))return genderedRel('Child',p.gender);if((you.parents||[]).includes(id))return genderedRel('Parent',p.gender);if(p.spouseOf===you.id||you.spouseOf===id)return genderedRel('Spouse',p.gender);const ycl=you.customLinks&&you.customLinks[id];if(ycl)return typeof ycl==='string'?ycl:ycl.label;const pcl=p.customLinks&&p.customLinks[you.id];if(pcl)return typeof pcl==='string'?pcl:pcl.label;if(p.relLabel)return p.relLabel;const myP=new Set(you.parents||[]);if(myP.size&&(p.parents||[]).some(pp=>myP.has(pp)))return genderedRel('Sibling',p.gender);return''}
+function relCat(p){if(p.isYou)return'you';if(p.death||(p.dod&&p.dod.year))return'deceased';const by=parseInt(p.dob&&p.dob.year)||p.birth||0;if(by>0&&(new Date().getFullYear()-by)<=youngAge)return'young';const you=P.find(x=>x.isYou);if(!you)return'default';if((p.parents||[]).includes(you.id))return'child';if((you.parents||[]).includes(p.id))return'parent';if(p.spouseOf===you.id||you.spouseOf===p.id)return'spouse';const myP=new Set(you.parents||[]);if(myP.size&&(p.parents||[]).some(pp=>myP.has(pp)))return'sibling';if((you.customLinks&&you.customLinks[p.id])||(p.customLinks&&p.customLinks[you.id]))return'extended';return'default'}
+function col(p){return NC[relCat(p)]||NC.default}
 
-// ─── GENERATION ASSIGNMENT ───
-function assignGenerations(){
-  const you=P.find(p=>p.isYou);if(!you)return {};
-  const gen={};const q=[{id:you.id,g:0}];const vis=new Set();
-  while(q.length){
-    const{id,g}=q.shift();if(vis.has(id))continue;vis.add(id);gen[id]=g;
-    const p=byId[id];if(!p)continue;
-    (p.parents||[]).forEach(pid=>{if(!vis.has(pid))q.push({id:pid,g:g-1})});
-    P.filter(x=>(x.parents||[]).includes(id)).forEach(c=>{if(!vis.has(c.id))q.push({id:c.id,g:g+1})});
-    if(p.spouseOf&&!vis.has(p.spouseOf))q.push({id:p.spouseOf,g});
-    const sp=P.find(x=>x.spouseOf===id);
-    if(sp&&!vis.has(sp.id))q.push({id:sp.id,g});
-  }
-  P.forEach(p=>{if(gen[p.id]===undefined)gen[p.id]=0});
-  return gen;
-}
-
-// ─── TIMELINE RENDERING ───
-const YEAR_WIDTH=24; // pixels per year — compact
-const GEN_HEIGHT=100; // pixels per generation band
-const PAD_LEFT=80, PAD_RIGHT=80, PAD_TOP=60, PAD_BOTTOM=70;
-
-let tlTx=0, tlTy=0, tlScale=1;
+const YEAR_PX=50,PAD=120;
 
 function renderTimeline(){
-  const canvas=document.getElementById('tl-canvas');
-  const currentYear=new Date().getFullYear();
+  const inner=document.getElementById('tl-inner');
+  const curYr=new Date().getFullYear();
+  const you=P.find(p=>p.isYou);
+  const entries=P.filter(p=>(parseInt(p.dob&&p.dob.year)||p.birth||0)>0);
+  if(!entries.length){document.getElementById('empty').classList.add('show');return}
 
-  // Filter to members with birth years
-  const entries=P.filter(p=>{
-    const by=parseInt(p.dob&&p.dob.year)||p.birth||0;
-    return by>0;
-  });
-
-  if(!entries.length){
-    document.getElementById('empty').classList.add('show');
-    canvas.innerHTML='';
-    return;
-  }
-
-  const gen=assignGenerations();
-
-  // Calculate year range
-  const birthYears=entries.map(p=>parseInt(p.dob&&p.dob.year)||p.birth);
-  const deathYears=entries.map(p=>parseInt(p.dod&&p.dod.year)||p.death||0).filter(y=>y>0);
-  const minYear=Math.min(...birthYears)-2;
-  const maxYear=Math.max(currentYear,...deathYears)+2;
-
-  // Calculate generation range
-  const genValues=entries.map(p=>gen[p.id]||0);
-  const minGen=Math.min(...genValues);
-  const maxGen=Math.max(...genValues);
-  const genCount=maxGen-minGen+1;
-
-  // Canvas dimensions
-  const canvasW=PAD_LEFT+(maxYear-minYear)*YEAR_WIDTH+PAD_RIGHT;
-  const canvasH=PAD_TOP+genCount*GEN_HEIGHT+PAD_BOTTOM;
-  canvas.style.width=canvasW+'px';
-  canvas.style.height=canvasH+'px';
+  const bys=entries.map(p=>parseInt(p.dob&&p.dob.year)||p.birth);
+  const minY=Math.min(...bys)-3,maxY=Math.max(curYr,...bys)+3;
+  const totalW=PAD*2+(maxY-minY)*YEAR_PX;
+  inner.style.width=totalW+'px';
+  const xOf=y=>PAD+(y-minY)*YEAR_PX;
 
   let html='';
+  // Year markers
+  for(let y=minY;y<=maxY;y++){const iD=y%10===0,i5=y%5===0;if(!i5)continue;
+    html+=`<div class="yr${iD?' decade':''}" style="left:${xOf(y)}px"><div class="yr-tick"></div><div class="yr-label">${y}</div></div>`}
 
-  // ── Year markers ──
-  for(let y=minYear;y<=maxYear;y++){
-    const x=PAD_LEFT+(y-minYear)*YEAR_WIDTH;
-    const isDecade=y%10===0;
-    const isFive=y%5===0;
-    if(!isFive)continue;
-    html+=`<div class="year-marker${isDecade?' decade':''}" style="left:${x}px;width:${YEAR_WIDTH}px">
-      <div class="year-line"></div>
-      <div class="year-label">${y}</div>
-    </div>`;
-  }
+  // Group by birth year
+  const byYear={};entries.forEach(p=>{const by=parseInt(p.dob&&p.dob.year)||p.birth;if(!byYear[by])byYear[by]=[];byYear[by].push(p)});
 
-  // ── Generation bands ──
-  const genLabels={'-4':'Great-Great-Grandparents','-3':'Great-Grandparents','-2':'Grandparents','-1':'Parents','0':'Your Generation','1':'Children','2':'Grandchildren','3':'Great-Grandchildren'};
-  for(let g=minGen;g<=maxGen;g++){
-    const bandY=PAD_TOP+(g-minGen)*GEN_HEIGHT;
-    const label=genLabels[String(g)]||`Generation ${g>0?'+':''}${g}`;
-    html+=`<div class="gen-band" style="top:${bandY}px;height:${GEN_HEIGHT}px">
-      <div class="gen-label">${label}</div>
-    </div>`;
-  }
+  Object.keys(byYear).sort((a,b)=>a-b).forEach(year=>{
+    const ms=byYear[year],x=xOf(parseInt(year));
 
-  // ── Track occupied slots to avoid overlaps ──
-  const slots={}; // key: "gen-yearBucket" → count
+    if(ms.length===1){
+      const p=ms[0],c=col(p),rel=p.isYou?'You':getRelToYou(p.id),age=calcAge(p),nm=fullName(p);
+      const dy=parseInt(p.dod&&p.dod.year)||p.death||0;
+      const story=(p.note&&!p.note.includes('Tap Edit'))?p.note:'';
+      const dot=p.photo?`<img src="${p.photo}"/>`:`<span>${initials(p)}</span>`;
+      let ds=`${year}`;if(dy)ds+=` – ${dy}`;
+      const ag=age!=null?(dy?`Lived ${age} years`:`Age ${age}`):'';
+      const pp=p.photo?`<div class="tl-pp" style="background:${c}"><img src="${p.photo}"/></div>`:`<div class="tl-pp" style="background:${c};color:#04070c">${initials(p)}</div>`;
 
-  // ── Member nodes + life span bars ──
-  entries.forEach(p=>{
-    const by=parseInt(p.dob&&p.dob.year)||p.birth;
-    const dy=parseInt(p.dod&&p.dod.year)||p.death||0;
-    const g=gen[p.id]||0;
-    const c=col(p);
-    const rel=p.isYou?'You':getRelToYou(p.id);
-    const age=calcAge(p);
-    const name=fullName(p);
+      html+=`<div class="tl-node" style="left:${x}px" onclick="window.location.href='/app#node-${p.id}'">
+        <div class="tl-popup"><div class="tl-pop">
+          ${pp}<div class="tl-pn">${nm}</div>
+          ${rel?`<div class="tl-pr">${rel}</div>`:''}
+          <div class="tl-pd">${ds}</div>${ag?`<div class="tl-pa">${ag}</div>`:''}
+          ${story?`<div class="tl-ps">${story}</div>`:''}
+        </div></div>
+        <div class="tl-dot" style="background:${c};color:#04070c">${dot}</div>
+        <div class="tl-name">${nm.split(' ')[0]}</div>
+        <div class="tl-ytag">${year}</div>
+      </div>`;
+    } else {
+      const sd=ms.slice(0,4).map(p=>`<div class="tl-stack-dot" style="background:${col(p)}"></div>`).join('');
+      let cards='';
+      ms.forEach(p=>{const c=col(p),rel=p.isYou?'You':getRelToYou(p.id),age=calcAge(p),nm=fullName(p);
+        const dy=parseInt(p.dod&&p.dod.year)||p.death||0;let ds=`${year}`;if(dy)ds+=` – ${dy}`;
+        const ag=age!=null?(dy?`${age} yrs`:`Age ${age}`):'';
+        const ph=p.photo?`<div class="tl-gc-ph" style="background:${c}"><img src="${p.photo}"/></div>`:`<div class="tl-gc-ph" style="background:${c};color:#04070c">${initials(p)}</div>`;
+        cards+=`<div class="tl-gc" onclick="event.stopPropagation();window.location.href='/app#node-${p.id}'">${ph}<div class="tl-gc-i"><div class="tl-gc-n">${nm}</div>${rel?`<div class="tl-gc-r">${rel}</div>`:''}<div class="tl-gc-m">${ds}${ag?' · '+ag:''}</div></div></div>`});
 
-    // X position from birth year
-    const x=PAD_LEFT+(by-minYear)*YEAR_WIDTH;
-
-    // Y position from generation — stagger within band
-    const bucket=`${g}-${Math.floor(by/5)}`;
-    slots[bucket]=(slots[bucket]||0);
-    const yOffset=slots[bucket]*44;
-    slots[bucket]++;
-    const nodeY=PAD_TOP+(g-minGen)*GEN_HEIGHT+20+yOffset;
-
-    // Life span bar
-    const endYear=dy||currentYear;
-    const barW=Math.max(4,(endYear-by)*YEAR_WIDTH);
-    html+=`<div class="tl-lifespan-bar" style="left:${x+18}px;top:${nodeY+16}px;width:${barW}px;background:${c}"></div>`;
-
-    // Connector line
-    html+=`<div class="tl-connector" style="left:${x+18}px;top:${nodeY+20}px;height:${canvasH-PAD_BOTTOM-(nodeY+20)}px;background:${c}"></div>`;
-
-    // Compact dot (photo or initials)
-    const dotContent=p.photo
-      ?`<img src="${p.photo}"/>`
-      :`<span style="color:${c}">${initials(p)}</span>`;
-
-    // Dates text for popup
-    let dateStr=`${by}`;
-    if(dy)dateStr+=` – ${dy}`;
-    const ageStr=age!=null?(dy?`Lived ${age} years`:`Age ${age}`):'';
-
-    // Story for popup
-    const story=(p.note&&!p.note.includes('Tap Edit to add your story'))?p.note:'';
-    const storyHtml=story?`<div class="tl-popup-story">${story}</div>`:'';
-
-    // Popup photo
-    const popupPhoto=p.photo
-      ?`<div class="tl-popup-photo" style="border-color:${c}"><img src="${p.photo}"/></div>`
-      :`<div class="tl-popup-photo" style="border-color:${c};color:${c}">${initials(p)}</div>`;
-
-    html+=`<div class="tl-node" style="left:${x}px;top:${nodeY}px" onclick="window.location.href='/app#node-${p.id}'">
-      <div class="tl-dot" style="border-color:${c}">${dotContent}</div>
-      <div class="tl-dot-name">${name.split(' ')[0]}</div>
-      <div class="tl-popup">
-        <div class="tl-popup-inner">
-          ${popupPhoto}
-          <div class="tl-popup-name">${name}</div>
-          ${rel?`<div class="tl-popup-rel">${rel}</div>`:''}
-          <div class="tl-popup-dates">${dateStr}</div>
-          ${ageStr?`<div class="tl-popup-age">${ageStr}</div>`:''}
-          ${storyHtml}
-        </div>
-      </div>
-    </div>`;
+      html+=`<div class="tl-group" style="left:${x}px">
+        <div class="tl-gpop"><div class="tl-gpop-in">${cards}</div></div>
+        <div class="tl-badge">${ms.length}<div class="tl-stack" style="position:absolute;bottom:-10px;left:50%;transform:translateX(-50%)">${sd}</div></div>
+        <div class="tl-ytag" style="margin-top:6px">${year}</div>
+      </div>`;
+    }
   });
 
-  canvas.innerHTML=html;
+  inner.innerHTML=`<div id="tl-line"></div>${html}`;
 
-  // ── Legend ──
-  const cats=new Set(entries.map(p=>relCategory(p)));
-  const catLabels={you:'You',spouse:'Spouse',parent:'Parent',child:'Child',sibling:'Sibling',
-    grandparent:'Grandparent',extended:'Extended',deceased:'Deceased',young:'Young',default:'Other'};
-  let legHtml='';
-  cats.forEach(c=>{
-    legHtml+=`<div class="leg-item"><div class="leg-dot" style="background:${nodeColors[c]}"></div>${catLabels[c]||c}</div>`;
-  });
-  document.getElementById('legend').innerHTML=legHtml;
+  // Legend
+  const cats=new Set(entries.map(p=>relCat(p)));
+  const cl={you:'You',spouse:'Spouse',parent:'Parent',child:'Child',sibling:'Sibling',grandparent:'Grandparent',extended:'Extended',deceased:'Deceased',young:'Young',default:'Other'};
+  let lh='';cats.forEach(c=>{lh+=`<div class="leg-i"><div class="leg-d" style="background:${NC[c]}"></div>${cl[c]||c}</div>`});
+  document.getElementById('legend').innerHTML=lh;
 
-  // Fit to screen on first render
-  fitTimeline();
+  // Scroll to isYou's decade
+  const sc=document.getElementById('tl-scroll');
+  if(you){const yby=parseInt(you.dob&&you.dob.year)||you.birth||0;
+    if(yby){const target=xOf(Math.floor(yby/10)*10-10)-sc.clientWidth*0.15;sc.scrollLeft=Math.max(0,target)}}
 }
 
-// ─── PAN / ZOOM ───
-function applyTL(){
-  document.getElementById('tl-canvas').style.transform=`translate(${tlTx}px,${tlTy}px) scale(${tlScale})`;
-}
-
-function fitTimeline(){
-  const canvas=document.getElementById('tl-canvas');
-  const cw=parseFloat(canvas.style.width)||1;
-  const ch=parseFloat(canvas.style.height)||1;
-  const ww=window.innerWidth, wh=window.innerHeight;
-  tlScale=Math.min(ww/cw,wh/ch)*0.9;
-  tlTx=(ww-cw*tlScale)/2;
-  tlTy=(wh-ch*tlScale)/2;
-  applyTL();
-}
-
-function zoomTL(f){
-  const cx=window.innerWidth/2,cy=window.innerHeight/2;
-  tlTx=cx-(cx-tlTx)*f;tlTy=cy-(cy-tlTy)*f;
-  tlScale=Math.max(.05,Math.min(5,tlScale*f));applyTL();
-}
-
-// Pan
-const wrap=document.getElementById('timeline-wrap');
-let drag=false,dsx=0,dsy=0;
-wrap.addEventListener('mousedown',e=>{
-  if(e.target.closest('.tl-card'))return;
-  drag=true;dsx=e.clientX-tlTx;dsy=e.clientY-tlTy;
-  wrap.classList.add('grabbing');
-});
-window.addEventListener('mousemove',e=>{
-  if(!drag)return;tlTx=e.clientX-dsx;tlTy=e.clientY-dsy;applyTL();
-});
-window.addEventListener('mouseup',()=>{drag=false;wrap.classList.remove('grabbing')});
-
-// Scroll zoom
-wrap.addEventListener('wheel',e=>{
-  e.preventDefault();
-  const f=e.deltaY<0?1.1:.9;
-  const r=wrap.getBoundingClientRect();
-  const mx=e.clientX-r.left,my=e.clientY-r.top;
-  tlTx=mx-(mx-tlTx)*f;tlTy=my-(my-tlTy)*f;
-  tlScale=Math.max(.05,Math.min(5,tlScale*f));applyTL();
-},{passive:false});
-
-// Touch pan/pinch
-let tpan=false,tdsx=0,tdsy=0,ltD=0;
-wrap.addEventListener('touchstart',e=>{
-  if(e.target.closest('.tl-card'))return;
-  if(e.touches.length===1){tpan=true;tdsx=e.touches[0].clientX-tlTx;tdsy=e.touches[0].clientY-tlTy}
-  else if(e.touches.length===2){tpan=false;ltD=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY)}
-},{passive:true});
-wrap.addEventListener('touchmove',e=>{
-  if(e.touches.length===1&&tpan){tlTx=e.touches[0].clientX-tdsx;tlTy=e.touches[0].clientY-tdsy;applyTL()}
-  else if(e.touches.length===2){
-    const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
-    if(ltD>0){const f=d/ltD;const cx=(e.touches[0].clientX+e.touches[1].clientX)/2;const cy=(e.touches[0].clientY+e.touches[1].clientY)/2;
-      tlTx=cx-(cx-tlTx)*f;tlTy=cy-(cy-tlTy)*f;tlScale=Math.max(.05,Math.min(5,tlScale*f));applyTL()}
-    ltD=d;
-  }
-},{passive:true});
-wrap.addEventListener('touchend',()=>{tpan=false;ltD=0});
-
-// ─── AUTH + LOAD ───
 auth.onAuthStateChanged(async user=>{
   if(!user){window.location.href='login.html';return}
   currentUser=user;
   try{
-    // Load settings
-    const setSnap=await db.collection('userSettings').doc(user.uid).get();
-    if(setSnap.exists){
-      const d=setSnap.data();
-      if(d.nodeColors)Object.assign(nodeColors,d.nodeColors);
-      if(d.youngAge!=null)youngAge=parseInt(d.youngAge)||17;
-    }
-    // Load tree
+    const ss=await db.collection('userSettings').doc(user.uid).get();
+    if(ss.exists){const d=ss.data();if(d.nodeColors)Object.assign(NC,d.nodeColors);if(d.youngAge!=null)youngAge=parseInt(d.youngAge)||17}
     const snap=await db.collection('familyTrees').doc(user.uid).get();
-    if(snap.exists){
-      const d=snap.data();
-      if(d.encryptedData){
-        const key=await deriveKey(user.uid);
-        P=await decrypt(key,d.encryptedData);
-      } else if(d.people&&d.people.length){
-        P=d.people;
-      }
-    }
+    if(snap.exists){const d=snap.data();if(d.encryptedData){const key=await deriveKey(user.uid);P=await decrypt(key,d.encryptedData)}else if(d.people&&d.people.length)P=d.people}
     byId={};P.forEach(p=>{if(!p.customLinks)p.customLinks={};byId[p.id]=p});
     renderTimeline();
-  }catch(e){
-    console.error('Failed to load:',e);
-    document.getElementById('empty').classList.add('show');
-  }
-  // Hide loading
-  const ld=document.getElementById('loading');
-  ld.classList.add('fade');setTimeout(()=>ld.classList.add('gone'),400);
+  }catch(e){console.error('Failed to load:',e);document.getElementById('empty').classList.add('show')}
+  const ld=document.getElementById('loading');ld.classList.add('fade');setTimeout(()=>ld.classList.add('gone'),400);
 });
 </script>
 </body>
