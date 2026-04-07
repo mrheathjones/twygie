@@ -440,6 +440,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-famil
   <div class="lr"><div class="ld" id="ln-child"   style="background:#6ecb8a"></div>Child</div>
   <div class="lr"><div class="ld" id="ln-sibling" style="background:#e87a5a"></div>Sibling</div>
   <div class="lr"><div class="ld" id="ln-extended" style="background:#e8c87a"></div>Extended</div>
+  <div class="lr"><div class="ld" style="background:transparent;border:1.5px dashed rgba(200,168,75,.7);box-shadow:none"></div>Linked</div>
   <div style="height:1px;background:var(--border);margin:8px 0"></div>
   <div style="font-size:.6rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:6px">Lines</div>
   <div class="lr"><div id="leg-parentChild" style="width:18px;height:3px;background:#64b464;border-radius:2px"></div>Parent / Child</div>
@@ -2771,10 +2772,9 @@ function drawNodes(){
     lbl.setAttribute('y',String(R+15));
     G.appendChild(lbl);
 
-    // Bridge node indicator — gold dashed ring + chain icon
+    // Bridge node indicator — gold dashed ring
     const bridge=getBridgeInfo(p.id);
     if(bridge){
-      // Outer gold dashed ring
       const bRing=se('circle');
       bRing.setAttribute('r',String(R+8));
       bRing.setAttribute('fill','none');
@@ -2783,23 +2783,6 @@ function drawNodes(){
       bRing.setAttribute('stroke-dasharray','4,3');
       bRing.setAttribute('class','bridge-ring');
       G.appendChild(bRing);
-
-      // Small chain icon badge at bottom-right
-      const badge=se('g');
-      badge.setAttribute('transform',`translate(${R*0.65},${R*0.65})`);
-      const badgeBg=se('circle');
-      badgeBg.setAttribute('r','8');
-      badgeBg.setAttribute('fill','rgba(200,168,75,0.9)');
-      badge.appendChild(badgeBg);
-      // Chain link paths (simplified)
-      const chain=se('path');
-      chain.setAttribute('d','M-3 0a2 2 0 0 1 3-2h0a2 2 0 0 1 0 4h0a2 2 0 0 1-3-2zM0 0a2 2 0 0 1 3-2h0a2 2 0 0 1 0 4h0a2 2 0 0 1-3-2z');
-      chain.setAttribute('fill','none');
-      chain.setAttribute('stroke','#04070c');
-      chain.setAttribute('stroke-width','1.2');
-      chain.setAttribute('stroke-linecap','round');
-      badge.appendChild(chain);
-      G.appendChild(badge);
     }
 
     // Events
