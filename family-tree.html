@@ -3217,7 +3217,7 @@ async function exportCanvasToPDF(canvas, w, h){
         if(p.dod.year) parts.push(p.dod.year);
         return `d. ${parts.join(' ')}`;
       })(),
-      story:p.note||'',
+      story:(p.note&&!p.note.includes('Tap Edit to add your story'))?p.note:'',
       photo:p.photo||null
     };
   }).sort((a,b)=>{
@@ -3247,31 +3247,49 @@ async function exportCanvasToPDF(canvas, w, h){
   pdf.setFillColor(dark);
   pdf.rect(0,0,pw,ph,'F');
 
+  // Twygie logo — render SVG to canvas then embed
+  try{
+    const logoSize=80;
+    const logoSvg=`<svg xmlns="http://www.w3.org/2000/svg" width="${logoSize}" height="${logoSize}" viewBox="0 0 24 24" fill="none" stroke="${gold}" stroke-width="1.5" stroke-linecap="round">
+      <path d="M12 22V10"/><path d="M12 10C12 6 8 3.5 4 4.5"/><path d="M12 10C12 6 16 3.5 20 4.5"/>
+      <path d="M12 16C12 13 9 11 5 12"/><path d="M12 16C12 13 15 11 19 12"/>
+    </svg>`;
+    const logoBlob=new Blob([logoSvg],{type:'image/svg+xml;charset=utf-8'});
+    const logoUrl=URL.createObjectURL(logoBlob);
+    const logoImg=await new Promise((resolve,reject)=>{
+      const img=new Image(); img.onload=()=>resolve(img); img.onerror=reject; img.src=logoUrl;
+    });
+    const lc=document.createElement('canvas'); lc.width=logoSize*2; lc.height=logoSize*2;
+    const lctx=lc.getContext('2d'); lctx.scale(2,2); lctx.drawImage(logoImg,0,0,logoSize,logoSize);
+    URL.revokeObjectURL(logoUrl);
+    pdf.addImage(lc.toDataURL('image/png'),'PNG',(pw-logoSize)/2,60,logoSize,logoSize);
+  }catch(e){ /* logo failed — skip gracefully */ }
+
   // Decorative gold line
   pdf.setDrawColor(gold);
   pdf.setLineWidth(0.8);
-  pdf.line(margin,140,pw-margin,140);
+  pdf.line(margin,160,pw-margin,160);
   pdf.line(margin,580,pw-margin,580);
 
   // Title
   setFont('bold',42);
   pdf.setTextColor(cream);
-  pdf.text('Twygie',pw/2,220,{align:'center'});
+  pdf.text('Twygie',pw/2,240,{align:'center'});
 
   // Subtitle
   setFont('normal',16);
   pdf.setTextColor(muted);
-  pdf.text('Family Tree',pw/2,255,{align:'center'});
+  pdf.text('Family Tree',pw/2,275,{align:'center'});
 
   // User name
   setFont('bold',22);
   pdf.setTextColor(gold);
-  pdf.text(`The ${you?.lastName||userName} Family`,pw/2,340,{align:'center'});
+  pdf.text(`The ${you?.lastName||userName} Family`,pw/2,360,{align:'center'});
 
   // Stats
   setFont('normal',12);
   pdf.setTextColor(muted);
-  pdf.text(`${P.length} Members  ·  ${genCount} Generations`,pw/2,380,{align:'center'});
+  pdf.text(`${P.length} Members  ·  ${genCount} Generations`,pw/2,400,{align:'center'});
 
   // Date
   setFont('normal',11);
