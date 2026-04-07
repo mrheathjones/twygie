@@ -897,7 +897,7 @@ function inferRelToYou(anchorRelToYou, newRelToAnchor, gender) {
   if(isParent(a)){
     if(isSibling(r))    return g('Uncle','Aunt','Aunt/Uncle');
     if(isParent(r))     return g('Grandfather','Grandmother','Grandparent');
-    if(isSpouse(r))     return g('Stepfather','Stepmother','Stepparent');
+    if(isSpouse(r))     return g('Father','Mother','Parent');
     if(isGrandpar(r))   return g('Great-grandfather','Great-grandmother','Great-grandparent');
     if(isNieceNeph(r))  return 'Cousin';
   }
