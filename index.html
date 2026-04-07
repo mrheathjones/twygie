@@ -449,7 +449,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-famil
   <div class="lr"><div class="ld" id="ln-child"   style="background:#6ecb8a"></div>Child</div>
   <div class="lr"><div class="ld" id="ln-sibling" style="background:#e87a5a"></div>Sibling</div>
   <div class="lr"><div class="ld" id="ln-extended" style="background:#e8c87a"></div>Extended</div>
-  <div class="lr"><div class="ld" style="background:transparent;border:1.5px dashed rgba(200,168,75,.7);box-shadow:none;width:10px;height:10px"></div>Linked</div>
+  <div class="lr"><svg width="12" height="12" viewBox="0 0 12 12" style="flex-shrink:0"><circle cx="6" cy="6" r="4.5" fill="none" stroke="rgba(200,168,75,.7)" stroke-width="1.2" stroke-dasharray="2.5,1.5"/></svg>Linked</div>
   <div style="height:1px;background:var(--border);margin:8px 0"></div>
   <div style="font-size:.6rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:6px">Lines</div>
   <div class="lr"><div id="leg-parentChild" style="width:18px;height:3px;background:#64b464;border-radius:2px"></div>Parent / Child</div>
@@ -1433,8 +1433,8 @@ function getRelToYou_for(targetId, fromId){
   return '';
 }
 
-function recalcAllRelationships(){
-  if(!autoConnections){ appAlert('Enable auto-assign first.'); return; }
+function recalcAllRelationships(force){
+  if(!force&&!autoConnections){ appAlert('Enable auto-assign first.'); return; }
   // Run autoAssignToYou for every node against every other node it's directly connected to
   // Iterate over every direct structural connection in the tree
   const seen=new Set();
@@ -2412,7 +2412,7 @@ function adoptBatch(nodes){
       adopted++;
     }
   }
-  if(adopted){rebuild();recalcAllRelationships();scheduleSave();}
+  if(adopted){rebuild();recalcAllRelationships(true);scheduleSave();}
   return adopted;
 }
 
