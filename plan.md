@@ -140,3 +140,30 @@ An interactive, beautiful family tree web app. Each family member is a "Twyg" �
 - App: **Twygie** | Member: **Twyg** | Loading: *"Picking up all of your Twygs…"*
 - Modes: **Tree View** / **All Twygs** | Add: **+ Add a Twyg**
 - Gold: `#c8a84b`
+
+---
+
+## Auto-Assign Status (Updated Session 9)
+
+### Working ✓
+- Child from either parent gets grandparents from BOTH sides
+- Child node draws green line (parents[]) not purple (customLinks)
+- Spouse's child = Son/Daughter (not Stepchild)
+- Spouse gets auto-assigned when new node is added
+- In-laws assigned when spouse is added
+- Full consanguinity chain: cousin degrees, great-grandparents, etc.
+- Recalculate button in Settings → Connections
+
+### Paused / Known Issues ⚠️
+- Alternating parent additions (isYou's parent → spouse's parent → isYou's parent...) 
+  creates wrong cross-family links between unrelated parents
+- `recalcAllRelationships` can amplify wrong links if existing data has errors
+- Root: isDirParent cascade + remaining inference chains through anchorSpouse path
+- Use manual "Add Connection" for now if auto-assign creates wrong links
+  and click ↻ Recalculate if needed to clean up
+
+### To Fix Next Session
+1. Audit isDirParent cascade linkNodes calls through anchorSpouse
+2. Add cleanFalseConnections() validation in recalcAllRelationships
+3. Consider depth-limiting inference to 1-hop during live addition
+4. Test: add 4 grandparents alternately and verify no cross-family links

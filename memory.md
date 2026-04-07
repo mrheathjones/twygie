@@ -181,3 +181,57 @@ git add . && git commit -m "..." && git push https://{GH_TOKEN}@github.com/mrhea
 4. **settings save was async** — `await settingsDoc().set()` used to block the UI. Now fire-and-forget. Don't revert to async.
 5. **Photos as base64 in Firestore** — approaching 1MB doc limit for nodes with large photos. Future: use Firebase Storage.
 6. **connType missing from sibs array** — auto-detected siblings from shared parents had no connType, causing remove to silently fail. Always include connType in every chip's connection object.
+
+---
+
+## Auto-Assign Architecture (Session 9 — Current State)
+
+### autoAssignToYou(newNodeId, anchorId, relToAnchor)
+Two-pass system:
+
+**Pass 1 — Structural Cascade** (explicit, reliable):
+```
+isDirChild  → anchor.parents → grandparents
+             anchor.spouse.parents → other-side grandparents
+             anchor.spouse → add as co-parent
+             anchor.siblings → uncles/aunts via linkNodes()
+isDirParent → anchor.children → grandchildren
+             anchor.spouse.children → grandchildren
+             anchor.spouse → child-in-law via linkNodes()
+isSpouseRel → anchor.children → add newNode as co-parent
+             anchor.parents → in-laws via linkNodes()
+```
+
+**Pass 2 — Inference Loop** (getRelToYou_for + inferRelToYou for all other nodes)
+
+### getRelToYou_for(targetId, fromId) — 7 steps
+Returns: how target appears to from (from's perspective)
+1. Direct structural (parents[], spouseOf, shared parents = sibling)
+2. from's child's spouse = target (Child-in-law)
+3. from's child's child = target (Grandchild)
+4. from's parent's parent = target (Grandparent)
+5. from's spouse's parent/sibling/child/grandchild
+6. Two-hop: from's spouse's child's child or spouse
+7. from.customLinks[targetId] only (NOT t.customLinks[fromId], NOT t.relLabel)
+
+⚠️ CRITICAL: Steps 7b (t.customLinks[fromId]) and 8 (t.relLabel) were REMOVED.
+- t.relLabel is a GLOBAL label (e.g. "Grandfather" from Kinder's view) — returning it for 
+  any query about Tony caused Tony to appear as "Grandfather" to everyone
+- t.customLinks[fromId] is from target's perspective, not from's → asymmetric chains
+
+### linkNodes(nodeA, nodeB, labelAtoB, labelBtoA)
+Direct customLinks writer — does NOT go through applyInferredRel routing.
+Always writes to customLinks regardless of label type.
+Used for explicit structural cascade assignments.
+
+### Known Issues (PAUSED — to revisit)
+- Alternating parent addition (isYou's parent, then spouse's parent, alternating) can still
+  create wrong cross-family links in some scenarios
+- recalcAllRelationships may amplify existing wrong links — needs cleanup pass first
+- Root still may be in isDirParent cascade: `linkNodes(newNode, anchorSpouse, ...)` creating
+  indirect chains through anchorSpouse's own parents
+
+### Pending Fix Ideas
+- Add `cleanFalseConnections()` before recalc that validates in-law paths structurally
+- Limit autoAssignToYou inference depth to 1 hop during live addition
+- Consider separating "add new node" cascade from "full tree recalc" logic

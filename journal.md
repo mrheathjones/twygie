@@ -169,3 +169,83 @@ Root causes found and fixed:
 | Auto-assign child draws purple | Inferred Son/Daughter stored as customLink | `applyInferredRel()` routes to `parents[]` for direct types |
 | Auto-assign only hits isYou | No spouse propagation | Added `getRelToYou_for()` + spouse loop in autoAssignToYou |
 | byId stale in autoAssign | autoAssignToYou called before rebuild() | Lightweight byId sync + P.find() fallback |
+
+---
+
+## Session 9 — April 6, 2026 — Auto-Assign Deep Fix (In Progress)
+
+### Work Done
+
+#### Full consanguinity dropdown + Table of Consanguinity
+- Expanded both "Add a Twyg" and "Add Connection" dropdowns to include the full Table of Consanguinity reference
+- First/Second/Third Cousins Once/Twice/Thrice Removed
+- Great-grandparents/grandchildren through Great-great level
+- Great-uncle/aunt, Grand-nephew/niece, all in-law variants
+- BLOOD_LABELS set expanded to include all cousin degrees
+
+#### Settings panel redesign
+- Collapsible sections (Tree View, Connections, Appearance, Advanced)
+- Tree stats (Members / Generations) displayed as stat cards under Account
+- Save button animates green "✓ Saved!" — decoupled from Firestore async (fire-and-forget)
+- Fixed position:relative override that broke panel positioning
+
+#### Edit existing connection
+- ✎ pencil icon on each chip opens inline dropdown pre-selected to current label
+- `saveEditedConnRel()` removes old connection and re-applies new one with correct storage type
+- Handles structural changes (e.g. Mother → Wife changes parents[] to spouseOf)
+
+#### Delete connection fixed
+- `sibs` array was missing `connType` field → fell through to wrong branch
+- All branches now use `P.find()` instead of stale `byId[]`
+
+#### Auto-assign overhaul
+
+**applyInferredRel()**: Routes inferred relationships to correct storage:
+- Son/Daughter → `parents[]` (green line)
+- Husband/Wife/Partner → `spouseOf`
+- Sibling → `customLinks` lineType:'sibling'
+- Others → `customLinks` lineType:'blood' or 'labeled'
+
+**autoAssignToYou() — enumerate all nodes**: Changed from "only isYou + spouse" to looping ALL existing nodes via `getRelToYou_for(anchorId, existing.id)`.
+
+**Structural cascade in autoAssignToYou**: Explicit rules for common cases that inference chains miss:
+- `isDirChild`: anchor.parents → grandparents, anchor.spouse.parents → other-side grandparents, add spouse as co-parent, siblings → uncles/aunts
+- `isDirParent`: anchor.children → grandchildren, anchor.spouse's children → grandchildren, anchor.spouse → child-in-law
+- `isSpouseRel`: anchor.children → add spouse to parents[], anchor.parents → in-laws
+
+**getRelToYou_for() rewrite**: Multi-hop structural traversal in 7 steps:
+1. Direct structural (parents[], spouseOf, siblings)
+2. Child's spouse (Son/Daughter-in-law)
+3. Grandchild (child's child)
+4. Grandparent (parent's parent)
+5. Spouse's parent (Parent-in-law) + spouse's sibling + spouse's grandchild
+6. Two-hop through spouse
+7. from's own customLinks for target
+
+**inferRelToYou() expansion**: Added missing sections:
+- Grandchild's relatives (grandchild+spouse=Grandchild-in-law, grandchild+child=Great-grandchild)
+- Great-grandchild chains
+- In-law section tightened: removed broad isParent/isSibling fallbacks that created co-grandparent links
+
+**Bug fixes along the way:**
+- `genderedRel('Spouse',...)` bug in getRelToYou_for step 2 → should be `genderedRel('Child',...)` to get "Son-in-law" not "Wife-in-law"
+- `son-in-law + spouse = granddaughter` case removed (son-in-law's wife = your daughter, already linked)
+- `isSibling(r)` fallback in in-law section removed (no standard kinship term for sibling-of-in-law)
+- **Root cause of cross-family links**: `getRelToYou_for` steps 7b and 8 removed:
+  - Step 7b: `t.customLinks[fromId]` = target's perspective, not from's → was creating asymmetric chains
+  - Step 8: `t.relLabel` = global label (e.g. "Grandfather" from Kinder's perspective) was returned for ANY node asking about Tony, not just Kinder → caused Tony to appear as "Grandfather" to Annette
+- `getRelToYou` changed to return `''` instead of `'Family'` for unknown relationships
+
+**Recalculate button**: Added "↻ Recalculate all auto-connections" in Settings → Connections. Retroactively re-runs cascade for all structural connections in the tree.
+
+### Current Status (PAUSED)
+Auto-assign is mostly working. Remaining issues to revisit:
+- When parent nodes are added alternately between isYou and spouse, the last added parent may still get incorrect connections to the other side's parents
+- Likely caused by remaining inference chains in recalcAllRelationships or the isDirParent/isDirChild cascade creating links through the anchorSpouse path
+- The "Recalculate" button currently makes things worse if existing wrong links exist — need to add cleanup pass first
+
+### Next Steps When Revisiting
+1. Add `cleanFalseConnections()` validation pass before or during recalc
+2. Audit the isDirParent cascade: `linkNodes(newNode, anchorSpouse, ...)` may be incorrectly linking new parent to anchor's spouse's OTHER parents
+3. Consider adding a "dry run" mode that shows what connections would be created before applying
+4. Consider limiting autoAssignToYou to only first-degree inferences (depth=1) and letting recalc handle chaining
