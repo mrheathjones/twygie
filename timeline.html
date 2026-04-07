@@ -7,53 +7,44 @@
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{--bg:#04070c;--surface:rgba(10,18,32,.96);--border:rgba(255,255,255,.08);--text:rgba(255,255,255,.88);--muted:rgba(255,255,255,.4);--gold:#c8a84b;--cream:#f0efeb}
-html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-family:'Outfit',sans-serif;color:var(--text)}
-body.dragging{user-select:none;cursor:ns-resize}
+:root{--bg:#04070c;--surface:rgba(10,18,32,.96);--border:rgba(255,255,255,.08);--text:rgba(255,255,255,.88);--muted:rgba(255,255,255,.4);--gold:#c8a84b}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-family:'Outfit',sans-serif;color:var(--text);user-select:none}
 
-/* Header */
 #hdr{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:14px 24px;background:linear-gradient(to bottom,var(--bg) 80%,transparent)}
 .logo{font-family:'Cormorant Garamond',serif;font-size:1.15rem;font-weight:700;color:var(--text);display:flex;align-items:center;gap:7px}
 .hbtn{padding:6px 14px;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:100px;color:var(--muted);font-family:'Outfit',sans-serif;font-size:.76rem;cursor:pointer;transition:all .2s;white-space:nowrap;text-decoration:none;display:inline-flex;align-items:center;gap:5px}
 .hbtn:hover{background:rgba(255,255,255,.1);color:var(--text)}
-
-/* Loading */
 #loading{position:fixed;inset:0;z-index:999;background:var(--bg);display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:1.2rem;color:var(--muted);transition:opacity .4s}
 #loading.fade{opacity:0;pointer-events:none}#loading.gone{display:none}
 
-/* Timeline scroll area */
-#tl-scroll{position:fixed;top:0;left:0;right:56px;bottom:0;overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
-#tl-scroll::-webkit-scrollbar{display:none}
-#tl-inner{position:relative;height:100%;min-width:100vw}
+/* Timeline area */
+#tl-scroll{position:fixed;top:0;left:0;right:56px;bottom:56px;overflow:hidden}
+#tl-inner{position:relative;height:100%;will-change:transform}
+#tl-line{position:absolute;left:0;right:0;top:68%;height:2px;background:linear-gradient(to right,transparent 20px,rgba(200,168,75,.2) 60px,rgba(200,168,75,.2) calc(100% - 60px),transparent)}
 
-/* Timeline line — sits at 70% height */
-#tl-line{position:absolute;left:0;right:0;top:70%;height:2px;background:linear-gradient(to right,transparent 40px,rgba(200,168,75,.2),rgba(200,168,75,.2) calc(100% - 40px),transparent)}
-
-/* Year markers below the line */
-.yr{position:absolute;top:70%;transform:translateX(-50%);pointer-events:none;display:flex;flex-direction:column;align-items:center}
+.yr{position:absolute;top:68%;transform:translateX(-50%);pointer-events:none;display:flex;flex-direction:column;align-items:center}
 .yr-tick{width:1px;height:10px;background:rgba(200,168,75,.15);margin-top:6px}
-.yr-label{font-size:.58rem;color:rgba(200,168,75,.35);margin-top:3px;letter-spacing:.04em}
-.yr.decade .yr-tick{height:16px;background:rgba(200,168,75,.35)}
-.yr.decade .yr-label{font-size:.7rem;color:var(--gold);font-weight:600;opacity:.6}
+.yr-label{font-size:.58rem;color:rgba(200,168,75,.35);margin-top:3px;letter-spacing:.04em;white-space:nowrap}
+.yr.decade .yr-tick{height:18px;background:rgba(200,168,75,.4)}
+.yr.decade .yr-label{font-size:.72rem;color:var(--gold);font-weight:600;opacity:.65}
+.yr.month .yr-tick{height:6px;background:rgba(200,168,75,.1)}
+.yr.month .yr-label{font-size:.48rem;color:rgba(200,168,75,.25)}
 
-/* Nodes — positioned ABOVE the line */
 .tl-node{position:absolute;transform:translateX(-50%);cursor:pointer;z-index:2;display:flex;flex-direction:column;align-items:center;gap:2px}
 .tl-node:hover{z-index:20}
-.tl-dot{width:42px;height:42px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;transition:transform .25s,box-shadow .25s}
+.tl-dot{width:42px;height:42px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;transition:transform .2s,box-shadow .2s}
 .tl-dot img{width:100%;height:100%;object-fit:cover}
 .tl-node:hover .tl-dot{transform:scale(1.2);box-shadow:0 0 24px rgba(200,168,75,.4)}
 .tl-nm{font-size:.56rem;color:var(--muted);white-space:nowrap;max-width:72px;overflow:hidden;text-overflow:ellipsis;text-align:center}
-/* Connector from dot down to line */
-.tl-conn{width:1px;height:0;opacity:.25;margin-top:-1px}
+.tl-conn{width:1px;opacity:.25;margin-top:-1px}
 
-/* Group badge */
 .tl-group{position:absolute;transform:translateX(-50%);cursor:pointer;z-index:3;display:flex;flex-direction:column;align-items:center;gap:2px}
 .tl-group:hover{z-index:25}
-.tl-badge{width:46px;height:46px;border-radius:50%;background:rgba(200,168,75,.18);border:2px solid var(--gold);display:flex;align-items:center;justify-content:center;font-size:.95rem;font-weight:700;color:var(--gold);transition:transform .25s,box-shadow .25s}
+.tl-badge{width:46px;height:46px;border-radius:50%;background:rgba(200,168,75,.18);border:2px solid var(--gold);display:flex;align-items:center;justify-content:center;font-size:.95rem;font-weight:700;color:var(--gold);transition:transform .2s,box-shadow .2s}
 .tl-group:hover .tl-badge{transform:scale(1.15);box-shadow:0 0 28px rgba(200,168,75,.35);background:rgba(200,168,75,.3)}
-.tl-stack{display:flex;margin-top:2px}.tl-sd{width:8px;height:8px;border-radius:50%;margin-left:-2px;border:1px solid rgba(0,0,0,.5)}.tl-sd:first-child{margin-left:0}
+.tl-stack{display:flex;margin-top:1px}.tl-sd{width:8px;height:8px;border-radius:50%;margin-left:-2px;border:1px solid rgba(0,0,0,.5)}.tl-sd:first-child{margin-left:0}
 
-/* Popup — single */
+/* Popups */
 .tl-popup{position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%) scale(.92);opacity:0;pointer-events:none;transition:all .18s;z-index:30;width:200px}
 .tl-node:hover .tl-popup{opacity:1;transform:translateX(-50%) scale(1);pointer-events:all}
 .tl-pop{background:rgba(6,12,24,.97);border:1px solid rgba(200,168,75,.2);border-radius:14px;padding:14px;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);box-shadow:0 12px 40px rgba(0,0,0,.7)}
@@ -66,7 +57,6 @@ body.dragging{user-select:none;cursor:ns-resize}
 .tl-pa{font-size:.6rem;color:var(--muted);text-align:center;margin-top:1px}
 .tl-ps{font-size:.6rem;color:rgba(255,255,255,.3);font-style:italic;text-align:center;margin-top:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 
-/* Group popup */
 .tl-gpop{position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%) scale(.92);opacity:0;pointer-events:none;transition:all .18s;z-index:30;width:230px}
 .tl-group:hover .tl-gpop{opacity:1;transform:translateX(-50%) scale(1);pointer-events:all}
 .tl-gpi{background:rgba(6,12,24,.97);border:1px solid rgba(200,168,75,.2);border-radius:14px;padding:8px;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);box-shadow:0 12px 40px rgba(0,0,0,.7);max-height:300px;overflow-y:auto}
@@ -76,26 +66,30 @@ body.dragging{user-select:none;cursor:ns-resize}
 .tl-gc+.tl-gc{border-top:1px solid rgba(255,255,255,.04)}
 .tl-gc-p{width:32px;height:32px;border-radius:50%;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.58rem;font-weight:600}
 .tl-gc-p img{width:100%;height:100%;object-fit:cover}
-.tl-gc-i{flex:1;min-width:0}
 .tl-gc-n{font-size:.78rem;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tl-gc-r{font-size:.58rem;color:var(--gold);font-style:italic}
 .tl-gc-m{font-size:.56rem;color:var(--muted);margin-top:1px}
 
-/* ─── VERTICAL SCROLL INDICATOR ─── */
-#scroll-ind{position:fixed;top:50%;right:16px;transform:translateY(-50%);z-index:200;width:40px;padding:10px 0;display:flex;justify-content:center;cursor:pointer;touch-action:none;-webkit-tap-highlight-color:transparent;border-radius:20px;transition:background .15s}
-#scroll-ind:hover{background:rgba(255,255,255,.03)}
-#scroll-ind.dragging{background:rgba(255,255,255,.05)}
-#si-lines{display:flex;flex-direction:column;gap:5px;align-items:center;pointer-events:none;user-select:none}
-.si-bar{width:14px;height:2px;border-radius:99px;background:rgba(255,255,255,.1);transform:scaleX(1);transform-origin:center;transition:background-color .1s,transform .1s,box-shadow .1s;will-change:background-color,transform}
+/* ─── SCROLL BARS ─── */
+.scroll-bar{position:fixed;display:flex;justify-content:center;touch-action:none;-webkit-tap-highlight-color:transparent;z-index:200;cursor:pointer;border-radius:12px;transition:background .12s}
+.scroll-bar:hover,.scroll-bar.active{background:rgba(255,255,255,.03)}
+.scroll-bar .sb-lines{display:flex;pointer-events:none;user-select:none}
+.sb-line{border-radius:99px;background:rgba(255,255,255,.08);transition:background-color .08s linear,transform .08s linear,box-shadow .08s linear;will-change:background-color,transform}
 
-/* Legend */
-#legend{position:fixed;bottom:14px;left:14px;z-index:50;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px 12px;backdrop-filter:blur(12px);display:flex;gap:10px;flex-wrap:wrap;font-size:.6rem}
+/* Vertical bar (right) — ZOOM */
+#v-bar{top:50%;right:12px;transform:translateY(-50%);width:40px;padding:12px 0;flex-direction:column;align-items:center}
+#v-bar .sb-lines{flex-direction:column;gap:5px;align-items:center}
+#v-bar .sb-line{width:14px;height:2px}
+
+/* Horizontal bar (bottom) — SCROLL */
+#h-bar{bottom:12px;left:50%;transform:translateX(-50%);height:40px;padding:0 12px;align-items:center}
+#h-bar .sb-lines{flex-direction:row;gap:5px;align-items:center}
+#h-bar .sb-line{width:2px;height:14px}
+
+/* Labels */
+#zoom-label{position:fixed;bottom:56px;right:12px;z-index:50;font-size:.55rem;color:rgba(200,168,75,.4);text-align:center;width:40px;letter-spacing:.06em;text-transform:uppercase}
+#legend{position:fixed;bottom:56px;left:14px;z-index:50;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px 12px;backdrop-filter:blur(12px);display:flex;gap:10px;flex-wrap:wrap;font-size:.6rem}
 .leg-i{display:flex;align-items:center;gap:4px;color:var(--muted)}.leg-d{width:8px;height:8px;border-radius:50%}
-
-/* Zoom label */
-#zoom-label{position:fixed;bottom:14px;right:16px;z-index:50;font-size:.6rem;color:var(--muted);text-align:center;width:40px}
-
-/* Empty */
 #empty{display:none;position:fixed;inset:0;z-index:10;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:12px;color:var(--muted);font-size:.95rem}
 #empty.show{display:flex}
 </style>
@@ -103,19 +97,17 @@ body.dragging{user-select:none;cursor:ns-resize}
 <body>
 <div id="loading">Loading timeline…</div>
 <div id="hdr">
-  <div class="logo">
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 22V10"/><path d="M12 10C12 6 8 3.5 4 4.5"/><path d="M12 10C12 6 16 3.5 20 4.5"/><path d="M12 16C12 13 9 11 5 12"/><path d="M12 16C12 13 15 11 19 12"/></svg>
-    Twygie Timeline
-  </div>
+  <div class="logo"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 22V10"/><path d="M12 10C12 6 8 3.5 4 4.5"/><path d="M12 10C12 6 16 3.5 20 4.5"/><path d="M12 16C12 13 9 11 5 12"/><path d="M12 16C12 13 15 11 19 12"/></svg> Twygie Timeline</div>
   <a class="hbtn" href="/app">← Back to Tree</a>
 </div>
-
 <div id="tl-scroll"><div id="tl-inner"><div id="tl-line"></div></div></div>
 
-<div id="scroll-ind" aria-label="Scroll position">
-  <div id="si-lines"></div>
-</div>
-<div id="zoom-label"></div>
+<!-- Vertical bar = ZOOM -->
+<div class="scroll-bar" id="v-bar"><div class="sb-lines" id="vb-lines"></div></div>
+<div id="zoom-label">Decade</div>
+
+<!-- Horizontal bar = SCROLL -->
+<div class="scroll-bar" id="h-bar"><div class="sb-lines" id="hb-lines"></div></div>
 
 <div id="legend"></div>
 <div id="empty">
@@ -135,7 +127,6 @@ const NC={you:'#f0efeb',spouse:'#e8a838',parent:'#7ab8e8',child:'#6ecb8a',siblin
 
 async function deriveKey(uid){const e=new TextEncoder();const km=await crypto.subtle.importKey('raw',e.encode(uid),'PBKDF2',false,['deriveKey']);return crypto.subtle.deriveKey({name:'PBKDF2',salt:e.encode('twygie-encryption-v1'),iterations:100000,hash:'SHA-256'},km,{name:'AES-GCM',length:256},false,['encrypt','decrypt'])}
 async function decrypt(key,b64){const bin=atob(b64);const raw=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)raw[i]=bin.charCodeAt(i);const dec=await crypto.subtle.decrypt({name:'AES-GCM',iv:raw.slice(0,12)},key,raw.slice(12));return JSON.parse(new TextDecoder().decode(dec))}
-
 function fullName(p){return p.name||[(p.firstName||''),(p.lastName||'')].filter(Boolean).join(' ')||'Unknown'}
 function initials(p){return fullName(p).split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}
 function calcAge(p){const by=parseInt(p.dob&&p.dob.year)||p.birth||null;if(!by)return null;const dy=parseInt(p.dod&&p.dod.year)||p.death||null;return(dy||new Date().getFullYear())-by}
@@ -145,7 +136,23 @@ function relCat(p){if(p.isYou)return'you';if(p.death||(p.dod&&p.dod.year))return
 function col(p){return NC[relCat(p)]||NC.default}
 
 // ─── TIMELINE STATE ───
-let yearPx=50, minY=1950, maxY=2030, PAD=120, birthYearCounts={};
+const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+let scrollPos=0; // 0-1 horizontal position
+let zoomLevel=0.3; // 0=overview, 1=month-level
+let minY=1950, maxY=2030, byYearCount={};
+
+// Zoom → pixels per year
+function yearPx(){
+  // 0 → 15px/yr (overview), 0.3 → 50px/yr (decade), 0.6 → 200px/yr (year), 1.0 → 800px/yr (month)
+  return Math.round(15*Math.pow(800/15, zoomLevel));
+}
+
+function xOf(year,month){
+  const px=yearPx();
+  const base=(year-minY)*px;
+  if(month!=null) return 100+base+(month/12)*px;
+  return 100+base;
+}
 
 function renderTimeline(){
   const inner=document.getElementById('tl-inner');
@@ -155,29 +162,37 @@ function renderTimeline(){
   if(!entries.length){document.getElementById('empty').classList.add('show');return}
 
   const bys=entries.map(p=>parseInt(p.dob&&p.dob.year)||p.birth);
-  minY=Math.min(...bys)-3; maxY=Math.max(curYr,...bys)+3;
-  const totalW=PAD*2+(maxY-minY)*yearPx;
-  inner.style.width=totalW+'px';
-  const xOf=y=>PAD+(y-minY)*yearPx;
-  const lineTop=70; // percentage
+  minY=Math.min(...bys)-2; maxY=Math.max(curYr,...bys)+2;
+  byYearCount={};entries.forEach(p=>{const by=parseInt(p.dob&&p.dob.year)||p.birth;byYearCount[by]=(byYearCount[by]||0)+1});
 
-  // Count births per year for indicator
-  birthYearCounts={};
-  entries.forEach(p=>{const by=parseInt(p.dob&&p.dob.year)||p.birth;birthYearCounts[by]=(birthYearCounts[by]||0)+1});
+  const px=yearPx();
+  const totalW=200+(maxY-minY)*px;
+  inner.style.width=totalW+'px';
 
   let html='';
 
-  // Year markers
-  for(let y=minY;y<=maxY;y++){const iD=y%10===0,i5=y%5===0;if(!i5)continue;
-    html+=`<div class="yr${iD?' decade':''}" style="left:${xOf(y)}px"><div class="yr-tick"></div><div class="yr-label">${y}</div></div>`}
+  // ── Markers based on zoom ──
+  const showMonths=px>=150; // show month ticks when zoomed in enough
+  const showYears=px>=30;   // show year ticks
+  for(let y=minY;y<=maxY;y++){
+    const iD=y%10===0;
+    if(!showYears&&!iD) continue;
+    const x=xOf(y);
+    html+=`<div class="yr${iD?' decade':''}" style="left:${x}px"><div class="yr-tick"></div><div class="yr-label">${y}</div></div>`;
+    // Month subdivisions
+    if(showMonths){
+      for(let m=1;m<12;m++){
+        const mx=xOf(y,m);
+        html+=`<div class="yr month" style="left:${mx}px"><div class="yr-tick"></div><div class="yr-label">${MONTHS[m]}</div></div>`;
+      }
+    }
+  }
 
-  // Group by birth year
+  // ── Group entries by birth year ──
   const byYear={};entries.forEach(p=>{const by=parseInt(p.dob&&p.dob.year)||p.birth;if(!byYear[by])byYear[by]=[];byYear[by].push(p)});
 
   Object.keys(byYear).sort((a,b)=>a-b).forEach(year=>{
     const ms=byYear[year],x=xOf(parseInt(year));
-    // Position above line: bottom of node sits at the line
-    const bottomY=lineTop; // percent
 
     if(ms.length===1){
       const p=ms[0],c=col(p),rel=p.isYou?'You':getRelToYou(p.id),age=calcAge(p),nm=fullName(p);
@@ -188,16 +203,11 @@ function renderTimeline(){
       const ag=age!=null?(dy?`Lived ${age} years`:`Age ${age}`):'';
       const pp=p.photo?`<div class="tl-pp" style="background:${c}"><img src="${p.photo}"/></div>`:`<div class="tl-pp" style="background:${c};color:#04070c">${initials(p)}</div>`;
 
-      html+=`<div class="tl-node" style="left:${x}px;bottom:${100-bottomY}%" onclick="window.location.href='/app#node-${p.id}'">
-        <div class="tl-popup"><div class="tl-pop">
-          ${pp}<div class="tl-pn">${nm}</div>
-          ${rel?`<div class="tl-pr">${rel}</div>`:''}
-          <div class="tl-pd">${ds}</div>${ag?`<div class="tl-pa">${ag}</div>`:''}
-          ${story?`<div class="tl-ps">${story}</div>`:''}
-        </div></div>
+      html+=`<div class="tl-node" style="left:${x}px;bottom:32%" onclick="window.location.href='/app#node-${p.id}'">
+        <div class="tl-popup"><div class="tl-pop">${pp}<div class="tl-pn">${nm}</div>${rel?`<div class="tl-pr">${rel}</div>`:''}<div class="tl-pd">${ds}</div>${ag?`<div class="tl-pa">${ag}</div>`:''}${story?`<div class="tl-ps">${story}</div>`:''}</div></div>
         <div class="tl-dot" style="background:${c};color:#04070c">${dot}</div>
         <div class="tl-nm">${nm.split(' ')[0]}</div>
-        <div class="tl-conn" style="background:${c};height:8px"></div>
+        <div class="tl-conn" style="background:${c};height:10px"></div>
       </div>`;
     } else {
       const sd=ms.slice(0,5).map(p=>`<div class="tl-sd" style="background:${col(p)}"></div>`).join('');
@@ -206,13 +216,13 @@ function renderTimeline(){
         const dy=parseInt(p.dod&&p.dod.year)||p.death||0;let ds=`${year}`;if(dy)ds+=` – ${dy}`;
         const ag=age!=null?(dy?`${age} yrs`:`Age ${age}`):'';
         const ph=p.photo?`<div class="tl-gc-p" style="background:${c}"><img src="${p.photo}"/></div>`:`<div class="tl-gc-p" style="background:${c};color:#04070c">${initials(p)}</div>`;
-        cards+=`<div class="tl-gc" onclick="event.stopPropagation();window.location.href='/app#node-${p.id}'">${ph}<div class="tl-gc-i"><div class="tl-gc-n">${nm}</div>${rel?`<div class="tl-gc-r">${rel}</div>`:''}<div class="tl-gc-m">${ds}${ag?' · '+ag:''}</div></div></div>`});
+        cards+=`<div class="tl-gc" onclick="event.stopPropagation();window.location.href='/app#node-${p.id}'">${ph}<div style="flex:1;min-width:0"><div class="tl-gc-n">${nm}</div>${rel?`<div class="tl-gc-r">${rel}</div>`:''}<div class="tl-gc-m">${ds}${ag?' · '+ag:''}</div></div></div>`});
 
-      html+=`<div class="tl-group" style="left:${x}px;bottom:${100-bottomY}%">
+      html+=`<div class="tl-group" style="left:${x}px;bottom:32%">
         <div class="tl-gpop"><div class="tl-gpi">${cards}</div></div>
         <div class="tl-badge">${ms.length}</div>
         <div class="tl-stack">${sd}</div>
-        <div class="tl-conn" style="background:var(--gold);height:8px;opacity:.3"></div>
+        <div class="tl-conn" style="background:var(--gold);height:10px;opacity:.3"></div>
       </div>`;
     }
   });
@@ -225,125 +235,133 @@ function renderTimeline(){
   let lh='';cats.forEach(c=>{lh+=`<div class="leg-i"><div class="leg-d" style="background:${NC[c]}"></div>${cl[c]||c}</div>`});
   document.getElementById('legend').innerHTML=lh;
 
-  // Scroll to isYou
-  const sc=document.getElementById('tl-scroll');
-  if(you){const yby=parseInt(you.dob&&you.dob.year)||you.birth||0;
-    if(yby){const target=xOf(Math.floor(yby/10)*10-10)-sc.clientWidth*0.15;sc.scrollLeft=Math.max(0,target)}}
-
-  // Build scroll indicator
-  buildIndicator();
-  renderIndicator();
+  applyScroll();
 }
 
-// ─── SCROLL INDICATOR ───
-const BAR_COUNT=36;
-const IND_CFG={falloff:.18,minOp:.08,maxOp:.92,scaleBoost:.22,scaleFall:.03,glowThresh:.8,glow:'0 0 8px rgba(200,168,75,.25)'};
-let bars=[];
+function applyScroll(){
+  const inner=document.getElementById('tl-inner');
+  const area=document.getElementById('tl-scroll');
+  const totalW=parseFloat(inner.style.width)||1;
+  const viewW=area.clientWidth;
+  const maxOffset=Math.max(0,totalW-viewW);
+  const offset=-scrollPos*maxOffset;
+  inner.style.transform=`translateX(${offset}px)`;
+}
 
-function buildIndicator(){
-  const container=document.getElementById('si-lines');
-  container.innerHTML='';
-  bars=[];
-  for(let i=0;i<BAR_COUNT;i++){
-    const bar=document.createElement('div');
-    bar.className='si-bar';
-    container.appendChild(bar);
-    bars.push(bar);
+// ─── SCROLL BARS ───
+const BAR_N=32;
+const GLOW='0 0 8px rgba(200,168,75,.2)';
+let vBars=[],hBars=[];
+
+function buildBars(){
+  const vc=document.getElementById('vb-lines'),hc=document.getElementById('hb-lines');
+  vc.innerHTML='';hc.innerHTML='';vBars=[];hBars=[];
+  for(let i=0;i<BAR_N;i++){
+    const vb=document.createElement('div');vb.className='sb-line';vc.appendChild(vb);vBars.push(vb);
+    const hb=document.createElement('div');hb.className='sb-line';hc.appendChild(hb);hBars.push(hb);
   }
 }
 
-function getScrollProgress(){
-  const sc=document.getElementById('tl-scroll');
-  const maxScroll=Math.max(0,sc.scrollWidth-sc.clientWidth);
-  if(maxScroll<=0)return 0;
-  return Math.min(1,Math.max(0,sc.scrollLeft/maxScroll));
-}
+function renderBars(){
+  const maxC=Math.max(1,...Object.values(byYearCount));
+  const span=maxY-minY||1;
 
-function renderIndicator(){
-  const progress=getScrollProgress();
-  const activeIdx=progress*(bars.length-1);
-  const maxCount=Math.max(1,...Object.values(birthYearCounts));
-  const yearSpan=maxY-minY||1;
+  // Horizontal bar — position indicator
+  const hActive=scrollPos*(hBars.length-1);
+  hBars.forEach((bar,i)=>{
+    const dist=Math.abs(i-hActive);
+    const posOp=Math.min(.9,Math.max(.06,1-dist*.17));
+    const barYear=Math.round(minY+(i/(hBars.length-1))*span);
+    let dens=0;for(let y=barYear-1;y<=barYear+1;y++)dens+=byYearCount[y]||0;
+    const densOp=dens>0?Math.min(.4,.1+dens/maxC*.3):0;
+    const op=Math.min(1,posOp+densOp);
+    const sc=1+Math.max(0,.2-dist*.025);
+    if(dens>0&&dist>2){bar.style.backgroundColor=`rgba(200,168,75,${densOp+.06})`}
+    else{bar.style.backgroundColor=`rgba(255,255,255,${op})`}
+    bar.style.transform=`scaleY(${sc})`;
+    bar.style.boxShadow=dist<.8?GLOW:'none';
+  });
 
-  bars.forEach((bar,i)=>{
-    const dist=Math.abs(i-activeIdx);
-    // Base brightness from scroll position
-    const posOp=Math.min(IND_CFG.maxOp,Math.max(IND_CFG.minOp,1-dist*IND_CFG.falloff));
-
-    // Density brightness — which year does this bar represent?
-    const barYear=Math.round(minY+(i/(bars.length-1))*yearSpan);
-    // Check years near this bar
-    let density=0;
-    for(let y=barYear-1;y<=barYear+1;y++){density+=birthYearCounts[y]||0}
-    const densityOp=density>0?Math.min(.5,.12+density/maxCount*.38):0;
-
-    const finalOp=Math.min(1,posOp+densityOp);
-    const scaleX=1+Math.max(0,IND_CFG.scaleBoost-dist*IND_CFG.scaleFall);
-
-    // Color: gold tint for density, white for position
-    if(density>0&&dist>2){
-      bar.style.backgroundColor=`rgba(200,168,75,${densityOp+.08})`;
-    } else {
-      bar.style.backgroundColor=`rgba(255,255,255,${finalOp})`;
-    }
-    bar.style.transform=`scaleX(${scaleX})`;
-    bar.style.boxShadow=dist<IND_CFG.glowThresh?IND_CFG.glow:'none';
+  // Vertical bar — zoom level indicator
+  const vActive=zoomLevel*(vBars.length-1);
+  vBars.forEach((bar,i)=>{
+    const dist=Math.abs(i-vActive);
+    const op=Math.min(.9,Math.max(.06,1-dist*.17));
+    const sc=1+Math.max(0,.2-dist*.025);
+    bar.style.backgroundColor=`rgba(200,168,75,${op})`;
+    bar.style.transform=`scaleX(${sc})`;
+    bar.style.boxShadow=dist<.8?GLOW:'none';
   });
 }
 
-// Indicator dragging → horizontal scroll
-const indicator=document.getElementById('scroll-ind');
-let isDragging=false;
-
-function scrollToProgress(p){
-  const sc=document.getElementById('tl-scroll');
-  const maxScroll=Math.max(0,sc.scrollWidth-sc.clientWidth);
-  sc.scrollLeft=Math.min(1,Math.max(0,p))*maxScroll;
+// ─── BAR INTERACTION ───
+function setupBar(el, axis, onDrag){
+  let active=false;
+  const getProgress=(e)=>{
+    const r=el.getBoundingClientRect();
+    if(axis==='y') return Math.min(1,Math.max(0,(e.clientY-r.top)/r.height));
+    return Math.min(1,Math.max(0,(e.clientX-r.left)/r.width));
+  };
+  el.addEventListener('pointerdown',e=>{e.preventDefault();el.setPointerCapture(e.pointerId);active=true;el.classList.add('active');onDrag(getProgress(e))});
+  el.addEventListener('pointermove',e=>{if(!active)return;e.preventDefault();onDrag(getProgress(e))});
+  el.addEventListener('pointerup',()=>{active=false;el.classList.remove('active')});
+  el.addEventListener('pointercancel',()=>{active=false;el.classList.remove('active')});
+  el.addEventListener('lostpointercapture',()=>{active=false;el.classList.remove('active')});
 }
 
-function progressFromY(clientY){
-  const rect=indicator.getBoundingClientRect();
-  return Math.min(1,Math.max(0,(clientY-rect.top)/rect.height));
-}
-
-indicator.addEventListener('pointerdown',e=>{
-  e.preventDefault();indicator.setPointerCapture(e.pointerId);
-  isDragging=true;document.body.classList.add('dragging');indicator.classList.add('dragging');
-  scrollToProgress(progressFromY(e.clientY));
+// Horizontal bar → scroll position
+setupBar(document.getElementById('h-bar'),'x',p=>{
+  scrollPos=p;
+  applyScroll();
+  renderBars();
 });
-indicator.addEventListener('pointermove',e=>{if(!isDragging)return;e.preventDefault();scrollToProgress(progressFromY(e.clientY))});
-indicator.addEventListener('pointerup',()=>{isDragging=false;document.body.classList.remove('dragging');indicator.classList.remove('dragging')});
-indicator.addEventListener('pointercancel',()=>{isDragging=false;document.body.classList.remove('dragging');indicator.classList.remove('dragging')});
-indicator.addEventListener('lostpointercapture',()=>{isDragging=false;document.body.classList.remove('dragging');indicator.classList.remove('dragging')});
 
-// Scroll wheel on indicator = zoom
-indicator.addEventListener('wheel',e=>{
-  e.preventDefault();
-  const oldPx=yearPx;
-  const factor=e.deltaY<0?1.15:.87;
-  yearPx=Math.min(200,Math.max(12,yearPx*factor));
-  // Maintain scroll position
-  const sc=document.getElementById('tl-scroll');
-  const centerYear=minY+(sc.scrollLeft+sc.clientWidth/2-PAD)/oldPx;
-  renderTimeline();
-  const newX=PAD+(centerYear-minY)*yearPx-sc.clientWidth/2;
-  sc.scrollLeft=Math.max(0,newX);
+// Vertical bar → zoom level
+setupBar(document.getElementById('v-bar'),'y',p=>{
+  // Save center year before zoom
+  const area=document.getElementById('tl-scroll');
+  const inner=document.getElementById('tl-inner');
+  const totalW=parseFloat(inner.style.width)||1;
+  const viewW=area.clientWidth;
+  const centerX=scrollPos*Math.max(0,totalW-viewW)+viewW/2;
+  const centerYear=minY+(centerX-100)/yearPx();
+
+  zoomLevel=p;
   updateZoomLabel();
-},{passive:false});
+  renderTimeline();
+
+  // Restore center year after re-render
+  const newPx=yearPx();
+  const newTotalW=200+(maxY-minY)*newPx;
+  const newCenterX=100+(centerYear-minY)*newPx;
+  const newMaxOffset=Math.max(0,newTotalW-viewW);
+  scrollPos=newMaxOffset>0?Math.min(1,Math.max(0,(newCenterX-viewW/2)/newMaxOffset)):0;
+  applyScroll();
+  renderBars();
+});
 
 function updateZoomLabel(){
+  const px=yearPx();
   const label=document.getElementById('zoom-label');
-  if(yearPx>=80) label.textContent='Yearly';
-  else if(yearPx>=40) label.textContent='5-Year';
-  else if(yearPx>=20) label.textContent='Decade';
+  if(px>=400) label.textContent='Month';
+  else if(px>=120) label.textContent='Year';
+  else if(px>=35) label.textContent='Decade';
   else label.textContent='Overview';
 }
 
-// Sync indicator on scroll
-document.getElementById('tl-scroll').addEventListener('scroll',()=>{
-  if(!isDragging) requestAnimationFrame(renderIndicator);
-},{passive:true});
-window.addEventListener('resize',()=>requestAnimationFrame(renderIndicator));
+// ─── INITIAL SCROLL TO isYou ───
+function scrollToYou(){
+  const you=P.find(p=>p.isYou);if(!you)return;
+  const yby=parseInt(you.dob&&you.dob.year)||you.birth||0;if(!yby)return;
+  const inner=document.getElementById('tl-inner');
+  const area=document.getElementById('tl-scroll');
+  const totalW=parseFloat(inner.style.width)||1;
+  const viewW=area.clientWidth;
+  const targetX=xOf(yby);
+  const maxOffset=Math.max(0,totalW-viewW);
+  scrollPos=maxOffset>0?Math.min(1,Math.max(0,(targetX-viewW/2)/maxOffset)):0;
+  applyScroll();
+}
 
 // ─── AUTH + LOAD ───
 auth.onAuthStateChanged(async user=>{
@@ -355,7 +373,10 @@ auth.onAuthStateChanged(async user=>{
     const snap=await db.collection('familyTrees').doc(user.uid).get();
     if(snap.exists){const d=snap.data();if(d.encryptedData){const key=await deriveKey(user.uid);P=await decrypt(key,d.encryptedData)}else if(d.people&&d.people.length)P=d.people}
     byId={};P.forEach(p=>{if(!p.customLinks)p.customLinks={};byId[p.id]=p});
+    buildBars();
     renderTimeline();
+    scrollToYou();
+    renderBars();
     updateZoomLabel();
   }catch(e){console.error('Failed:',e);document.getElementById('empty').classList.add('show')}
   const ld=document.getElementById('loading');ld.classList.add('fade');setTimeout(()=>ld.classList.add('gone'),400);
