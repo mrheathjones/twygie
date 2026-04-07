@@ -885,10 +885,13 @@ function inferRelToYou(anchorRelToYou, newRelToAnchor, gender) {
     if((a==='father-in-law'||a==='mother-in-law')&&isChild(r))      return g('Grandson','Granddaughter','Grandchild');
     if((a==='father-in-law'||a==='mother-in-law')&&isGrandchild(r)) return g('Great-grandson','Great-granddaughter','Great-grandchild');
     if((a==='grandfather-in-law'||a==='grandmother-in-law')&&isChild(r)) return g('Great-grandson','Great-granddaughter','Great-grandchild');
+    // Son/Daughter-in-law's spouse = your own child (already linked) → skip
+    if((a==='son-in-law'||a==='daughter-in-law')&&isSpouse(r))    return null;
     // Brother/Sister-in-law's child = Nephew/Niece
     if((a==='brother-in-law'||a==='sister-in-law')&&isChild(r))   return g('Nephew','Niece','Niece/Nephew');
-    if(isSibling(r))  return g('Brother-in-law','Sister-in-law','Sibling-in-law');
-    if(isParent(r))   return null; // e.g. in-law's parent = no standard English kinship term
+    // son/daughter-in-law's spouse = your own child (already linked, skip)
+    // sibling-of-in-law, parent-of-in-law — no standard kinship term
+    return null;
   }
   // ── Parent's relatives ─────────────────────────────────────────────────────
   if(isParent(a)){
