@@ -2238,20 +2238,7 @@ function subscribeActiveLinks(){
     activeLinks=combined;
     if(newJson!==oldJson){
       console.log('Tree links updated:',activeLinks.length,'active link(s)');
-      autoUploadSharedData().then(()=>loadSharedNodes()).then(()=>{
-        // Auto-adopt if preference is set and shared nodes are available
-        for(const link of activeLinks){
-          if(link.autoAdopt?.[currentUser.uid]&&sharedNodes.length){
-            const toAdopt=[...sharedNodes.filter(sn=>sn._linkId===link.id)];
-            if(toAdopt.length){
-              console.log('Auto-adopting',toAdopt.length,'nodes from link',link.id);
-              adoptBatch(toAdopt);
-              db.collection('treeLinks').doc(link.id).update({[`autoAdopt.${currentUser.uid}`]:false}).catch(()=>{});
-            }
-          }
-        }
-        render();
-      });
+      autoUploadSharedData().then(()=>loadSharedNodes()).then(()=>render());
     }
   };
 
@@ -2586,6 +2573,21 @@ async function loadSharedNodes(){
           sharedNodes.push(n);
         });
       }catch(e){console.warn('Failed to decrypt shared nodes from',otherName,e)}
+    }
+  }
+
+  // Auto-adopt trigger: if preference is set and we have shared nodes, adopt them
+  if(sharedNodes.length&&currentUser){
+    for(const link of activeLinks){
+      if(link.autoAdopt?.[currentUser.uid]){
+        const toAdopt=[...sharedNodes.filter(sn=>sn._linkId===link.id)];
+        if(toAdopt.length){
+          console.log('Auto-adopting',toAdopt.length,'shared nodes from',link.id);
+          adoptBatch(toAdopt);
+          // Clear flag so it doesn't re-run
+          db.collection('treeLinks').doc(link.id).update({[`autoAdopt.${currentUser.uid}`]:false}).catch(()=>{});
+        }
+      }
     }
   }
 }
