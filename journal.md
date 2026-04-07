@@ -249,3 +249,52 @@ Auto-assign is mostly working. Remaining issues to revisit:
 2. Audit the isDirParent cascade: `linkNodes(newNode, anchorSpouse, ...)` may be incorrectly linking new parent to anchor's spouse's OTHER parents
 3. Consider adding a "dry run" mode that shows what connections would be created before applying
 4. Consider limiting autoAssignToYou to only first-degree inferences (depth=1) and letting recalc handle chaining
+
+---
+
+## Session 10 — April 7, 2026 — Auto-Assign Deep Fix (Complete)
+
+### cleanFalseConnections Overhaul
+- Added structural validation helpers: `collectAncestors()`, `collectDescendants()`, `hasBloodPath()`, `hasSharedParent()`, `getSpouseNode()`
+- `hasBloodPath()`: validates blood relations via common ancestor through parents[] chains (6 gen depth)
+- `hasInLawPath()` rewritten: validates in-law connections through marriage bridges (spouse→blood, child/grandchild→spouse)
+- `cleanFalseConnections()` now validates ALL customLink types (blood, labeled, sibling), not just in-law labels
+- Runs after every `autoAssignToYou()` call to catch false cross-family links immediately
+- Correctly rejects co-grandparent links (Dad↔FatherInLaw) while preserving valid multi-gen in-laws
+
+### Spouse Addition Fix
+- Adding a spouse now links them as co-parent to anchor's existing children directly in form submit
+- Works regardless of auto-connections toggle (structural, not inferential)
+- Previously only handled inside autoAssignToYou which requires auto-connections enabled
+
+### Inference Table — Comprehensive Audit
+**Bugs fixed (3):**
+- FIL/MIL + child: was Grandchild → now Brother/Sister-in-law
+- FIL/MIL + grandchild: was Great-grandchild → now Nephew/Niece
+- GIL/GMIL + child: was Great-grandchild → now null
+
+**Step/in-law defaults corrected:**
+- Parent's spouse: was Stepfather/Stepmother → now Father/Mother (user edits to Step manually)
+- Grandparent's spouse: was Grandparent-in-law → now Grandparent
+- Great-GP's spouse: added → Great-grandparent
+
+**Missing rules added (11):**
+- Spouse's nephew/niece → Nephew/Niece
+- Uncle/Aunt's spouse → Uncle/Aunt
+- Great-uncle's spouse → Great-aunt/uncle
+- FIL's parent → Grandparent-in-law
+- FIL's sibling → Uncle/Aunt-in-law
+- BIL/SIL's grandchild → Grand-nephew/niece
+- BIL/SIL's sibling → Brother/Sister-in-law
+- Grandparent's great-grandchild → First Cousin Once Removed
+- Great-GP's great-grandchild → Second Cousin
+- First Cousin's parent → Uncle/Aunt
+- First Cousin's spouse → Cousin-in-law
+- FIL/MIL's spouse → other Parent-in-law
+- GIL/GMIL's spouse → other Grandparent-in-law
+
+### Sibling Fix
+- Siblings now copy anchor's parents[] (previously set to empty)
+- Auto-assign runs as "child of each parent" instead of "sibling of anchor"
+- Triggers full isDirChild cascade: grandparents, uncles, in-laws all connected
+- Previously siblings were orphaned with just a single customLink

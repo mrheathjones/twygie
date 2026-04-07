@@ -225,13 +225,12 @@ Always writes to customLinks regardless of label type.
 Used for explicit structural cascade assignments.
 
 ### Known Issues (PAUSED — to revisit)
-- Alternating parent addition (isYou's parent, then spouse's parent, alternating) can still
-  create wrong cross-family links in some scenarios
-- recalcAllRelationships may amplify existing wrong links — needs cleanup pass first
-- Root still may be in isDirParent cascade: `linkNodes(newNode, anchorSpouse, ...)` creating
-  indirect chains through anchorSpouse's own parents
+- No known auto-assign issues remaining as of Session 10
+- cleanFalseConnections runs after every autoAssignToYou call as a safety net
+- If false connections appear, check browser console for `cleanFalseConnections: removed N` messages
 
-### Pending Fix Ideas
-- Add `cleanFalseConnections()` before recalc that validates in-law paths structurally
-- Limit autoAssignToYou inference depth to 1 hop during live addition
-- Consider separating "add new node" cascade from "full tree recalc" logic
+### Session 10 Fixes Applied
+- Siblings copy anchor's parents[] and auto-assign runs as child-of-each-parent
+- Spouse addition links co-parent to children in form submit (not dependent on autoAssignToYou)
+- Inference table: no more Step defaults, 3 bugs fixed, 11 rules added
+- cleanFalseConnections validates blood/in-law/sibling paths structurally

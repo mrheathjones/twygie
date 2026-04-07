@@ -155,15 +155,12 @@ An interactive, beautiful family tree web app. Each family member is a "Twyg" �
 - Recalculate button in Settings → Connections
 
 ### Paused / Known Issues ⚠️
-- Alternating parent additions (isYou's parent → spouse's parent → isYou's parent...) 
-  creates wrong cross-family links between unrelated parents
-- `recalcAllRelationships` can amplify wrong links if existing data has errors
-- Root: isDirParent cascade + remaining inference chains through anchorSpouse path
-- Use manual "Add Connection" for now if auto-assign creates wrong links
-  and click ↻ Recalculate if needed to clean up
+- ~~Alternating parent additions creates wrong cross-family links~~ **FIXED Session 10**
+- ~~`recalcAllRelationships` can amplify wrong links~~ **FIXED Session 10** (cleanFalseConnections runs after every auto-assign)
+- ~~Root: isDirParent cascade + remaining inference chains through anchorSpouse path~~ **FIXED Session 10**
 
-### To Fix Next Session
-1. Audit isDirParent cascade linkNodes calls through anchorSpouse
-2. Add cleanFalseConnections() validation in recalcAllRelationships
-3. Consider depth-limiting inference to 1-hop during live addition
-4. Test: add 4 grandparents alternately and verify no cross-family links
+### Fixed in Session 10
+1. ✅ cleanFalseConnections validates ALL customLink types structurally
+2. ✅ Spouse addition links co-parent to children regardless of auto-connections toggle
+3. ✅ Inference table: 3 bugs fixed, 11 missing rules added, Step defaults removed
+4. ✅ Siblings copy parents and trigger full isDirChild cascade
