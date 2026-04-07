@@ -548,6 +548,14 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-famil
           <input class="ei" id="sp-young-age" type="number" min="0" max="30" style="width:80px;padding:7px 10px;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:Outfit,sans-serif;font-size:.88rem;outline:none" placeholder="17"/>
           <span style="font-size:.84rem;color:var(--muted)">years old and under</span>
         </div>
+        <div style="height:8px"></div>
+        <div class="sp-option" id="sp-demo" onclick="toggleDemoMode()" style="cursor:pointer;margin-bottom:8px">
+          <div><div class="sp-option-label">Demo Mode</div><div class="sp-option-sub">Creates a fresh tree on every reload. Saves are disabled. Turn off to return to your saved tree.</div></div>
+          <div style="position:relative;width:36px;height:20px;flex-shrink:0">
+            <div id="dm-track" style="position:absolute;inset:0;border-radius:100px;background:rgba(255,255,255,.12);transition:background .2s"></div>
+            <div id="dm-thumb" style="position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 4px rgba(0,0,0,.3)"></div>
+          </div>
+        </div>
         <div style="height:4px"></div>
       </div>
     </div>
@@ -1444,6 +1452,19 @@ function syncAutoConnToggle(){
   if(opt) opt.classList.toggle('active',autoConnections);
 }
 
+function toggleDemoMode(){
+  demoMode=!demoMode;
+  syncDemoToggle();
+}
+function syncDemoToggle(){
+  const track=document.getElementById('dm-track');
+  const thumb=document.getElementById('dm-thumb');
+  const opt=document.getElementById('sp-demo');
+  if(track) track.style.background=demoMode?'rgba(200,168,75,.7)':'rgba(255,255,255,.12)';
+  if(thumb) thumb.style.transform=demoMode?'translateX(18px)':'translateX(0)';
+  if(opt) opt.classList.toggle('active',demoMode);
+}
+
 // ─── SETTINGS ─────────────────────────────────────────────────────────────────
 function rgbToHex([r,g,b]){ return '#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join(''); }
 
@@ -1600,6 +1621,7 @@ async function loadSettings(){
       if(d.customLineTypes) customLineTypes=d.customLineTypes;
       if(d.youngAge!=null) youngAge=parseInt(d.youngAge)||17;
       if(d.autoConnections!=null) autoConnections=!!d.autoConnections;
+      if(d.demoMode!=null) demoMode=!!d.demoMode;
     }
   }catch(e){}
 }
@@ -1635,7 +1657,7 @@ function saveSettings(){
   if(currentUser){
     settingsDoc().set({
       defaultView:settingsMode, lineColors, nodeColors,
-      customLineTypes, youngAge, autoConnections,
+      customLineTypes, youngAge, autoConnections, demoMode,
       updatedAt:firebase.firestore.FieldValue.serverTimestamp()
     }).catch(e=>console.warn('Settings save failed:',e));
   }
@@ -1679,6 +1701,7 @@ function openSettings(){
   const yaInput=document.getElementById('sp-young-age');
   if(yaInput) yaInput.value=youngAge;
   syncAutoConnToggle();
+  syncDemoToggle();
   document.getElementById('settings-panel').classList.add('open');
   document.getElementById('scrim').classList.add('on');
 }
@@ -1692,24 +1715,31 @@ function closeSettings(){
 // ─── FIRESTORE ────────────────────────────────────────────────────────────────
 function userDoc(){ return db.collection('familyTrees').doc(currentUser.uid); }
 async function loadTree(){
-  try{
-    const snap=await userDoc().get();
-    if(snap.exists && snap.data().people && snap.data().people.length){
-      P=snap.data().people;
-      treeLoaded=true;
-    } else {
-      P=makeDefaultTree(currentUser);
-      treeLoaded=true;
-      await saveTree(false);
-    }
-  }catch(e){
-    console.error('Failed to load tree from Firestore:',e);
-    P=makeDefaultTree(currentUser||{displayName:''});
-    // Do NOT set treeLoaded — prevents saving default tree over real data
-    // Show warning so user knows data didn't load
-    setTimeout(()=>alert('Could not load your tree — you may be offline. Your saved data is safe. Please refresh to try again.'),500);
-  }
+  // Load settings FIRST so we know if demoMode is on
   await loadSettings();
+
+  if(demoMode){
+    // Demo mode: fresh tree every reload, saves blocked (treeLoaded stays false)
+    P=makeDefaultTree(currentUser);
+    console.log('Demo Mode: fresh tree created. Saves are disabled.');
+  } else {
+    try{
+      const snap=await userDoc().get();
+      if(snap.exists && snap.data().people && snap.data().people.length){
+        P=snap.data().people;
+        treeLoaded=true;
+      } else {
+        P=makeDefaultTree(currentUser);
+        treeLoaded=true;
+        await saveTree(false);
+      }
+    }catch(e){
+      console.error('Failed to load tree from Firestore:',e);
+      P=makeDefaultTree(currentUser||{displayName:''});
+      // Do NOT set treeLoaded — prevents saving default tree over real data
+      setTimeout(()=>alert('Could not load your tree — you may be offline. Your saved data is safe. Please refresh to try again.'),500);
+    }
+  }
   rebuild(); render(); setTimeout(()=>{setTreeMode(treeMode||'simple'); resetView();},90);
 }
 async function saveTree(ind=true){
@@ -1738,6 +1768,7 @@ function g(id){ return byId[id]; }
 let nxt=Date.now();
 let treeMode='complex'; // 'simple' | 'complex'
 let youngAge=17; // 'young' if age <= this
+let demoMode=false; // when true, creates fresh tree on every reload
 let autoConnections=true; // auto-infer relationships to isYou
 function setTreeMode(mode){
   treeMode=mode;
