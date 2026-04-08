@@ -229,28 +229,62 @@ function drawBranches(){
     });
   });
 
-  // ── Auto-detected sibling lines from shared parents (BLOOD: solid bold, BOTH modes) ──
+  // ── Auto-detected sibling lines (BLOOD: solid bold, BOTH modes) ──
+  // Two passes: (1) shared parents[] entries, (2) parent-centric — find all children
+  // of each parent (via parents[] OR child-type customLinks) and draw sibling lines.
   const autoSibDrawn=new Set();
+  const CHILD_TYPE_LABELS=new Set(['Son','Daughter','Child','Stepson','Stepdaughter','Stepchild']);
+
+  // Build a map: parentId → Set of childIds (from parents[] AND customLinks)
+  const parentChildMap={};
   people.forEach(p=>{
-    const pars=p.parents||[];
-    if(!pars.length) return;
-    people.filter(x=>x.id!==p.id&&(x.parents||[]).some(pp=>pars.includes(pp))).forEach(sib=>{
-      const key=[p.id,sib.id].sort().join('|');
-      if(autoSibDrawn.has(key)) return;
-      autoSibDrawn.add(key);
-      // Skip if already drawn as a customLink sibling
-      if(sibDrawn.has(key)) return;
-      const mx=(p.x+sib.x)/2, my=(p.y+sib.y)/2-20;
-      const path=createSvgElement('path');
-      path.setAttribute('d',`M ${p.x} ${p.y} Q ${mx} ${my} ${sib.x} ${sib.y}`);
-      path.setAttribute('stroke', getBranchRgba('sibling', .55));
-      path.setAttribute('stroke-width','3');
-      path.setAttribute('fill','none');
-      path.setAttribute('stroke-linecap','round');
-      path.setAttribute('class','br');
-      path.dataset.src=p.id; path.dataset.dst=sib.id;
-      bG.appendChild(path);
+    // Children listed in parents[]
+    (p.parents||[]).forEach(pid=>{
+      if(!parentChildMap[pid]) parentChildMap[pid]=new Set();
+      parentChildMap[pid].add(p.id);
     });
+  });
+  // Also detect children via customLinks (parent has "Son"/"Daughter" link to child,
+  // OR child has "Father"/"Mother" link to parent) — single pass
+  const PARENT_TYPE_LABELS=new Set(['Father','Mother','Parent','Stepfather','Stepmother']);
+  people.forEach(p=>{
+    Object.entries(p.customLinks||{}).forEach(([tid,v])=>{
+      const label=typeof v==='string'?v:v.label||'';
+      if(CHILD_TYPE_LABELS.has(label)){
+        // p is parent, tid is child
+        if(!parentChildMap[p.id]) parentChildMap[p.id]=new Set();
+        parentChildMap[p.id].add(tid);
+      }
+      if(PARENT_TYPE_LABELS.has(label)){
+        // p is child, tid is parent
+        if(!parentChildMap[tid]) parentChildMap[tid]=new Set();
+        parentChildMap[tid].add(p.id);
+      }
+    });
+  });
+
+  // Draw sibling lines between all children of each parent
+  Object.values(parentChildMap).forEach(childSet=>{
+    const kids=[...childSet];
+    for(let i=0;i<kids.length;i++){
+      for(let j=i+1;j<kids.length;j++){
+        const a=peopleById[kids[i]], b=peopleById[kids[j]];
+        if(!a||!b) continue;
+        const key=[kids[i],kids[j]].sort().join('|');
+        if(autoSibDrawn.has(key)||sibDrawn.has(key)) continue;
+        autoSibDrawn.add(key);
+        const mx=(a.x+b.x)/2, my=(a.y+b.y)/2-20;
+        const path=createSvgElement('path');
+        path.setAttribute('d',`M ${a.x} ${a.y} Q ${mx} ${my} ${b.x} ${b.y}`);
+        path.setAttribute('stroke', getBranchRgba('sibling', .55));
+        path.setAttribute('stroke-width','3');
+        path.setAttribute('fill','none');
+        path.setAttribute('stroke-linecap','round');
+        path.setAttribute('class','br');
+        path.dataset.src=kids[i]; path.dataset.dst=kids[j];
+        bG.appendChild(path);
+      }
+    }
   });
 
   // ── Tree View ends here — All Twygs continues below ──
