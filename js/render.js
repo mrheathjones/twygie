@@ -234,22 +234,48 @@ function drawBranches(){
 
   // ── Spouse lines (NON-BLOOD: dashed) ──
   const spouseDrawn=new Set();
-  if(showNonBlood) people.forEach(p=>{
-    if(!p.spouseOf) return;
-    const key=[p.id,p.spouseOf].sort().join('|');
-    if(spouseDrawn.has(key)) return;
-    spouseDrawn.add(key);
-    const sp=peopleById[p.spouseOf]; if(!sp) return;
-    const path=createSvgElement('path');
-    path.setAttribute('d',`M ${p.x} ${p.y} L ${sp.x} ${sp.y}`);
-    path.setAttribute('stroke', getBranchRgba('spouse', .55));
-    path.setAttribute('stroke-width','2.5');
-    path.setAttribute('stroke-dasharray','8,5');
-    path.setAttribute('fill','none');
-    path.setAttribute('class','br');
-    path.dataset.src=p.id; path.dataset.dst=sp.id;
-    bG.appendChild(path);
-  });
+  if(showNonBlood){
+    // Draw from spouseOf property
+    people.forEach(p=>{
+      if(!p.spouseOf) return;
+      const key=[p.id,p.spouseOf].sort().join('|');
+      if(spouseDrawn.has(key)) return;
+      spouseDrawn.add(key);
+      const sp=peopleById[p.spouseOf]; if(!sp) return;
+      const path=createSvgElement('path');
+      path.setAttribute('d',`M ${p.x} ${p.y} L ${sp.x} ${sp.y}`);
+      path.setAttribute('stroke', getBranchRgba('spouse', .55));
+      path.setAttribute('stroke-width','2.5');
+      path.setAttribute('stroke-dasharray','8,5');
+      path.setAttribute('fill','none');
+      path.setAttribute('class','br');
+      path.dataset.src=p.id; path.dataset.dst=sp.id;
+      bG.appendChild(path);
+    });
+    // Also draw from customLinks with spouse-type labels (Husband/Wife/Partner)
+    people.forEach(p=>{
+      Object.entries(p.customLinks||{}).forEach(([tid,v])=>{
+        const lbl=typeof v==='string'?v:v.label||'';
+        if(!SPOUSE_SET.has(lbl)) return;
+        const key=[p.id,tid].sort().join('|');
+        if(spouseDrawn.has(key)) return;
+        spouseDrawn.add(key);
+        const sp=peopleById[tid]; if(!sp) return;
+        // Also fix the data: set spouseOf if missing
+        if(!p.spouseOf) p.spouseOf=tid;
+        if(!sp.spouseOf) sp.spouseOf=p.id;
+        const path=createSvgElement('path');
+        path.setAttribute('d',`M ${p.x} ${p.y} L ${sp.x} ${sp.y}`);
+        path.setAttribute('stroke', getBranchRgba('spouse', .55));
+        path.setAttribute('stroke-width','2.5');
+        path.setAttribute('stroke-dasharray','8,5');
+        path.setAttribute('fill','none');
+        path.setAttribute('class','br');
+        path.dataset.src=p.id; path.dataset.dst=tid;
+        bG.appendChild(path);
+      });
+    });
+  }
 
   // ── Sibling + blood customLinks (solid) ──
   const sibDrawn=new Set();

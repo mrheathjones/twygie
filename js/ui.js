@@ -761,10 +761,14 @@ function saveConnection(){
     if(!other.relLabel) other.relLabel=sLbl;
   } else if(type==='spouse'){
     other.spouseOf=target.id;
+    target.spouseOf=other.id;
     if(!other.gender&&label.toLowerCase()==='husband') other.gender='male';
     if(!other.gender&&label==='wife') other.gender='female';
-    if(!other.relLabel) other.relLabel='Spouse';
     other.relLabel=label;
+    // Structural: target's existing children become new spouse's children too
+    people.filter(x=>(x.parents||[]).includes(target.id)).forEach(child=>{
+      if(!(child.parents||[]).includes(other.id)) child.parents=[...(child.parents||[]),other.id];
+    });
   } else if(type==='labeled'){
     if(!target.customLinks) target.customLinks={};
     if(!other.customLinks) other.customLinks={};
