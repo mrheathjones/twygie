@@ -661,7 +661,7 @@ function drawNodes(){
         if(tip){
           tip.textContent=`${sn.name||sn.firstName} · From ${sn._sharedByName}'s tree`;
           tip.style.left=(e.clientX+12)+'px';tip.style.top=(e.clientY-24)+'px';
-          tip.style.opacity='1';
+          tip.classList.add('show');
         }
       });
       G.addEventListener('mouseleave',hideTooltip);

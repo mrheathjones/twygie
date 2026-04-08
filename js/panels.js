@@ -91,7 +91,7 @@ function showTooltip(e,p){
   t.style.left=(e.clientX+14)+'px'; t.style.top=(e.clientY-12)+'px';
   t.classList.add('show');
 }
-function hideTooltip(){ document.getElementById('tip').classList.remove('show'); }
+function hideTooltip(){ const t=document.getElementById('tip'); t.classList.remove('show'); t.style.opacity=''; }
 
 // ─── SCRIM CLICK ─────────────────────────────────────────────────────────────
 function handleScrimClick(e){
