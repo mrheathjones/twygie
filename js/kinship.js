@@ -373,10 +373,19 @@ function autoAssignToYou(newNodeId, anchorId, relToAnchor){
     const alreadyLinked=
       (existing.parents||[]).includes(newNodeId)||
       (newNode.parents||[]).includes(existing.id)||
-      existing.spouseOf===newNodeId||newNode.spouseOf===existing.id||
-      (existing.customLinks&&existing.customLinks[newNodeId])||
-      (newNode.customLinks&&newNode.customLinks[existing.id]);
+      existing.spouseOf===newNodeId||newNode.spouseOf===existing.id;
     if(alreadyLinked) return;
+
+    // For customLinks: skip only if the exact label already exists
+    const existingCL=existing.customLinks&&existing.customLinks[newNodeId];
+    const reverseCL=newNode.customLinks&&newNode.customLinks[existing.id];
+    if(existingCL||reverseCL){
+      const existLabel=existingCL?(typeof existingCL==='string'?existingCL:existingCL.label||''):'';
+      const reverseLabel=reverseCL?(typeof reverseCL==='string'?reverseCL:reverseCL.label||''):'';
+      // Already has this exact label or its inverse — skip
+      if(existLabel===finalLabel||reverseLabel===finalLabel||reverseLabel===inverseLabel(finalLabel)) return;
+      // Different label exists — still apply (applyInferredRel will update)
+    }
 
     applyInferredRel(existing, newNode, finalLabel);
   });
