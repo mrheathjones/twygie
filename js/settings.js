@@ -214,8 +214,10 @@ function saveSettings(){
 
 function setSettingsMode(mode){
   settingsMode=mode;
-  document.getElementById('sp-opt-simple').classList.toggle('active', mode==='simple');
-  document.getElementById('sp-opt-complex').classList.toggle('active', mode==='complex');
+  ['simple','complex','bloodline','bonds'].forEach(m=>{
+    const el=document.getElementById('sp-opt-'+m);
+    if(el) el.classList.toggle('active', mode===m);
+  });
   render();
 }
 

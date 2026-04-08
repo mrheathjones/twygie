@@ -295,12 +295,12 @@ let demoMode=false; // when true, creates fresh tree on every reload
 let autoConnections=true; // auto-infer relationships to isYou
 function setTreeMode(mode){
   treeMode=mode;
-  const tBtn=document.getElementById('btn-tree');
-  const aBtn=document.getElementById('btn-all');
-  if(tBtn&&aBtn){
-    tBtn.classList.toggle('active', mode==='simple');
-    aBtn.classList.toggle('active', mode==='complex');
-  }
+  ['btn-tree','btn-all','btn-blood','btn-bonds'].forEach(id=>{
+    const btn=document.getElementById(id);
+    if(btn) btn.classList.toggle('active',
+      (id==='btn-tree'&&mode==='simple')||(id==='btn-all'&&mode==='complex')||
+      (id==='btn-blood'&&mode==='bloodline')||(id==='btn-bonds'&&mode==='bonds'));
+  });
   render();
 }
 function updateCount(){ document.getElementById('mcnum').textContent=people.length; }

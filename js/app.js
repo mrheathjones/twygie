@@ -328,6 +328,8 @@ function initEventListeners() {
   on('mcount',       'click', openMembersPanel);
   on('btn-tree',     'click', () => setTreeMode('simple'));
   on('btn-all',      'click', () => setTreeMode('complex'));
+  on('btn-blood',    'click', () => setTreeMode('bloodline'));
+  on('btn-bonds',    'click', () => setTreeMode('bonds'));
   on('btn-fit',      'click', resetView);
   on('export-btn',   'click', toggleExportMenu);
   on('btn-export-png','click', () => exportTree('png'));
@@ -373,6 +375,8 @@ function initEventListeners() {
   on('sp-save-btn',       'click', saveSettings);
   on('sp-opt-simple',     'click', () => setSettingsMode('simple'));
   on('sp-opt-complex',    'click', () => setSettingsMode('complex'));
+  on('sp-opt-bloodline',  'click', () => setSettingsMode('bloodline'));
+  on('sp-opt-bonds',      'click', () => setSettingsMode('bonds'));
   on('sp-autoconn',       'click', toggleAutoConn);
   on('sp-demo',           'click', toggleDemoMode);
 

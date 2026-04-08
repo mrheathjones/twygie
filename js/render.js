@@ -157,9 +157,13 @@ function getBranchRgba(key, o){
 function drawBranches(){
   const bG=document.getElementById('bG');
   const simple=treeMode==='simple';
+  // Mode flags: what to show
+  const showBlood=treeMode!=='bonds';      // parent-child, sibling, extended blood
+  const showNonBlood=treeMode!=='bloodline'; // spouse, in-law, non-blood labeled
+  const showExtended=treeMode==='complex'||treeMode==='bloodline'||treeMode==='bonds'; // extended connections
 
   // ── Parent-child lines (BLOOD: solid, bold) ──
-  people.forEach(child=>{
+  if(showBlood) people.forEach(child=>{
     (child.parents||[]).forEach(pid=>{
       const par=peopleById[pid]; if(!par) return;
       const dy=par.y-child.y;
@@ -181,7 +185,7 @@ function drawBranches(){
 
   // ── Spouse lines (NON-BLOOD: dashed) ──
   const spouseDrawn=new Set();
-  people.forEach(p=>{
+  if(showNonBlood) people.forEach(p=>{
     if(!p.spouseOf) return;
     const key=[p.id,p.spouseOf].sort().join('|');
     if(spouseDrawn.has(key)) return;
@@ -198,18 +202,18 @@ function drawBranches(){
     bG.appendChild(path);
   });
 
-  // ── Sibling customLinks (solid) — Tree View; Blood extended (solid) + labeled (dashed) — All Twygs ──
+  // ── Sibling + blood customLinks (solid) ──
   const sibDrawn=new Set();
-  people.forEach(p=>{
+  if(showBlood) people.forEach(p=>{
     Object.entries(p.customLinks||{}).forEach(([tid,v])=>{
       const label=typeof v==='string'?v:v.label||'';
       // ALWAYS derive lineType from current BLOOD_LABELS — never trust stored lineType
       const isSibLabel=['Brother','Sister','Half-brother','Half-sister','Stepbrother','Stepsister','Sibling'].includes(label);
       const isInLaw=label.includes('-in-law');
       const lineType=isSibLabel?'sibling':isInLaw?'inlaw':BLOOD_LABELS.has(label)?'blood':'labeled';
-      // Siblings: show in both modes. Blood extended: All Twygs only. In-law/labeled: drawn below
+      // Siblings + blood extended only in this section
       if(lineType!=='sibling'&&lineType!=='blood') return;
-      if(lineType==='blood'&&simple) return;
+      if(lineType==='blood'&&!showExtended) return;
       const key=[p.id,tid].sort().join('|');
       if(sibDrawn.has(key)) return;
       sibDrawn.add(key);
@@ -229,10 +233,11 @@ function drawBranches(){
     });
   });
 
-  // ── Auto-detected sibling lines (BLOOD: solid bold, BOTH modes) ──
+  // ── Auto-detected sibling lines (BLOOD: solid bold) ──
   // Two passes: (1) shared parents[] entries, (2) parent-centric — find all children
   // of each parent (via parents[] OR child-type customLinks) and draw sibling lines.
   const autoSibDrawn=new Set();
+  if(showBlood){
   const CHILD_TYPE_LABELS=new Set(['Son','Daughter','Child','Stepson','Stepdaughter','Stepchild']);
 
   // Build a map: parentId → Set of childIds (from parents[] AND customLinks)
@@ -286,11 +291,14 @@ function drawBranches(){
       }
     }
   });
+  } // end if(showBlood) — auto-detected siblings
 
-  // ── Tree View ends here — All Twygs continues below ──
-  if(simple) return;
+  // ── Extended sections: only for All Twygs, Bloodline, Bonds ──
+  if(!showExtended) return;
+
+  // ── In-law + non-blood labeled customLinks (dashed) ──
   const extDrawn=new Set();
-  people.forEach(p=>{
+  if(showNonBlood) people.forEach(p=>{
     Object.entries(p.customLinks||{}).forEach(([tid,v])=>{
       const label=typeof v==='string'?v:v.label||'';
       const isSibLabel=['Brother','Sister','Half-brother','Half-sister','Stepbrother','Stepsister','Sibling'].includes(label);
