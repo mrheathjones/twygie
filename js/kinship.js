@@ -491,7 +491,8 @@ function cleanFalseParents(){
 
 // Generic getRelToYou from any node's perspective (not just isYou)
 // Returns: how TARGET appears to FROM (FROM's perspective)
-function getRelToYou_for(targetId, fromId){
+function getRelToYou_for(targetId, fromId, _depth){
+  if((_depth||0)>2) return ''; // recursion guard for spouse bridges
   const from=people.find(p=>p.id===fromId); if(!from) return '';
   const t=peopleById[targetId]||people.find(p=>p.id===targetId); if(!t) return '';
   if(t.id===from.id) return '';
@@ -558,49 +559,146 @@ function getRelToYou_for(targetId, fromId){
     }
   }
 
-  // ── 7. Explicit customLinks — from's own stored label for target only ───────
+  // ── 7. STRUCTURAL RESOLVER: find common ancestor and determine relationship ──
+  // This is the core genealogical algorithm: trace parent chains from both nodes
+  // upward to find a shared ancestor, then use generation distances to classify.
+  {
+    // Build expanded parents for any node (parents[] + parent-type customLinks)
+    const PARENT_CL=new Set(['Father','Mother','Parent','Stepfather','Stepmother']);
+    const CHILD_CL=new Set(['Son','Daughter','Child','Stepson','Stepdaughter','Stepchild']);
+    function getExpandedParents(nid){
+      const node=peopleById[nid]; if(!node) return [];
+      const pset=new Set(node.parents||[]);
+      Object.entries(node.customLinks||{}).forEach(([tid,v])=>{
+        const lbl=typeof v==='string'?v:v.label||'';
+        if(PARENT_CL.has(lbl)) pset.add(tid);
+      });
+      // Reverse: anyone with a child-type link pointing to this node
+      people.forEach(p=>{
+        const cl=p.customLinks&&p.customLinks[nid];
+        if(cl){
+          const lbl=typeof cl==='string'?cl:cl.label||'';
+          if(CHILD_CL.has(lbl)) pset.add(p.id);
+        }
+      });
+      return [...pset];
+    }
+
+    // BFS upward from both nodes to find common ancestor
+    const ancFrom={}, ancTarget={}; // id → generation distance
+    let qF=[{id:fromId,gen:0}], qT=[{id:targetId,gen:0}];
+    let found=null;
+    const MAX_GEN=8;
+    for(let step=0;step<MAX_GEN*2&&!found;step++){
+      // Expand from's ancestors
+      if(qF.length){
+        const next=[];
+        for(const {id,gen} of qF){
+          if(id in ancFrom) continue;
+          ancFrom[id]=gen;
+          if(id in ancTarget){ found={id,genA:gen,genB:ancTarget[id]}; break; }
+          if(gen<MAX_GEN) getExpandedParents(id).forEach(pid=>next.push({id:pid,gen:gen+1}));
+        }
+        qF=next;
+        if(found) break;
+      }
+      // Expand target's ancestors
+      if(qT.length){
+        const next=[];
+        for(const {id,gen} of qT){
+          if(id in ancTarget) continue;
+          ancTarget[id]=gen;
+          if(id in ancFrom){ found={id,genA:ancFrom[id],genB:gen}; break; }
+          if(gen<MAX_GEN) getExpandedParents(id).forEach(pid=>next.push({id:pid,gen:gen+1}));
+        }
+        qT=next;
+      }
+    }
+
+    if(found){
+      const {genA,genB}=found; // genA = from→ancestor, genB = target→ancestor
+      const g=t.gender;
+
+      // Direct line: one IS the ancestor
+      if(genA===0){
+        if(genB===1) return genderedRel('Child',g);
+        if(genB===2) return genderedRel('Grandchild',g);
+        if(genB===3) return genderedRel('Great-grandchild',g);
+        if(genB===4) return genderedRel('Great-great-grandchild',g);
+      }
+      if(genB===0){
+        if(genA===1) return genderedRel('Parent',g);
+        if(genA===2) return genderedRel('Grandparent',g);
+        if(genA===3) return genderedRel('Great-grandparent',g);
+        if(genA===4) return genderedRel('Great-great-grandparent',g);
+      }
+
+      // Same generation
+      if(genA===genB){
+        if(genA===1) return genderedRel('Sibling',g);
+        const cousinDeg=genA-1; // 2→first, 3→second, 4→third
+        const labels=['','First','Second','Third'];
+        return (labels[cousinDeg]||cousinDeg+'th')+' Cousin';
+      }
+
+      // Different generations — uncle/nephew or cousin-removed
+      const minGen=Math.min(genA,genB), maxGen=Math.max(genA,genB);
+      const diff=maxGen-minGen;
+
+      if(minGen===1){
+        // One is child of common ancestor → uncle/nephew relationship
+        if(genA<genB){
+          // from is closer to ancestor → target is nephew/niece level
+          if(diff===1) return genderedRel('Nephew',g)||'Nephew/Niece';
+          if(diff===2) return genderedRel('Grand-nephew',g)||'Grand-nephew/niece';
+          if(diff===3) return genderedRel('Great-grand-nephew',g)||'Great-grand-nephew/niece';
+        } else {
+          // target is closer to ancestor → target is uncle/aunt level
+          if(diff===1) return g==='male'?'Uncle':g==='female'?'Aunt':'Uncle/Aunt';
+          if(diff===2) return g==='male'?'Great-uncle':g==='female'?'Great-aunt':'Great-uncle/aunt';
+          if(diff===3) return g==='male'?'Great-grand-uncle':g==='female'?'Great-grand-aunt':'Great-grand-uncle/aunt';
+        }
+      }
+
+      // Cousin with removal
+      const cousinDeg=minGen-1;
+      const labels=['','First','Second','Third'];
+      const removedLabels=['','Once Removed','Twice Removed','Thrice Removed'];
+      return (labels[cousinDeg]||cousinDeg+'th')+' Cousin'+(removedLabels[diff]?' '+removedLabels[diff]:'');
+    }
+
+    // ── 8. No common blood ancestor — check for in-law via spouse bridge ──
+    // If from's spouse shares a common ancestor with target, it's an in-law relationship
+    if(fromSpouseId){
+      const sp=peopleById[fromSpouseId];
+      if(sp){
+        const spouseRel=getRelToYou_for(targetId, fromSpouseId, (_depth||0)+1);
+        if(spouseRel && !spouseRel.includes('-in-law')){
+          // Spouse's blood relative → in-law to from
+          return spouseRel+'-in-law';
+        }
+      }
+    }
+    // Reverse: target's spouse is blood-related to from
+    const targetSpouseId=t.spouseOf||(people.find(p=>p.spouseOf===targetId)||{}).id;
+    if(targetSpouseId && targetSpouseId!==fromId){
+      const tsp=peopleById[targetSpouseId];
+      if(tsp){
+        const tspRel=getRelToYou_for(targetSpouseId, fromId, (_depth||0)+1);
+        if(tspRel && !tspRel.includes('-in-law')){
+          // Target's spouse is from's blood relative → target is in-law
+          // e.g. spouse is "Uncle" → target is "Uncle-in-law"
+          return tspRel+'-in-law';
+        }
+      }
+    }
+  }
+
+  // ── 9. Fallback: explicit customLinks (last resort) ──
   if(from.customLinks&&from.customLinks[targetId]){
     const v=from.customLinks[targetId];
     return typeof v==='string'?v:v.label;
   }
-
-  // ── 8. Through isYou: if from is isYou's sibling, reuse isYou's label for target ──
-  // This enables multi-hop inference: if isYou↔Henry = Uncle, and Maddy is isYou's
-  // sibling, then getRelToYou_for(Henry, Maddy) = "Uncle" (same as isYou's perspective)
-  const youRef=people.find(p=>p.isYou);
-  if(youRef && from.id!==youRef.id){
-    const SAME_FOR_SIBLINGS=new Set([
-      'Uncle','Aunt','Great-uncle','Great-aunt','Great-grand-uncle','Great-grand-aunt',
-      'Grandfather','Grandmother','Grandparent',
-      'Great-grandfather','Great-grandmother','Great-grandparent',
-      'Nephew','Niece','Grand-nephew','Grand-niece',
-      'First Cousin','Second Cousin','Third Cousin',
-      'First Cousin Once Removed','First Cousin Twice Removed',
-      'Uncle-in-law','Aunt-in-law','Nephew-in-law','Niece-in-law',
-    ]);
-    // Check if from is isYou's sibling
-    const yp=new Set(youRef.parents||[]);
-    const isSibOfYou=(yp.size&&(from.parents||[]).some(pid=>yp.has(pid)))||
-      (youRef.customLinks&&Object.entries(youRef.customLinks).some(([k,v])=>{
-        if(k!==from.id) return false;
-        const l=typeof v==='string'?v:v.label||'';
-        return ['Brother','Sister','Sibling','Half-brother','Half-sister'].includes(l);
-      }));
-    if(isSibOfYou && youRef.customLinks && youRef.customLinks[targetId]){
-      const yv=youRef.customLinks[targetId];
-      const youLabel=typeof yv==='string'?yv:yv.label||'';
-      if(SAME_FOR_SIBLINGS.has(youLabel)) return youLabel;
-    }
-    // Reverse: check target's customLink to isYou and use its inverse
-    // e.g., Henry sees isYou as "Nephew" → inverse = "Uncle" → Henry appears as "Uncle" to sibling too
-    if(isSibOfYou && t.customLinks && t.customLinks[youRef.id]){
-      const tv=t.customLinks[youRef.id];
-      const tLabel=typeof tv==='string'?tv:tv.label||'';
-      const inv=inverseLabel(tLabel);
-      if(SAME_FOR_SIBLINGS.has(inv)) return inv;
-    }
-  }
-
   return '';
 }
 
