@@ -1,5 +1,22 @@
-/* ═══ render.js ═══ SVG rendering: nodes, branches, glow, layout, visual helpers ═══ */
-
+/* ═══ render.js ═══════════════════════════════════════════════════════════
+ * SVG tree rendering: nodes, branches, glow effects, and visual helpers.
+ *
+ * DEFINES (globals):
+ *   SVG_NS              — SVG namespace string
+ *   DEFAULT_NODE_COLORS  — default color palette for node categories
+ *   DEFAULT_LINE_COLORS  — default color palette for connection lines
+ *   nodeColors, lineColors — current (possibly user-customized) palettes
+ *
+ * KEY FUNCTIONS:
+ *   render()            — main render loop: clears + redraws branches + nodes
+ *   drawBranches()      — draws all connection lines (color-coded by type)
+ *   drawNodes()         — draws all node circles with glow, photos, labels
+ *   relCategory(p)      — classifies a Person into a visual category
+ *   getNodeColor(p)     — returns the fill color for a node
+ *   getGlowRadius(p)    — returns glow halo size based on connection count
+ *
+ * READS: people[], peopleById{}, treeMode, BLOOD_LABELS, nodeColors, lineColors
+ * ═══════════════════════════════════════════════════════════════════════════ */
 // ─── GENDER-AWARE RELATIONSHIP LABELS ────────────────────────────────────────
 function genderedRel(baseRel, gender){
   const m=gender==='male', f=gender==='female';

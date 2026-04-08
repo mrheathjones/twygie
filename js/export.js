@@ -1,5 +1,14 @@
-/* ═══ export.js ═══ Export tree as PNG image or PDF document ═══ */
-
+/* ═══ export.js ═══════════════════════════════════════════════════════════
+ * Export the family tree as PNG image or multi-page PDF document.
+ *
+ * KEY FUNCTIONS:
+ *   exportTree('png')      — renders SVG to canvas, downloads as PNG
+ *   exportTree('pdf')      — generates PDF with cover, TOC, tree viz,
+ *                             and member directory (uses jsPDF from CDN)
+ *   toggleExportMenu()     — shows/hides the export dropdown
+ *
+ * READS: people[], peopleById{}, nodeColors, lineColors
+ * ═══════════════════════════════════════════════════════════════════════════ */
 // ─── EXPORT ──────────────────────────────────────────────────────────────────
 
 function toggleExportMenu(){

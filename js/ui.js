@@ -1,5 +1,19 @@
-/* ═══ ui.js ═══ Node drag, selection, card display, editing, connection management ═══ */
-
+/* ═══ ui.js ═══════════════════════════════════════════════════════════════
+ * Node interaction, card display, editing, and connection management.
+ *
+ * KEY FUNCTIONS:
+ *   selectNode(id)        — highlights node, opens card, zooms to it
+ *   fillCard(p)           — populates the overlay card with Person data
+ *   editCard(id)          — switches card to edit mode with form fields
+ *   saveCard(id)          — saves edited fields back to the Person object
+ *   removePerson(id)      — deletes a node with cascade/orphan choice
+ *   editConnRel()         — inline connection type editing (pencil icon)
+ *   removeConnFromCard()  — deletes a specific connection between two nodes
+ *   openConnModal(id)     — opens the Add Connection modal for a node
+ *   saveConnection()      — saves a new connection between two nodes
+ *
+ * READS: people[], peopleById{}, selectedNodeId, BLOOD_LABELS
+ * ═══════════════════════════════════════════════════════════════════════════ */
 // ─── NODE DRAG ────────────────────────────────────────────────────────────────
 let nodeDragState=null;
 

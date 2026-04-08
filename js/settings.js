@@ -1,5 +1,16 @@
-/* ═══ settings.js ═══ Settings panel, color pickers, custom connection types ═══ */
-
+/* ═══ settings.js ═══════════════════════════════════════════════════════════
+ * Settings panel UI: preferences, color pickers, custom connection types.
+ *
+ * KEY FUNCTIONS:
+ *   openSettings() / closeSettings()  — panel show/hide with animation
+ *   loadSettings()                    — loads from Firestore userSettings/{uid}
+ *   saveSettings()                    — persists all preferences (fire-and-forget)
+ *   syncColorPickers()                — syncs color picker UI with current values
+ *   renderCustomLineList()            — renders custom connection type manager
+ *
+ * READS: nodeColors, lineColors, DEFAULT_NODE_COLORS, DEFAULT_LINE_COLORS
+ * WRITES: nodeColors, lineColors, customLineTypes[], youngAge, treeMode
+ * ═══════════════════════════════════════════════════════════════════════════ */
 // ─── SETTINGS ─────────────────────────────────────────────────────────────────
 
 function previewLineColor(key, hex){

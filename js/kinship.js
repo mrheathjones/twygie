@@ -1,5 +1,18 @@
-/* ═══ kinship.js ═══ Relationship inference, auto-connections, structural validation ═══ */
-
+/* ═══ kinship.js ═══════════════════════════════════════════════════════════
+ * Relationship inference engine — the "kinship algebra" that auto-assigns
+ * relationships when new nodes are added to the tree.
+ *
+ * KEY FUNCTIONS:
+ *   inferRelToYou(anchorRel, newRel, gender) — kinship composition table
+ *   autoAssignToYou(newNodeId, anchorId, rel) — full auto-assign pipeline
+ *   getRelToYou_for(targetId, fromId)        — multi-hop relationship lookup
+ *   cleanFalseConnections()                  — validates + removes bad links
+ *   cleanFalseParents()                      — removes invalid parent entries
+ *   recalcAllRelationships()                 — full tree re-inference
+ *
+ * READS: people[], peopleById{}, BLOOD_LABELS, DIRECT_PARENT_SET, etc.
+ * WRITES: Person.parents[], Person.customLinks{}, Person.spouseOf
+ * ═══════════════════════════════════════════════════════════════════════════ */
 // ─── AUTO-CONNECTIONS ────────────────────────────────────────────────────────
 
 /**

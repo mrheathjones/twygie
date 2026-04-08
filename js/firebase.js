@@ -1,5 +1,23 @@
-/* ═══ firebase.js ═══ Firebase config, auth, encryption, data persistence ═══ */
-
+/* ═══ firebase.js ═══════════════════════════════════════════════════════════
+ * Firebase initialization, authentication, and data persistence.
+ *
+ * DEFINES (globals):
+ *   people[]        — master array of all Person objects
+ *   peopleById{}    — lookup map: id → Person
+ *   currentUser     — Firebase Auth user object
+ *   treeMode        — 'simple' | 'complex' (which connections to show)
+ *   youngAge        — age threshold for "young" node styling (default 17)
+ *   demoMode        — when true, creates fresh tree on every reload
+ *   autoConnections — when true, auto-infer relationships on add
+ *
+ * KEY FUNCTIONS:
+ *   loadTree()      — loads + decrypts user tree from Firestore
+ *   saveTree()      — encrypts + saves tree to Firestore
+ *   scheduleSave()  — debounced save (1.8s delay)
+ *   rebuild()       — rebuilds peopleById index + runs auto-layout
+ *   fullName(p)     — returns display name for a Person
+ *   appAlert/appConfirm/appChoice — branded modal dialogs
+ * ═══════════════════════════════════════════════════════════════════════════ */
 // ─── FIREBASE ─────────────────────────────────────────────────────────────────
 const firebaseConfig = {
   apiKey: "AIzaSyBwtDMGEIphvwvq319MZIr62C32fvSSe-4",

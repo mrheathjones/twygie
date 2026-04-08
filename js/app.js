@@ -1,5 +1,19 @@
-/* ═══ app.js ═══ Pan/zoom, view controls, add member form, event listeners ═══ */
-
+/* ═══ app.js ═══════════════════════════════════════════════════════════════
+ * Application entry point: pan/zoom controls, add member form, and
+ * event listeners. This file loads last and wires everything together.
+ *
+ * KEY FUNCTIONS:
+ *   resetView()          — fits tree to screen with padding
+ *   zoomBy(factor)       — zooms in/out centered on viewport
+ *   openModal(forId)     — opens the Add a Twyg form (optionally pre-linked)
+ *   submitMember()       — validates form, creates Person, runs auto-assign
+ *   promptWeddingDate()  — optional wedding date entry after spouse addition
+ *
+ * EVENT LISTENERS:
+ *   mousedown/mousemove/mouseup — canvas panning
+ *   wheel                       — scroll zoom
+ *   touchstart/touchmove/touchend — mobile pan + pinch-to-zoom
+ * ═══════════════════════════════════════════════════════════════════════════ */
 // ─── VIEW ────────────────────────────────────────────────────────────────────
 
 function resetView(){

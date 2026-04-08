@@ -1,5 +1,16 @@
-/* ═══ panels.js ═══ Members panel, timeline panel, tooltip, scrim ═══ */
-
+/* ═══ panels.js ═══════════════════════════════════════════════════════════
+ * Side panels, tooltip, transform state, and scrim handling.
+ *
+ * DEFINES (globals):
+ *   panX, panY, scale  — current canvas transform state
+ *
+ * KEY FUNCTIONS:
+ *   openMembersPanel() / closeMembersPanel()  — member list slide-in
+ *   renderMembersList()    — populates member list grouped by generation
+ *   showTooltip(e, p)      — shows hover tooltip near cursor
+ *   applyTransform(anim)   — applies panX/panY/scale to the SVG group
+ *   handleScrimClick()     — closes open panels/cards when backdrop clicked
+ * ═══════════════════════════════════════════════════════════════════════════ */
 // ─── MEMBERS PANEL ────────────────────────────────────────────────────────────
 function openMembersPanel(){
   renderMembersList();

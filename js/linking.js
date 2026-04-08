@@ -1,5 +1,21 @@
-/* ═══ linking.js ═══ Tree linking, TWYG codes, sharing tiers, shared nodes, auto-adopt ═══ */
-
+/* ═══ linking.js ═══════════════════════════════════════════════════════════
+ * Tree linking: connect trees between Twygie users via shared family members.
+ *
+ * FEATURES:
+ *   - TWYG-XXXX-XXXX link code generation (SHA-256 bridge matching)
+ *   - Firestore linkInvites/{code} with 7-day expiry
+ *   - treeLinks/{linkId} with real-time onSnapshot sync
+ *   - Share All / Bridge Only tiers with AES-256-GCM encryption
+ *   - Auto-adopt: import shared nodes into your own tree
+ *   - Bridge node display: gold dashed ring on shared nodes
+ *
+ * KEY FUNCTIONS:
+ *   generateLinkCode(nodeId)  — creates invite code for a bridge node
+ *   acceptLinkCode()          — validates + processes received code
+ *   loadSharedNodes()         — decrypts + renders shared data from links
+ *   adoptBatch(nodes)         — imports shared nodes into local tree
+ *   subscribeActiveLinks()    — real-time Firestore listener for link changes
+ * ═══════════════════════════════════════════════════════════════════════════ */
 // ─── TREE LINKING (Phase 3) ──────────────────────────────────────────────────
 
 function closeLinkModal(){ document.getElementById('link-bg').classList.remove('open'); }
