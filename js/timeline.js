@@ -412,7 +412,7 @@ function openDetail(id){
     ${story?`<div class="dc-story">"${story}"</div>`:''}
     <div class="dc-divider"></div>
     <div class="dc-tree">${treeHtml}</div>
-    <a class="dc-link" href="/family-tree">View in Tree →</a>
+    <a class="dc-link" href="/app">View in Tree →</a>
   `;
   document.getElementById('detail-bg').classList.add('open');
 }

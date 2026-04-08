@@ -107,7 +107,7 @@ function makeDefaultTree(user) {
 // ─── AUTH ─────────────────────────────────────────────────────────────────────
 let currentUser=null, saveTimer=null, treeLoaded=false;
 auth.onAuthStateChanged(async user => {
-  if (!user){ window.location.href='login.html'; return; }
+  if (!user){ window.location.href='/login'; return; }
   currentUser=user;
   const initEl=document.getElementById('uinitial');
   const avatarEl=document.getElementById('uavatar');
@@ -120,7 +120,7 @@ auth.onAuthStateChanged(async user => {
   window._appReady=true; // enable auto-adopt only after initial load
   hideLoading();
 });
-async function signOut(){ if(!await appConfirm('Sign out of Twygie?','Sign Out','Stay')) return; await auth.signOut(); window.location.href='login.html'; }
+async function signOut(){ if(!await appConfirm('Sign out of Twygie?','Sign Out','Stay')) return; await auth.signOut(); window.location.href='/login'; }
 
 function toggleSection(id){
   const body=document.getElementById(id);
