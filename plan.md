@@ -117,9 +117,10 @@ An interactive, beautiful family tree web app. Each family member is a "Twyg" �
 - [x] Timeline view (by birth year) ✅ DONE (Session 10)
 - [x] Export tree as image/PDF ✅ DONE (Session 10)
 - [ ] GEDCOM import (Ancestry/FamilySearch)
-- [ ] **Anniversary Capture**
-  - When spouse connection is made, prompt to enter Wedding Date
-  - Shows anniversary info in the node card info section
+- [x] **Anniversary Capture** (Session 10)
+  - When spouse connection is made, branded modal prompts for Wedding Date
+  - Shows 💍 Married [date] · [years] in node card info section
+  - Editable in the edit form when node has a spouse
 - [ ] **View Modifiers** — layout modes for the tree
   - Compact: nodes cluster close in a tight orb pattern
   - Relaxed: nodes spread out a bit (current default)
