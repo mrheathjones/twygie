@@ -312,3 +312,106 @@ function saveWeddingDate(nodeId){
   scheduleSave();
   if(selectedNodeId) selectNode(selectedNodeId); // refresh card
 }
+
+// ─── EVENT LISTENER WIRING ───────────────────────────────────────────────────
+// All static HTML event handlers in one place (replaces inline onclick/oninput)
+
+function initEventListeners() {
+  const on = (id, event, fn) => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener(event, fn);
+  };
+
+  // --- Header ---
+  on('mcount',       'click', openMembersPanel);
+  on('btn-tree',     'click', () => setTreeMode('simple'));
+  on('btn-all',      'click', () => setTreeMode('complex'));
+  on('btn-fit',      'click', resetView);
+  on('export-btn',   'click', toggleExportMenu);
+  on('btn-export-png','click', () => exportTree('png'));
+  on('btn-export-pdf','click', () => exportTree('pdf'));
+  on('btn-add-member','click', () => openModal(null));
+  on('btn-settings-gear','click', openSettings);
+  on('uavatar',      'click', openSettings);
+
+  // --- Zoom controls ---
+  on('btn-zoom-in',  'click', () => zoomBy(1.25));
+  on('btn-zoom-out', 'click', () => zoomBy(0.8));
+  on('btn-zoom-fit', 'click', resetView);
+
+  // --- Scrim ---
+  on('scrim',        'click', handleScrimClick);
+
+  // --- Card overlay ---
+  on('btn-close-card','click', closeCard);
+
+  // --- Members panel ---
+  on('btn-close-members','click', closeMembersPanel);
+  on('mp-search-input',  'input', renderMembersList);
+
+  // --- Timeline panel ---
+  on('btn-close-timeline','click', closeTimeline);
+
+  // --- Connection modal (close on backdrop click) ---
+  document.getElementById('conn-bg')?.addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeConnModal();
+  });
+  on('conn-search',    'input', filterConnList);
+  on('btn-conn-cancel','click', closeConnModal);
+  on('btn-conn-save',  'click', saveConnection);
+
+  // --- Link modal (close on backdrop click) ---
+  document.getElementById('link-bg')?.addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeLinkModal();
+  });
+
+  // --- Settings panel ---
+  on('btn-close-settings','click', closeSettings);
+  on('btn-signout',       'click', signOut);
+  on('sp-save-btn',       'click', saveSettings);
+  on('sp-opt-simple',     'click', () => setSettingsMode('simple'));
+  on('sp-opt-complex',    'click', () => setSettingsMode('complex'));
+  on('sp-autoconn',       'click', toggleAutoConn);
+  on('sp-demo',           'click', toggleDemoMode);
+
+  // --- Settings: collapse headers ---
+  on('hdr-sec-view',   'click', () => toggleSection('sec-view'));
+  on('hdr-sec-links',  'click', () => toggleSection('sec-links'));
+  on('hdr-sec-conn',   'click', () => toggleSection('sec-conn'));
+  on('hdr-sec-appear', 'click', () => toggleSection('sec-appear'));
+  on('hdr-sec-adv',    'click', () => toggleSection('sec-adv'));
+
+  // --- Settings: action buttons ---
+  on('btn-manage-links',    'click', () => { closeSettings(); openLinkCard(); });
+  on('btn-add-custom-type', 'click', addCustomLineType);
+  on('btn-recalc',          'click', recalcAllRelationships);
+  on('btn-reset-node-colors','click', resetNodeColors);
+  on('btn-reset-line-colors','click', resetLineColors);
+
+  // --- Settings: color pickers (node colors) ---
+  ['you','spouse','parent','child','sibling','grandparent','extended','deceased','young'].forEach(key => {
+    on('ncolor-' + key, 'input', e => previewNodeColor(key, e.target.value));
+  });
+
+  // --- Settings: color pickers (line colors) ---
+  ['parentChild','spouse','sibling','labeled','inlaw'].forEach(key => {
+    on('color-' + key, 'input', e => previewLineColor(key, e.target.value));
+  });
+
+  // --- Add member modal (close on backdrop click) ---
+  document.getElementById('mbg')?.addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeModal();
+  });
+  on('btn-modal-cancel', 'click', closeModal);
+  on('btn-modal-submit', 'click', submitMember);
+  on('f-deceased',       'change', toggleDeathDate);
+  on('modal-photo-file', 'change', handleModalPhoto);
+
+  // --- Deceased toggle track (clicks the hidden checkbox) ---
+  document.getElementById('f-deceased-track')?.addEventListener('click', () => {
+    document.getElementById('f-deceased').click();
+  });
+}
+
+// Run after DOM is ready (scripts are at bottom of body)
+initEventListeners();

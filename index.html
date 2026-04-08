@@ -17,7 +17,7 @@
 
 <div id="loading"><div class="load-ring"></div><span class="load-txt">Picking up all of your Twygs…</span></div>
 <div id="atm"></div>
-<div id="scrim" onclick="handleScrimClick(event)"></div>
+<div id="scrim"></div>
 
 <!-- HEADER -->
 <div id="hdr">
@@ -28,7 +28,7 @@
     </svg>
     Twygie
   </div>
-  <div id="mcount" onclick="openMembersPanel()">
+  <div id="mcount">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
       <circle cx="8" cy="7" r="4"/><path d="M2 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>
       <path d="M17 11a3 3 0 1 0 0-6"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
@@ -37,36 +37,36 @@
   </div>
   <div class="hbtns">
     <div class="view-toggle">
-    <button id="btn-tree" class="view-toggle-btn active" onclick="setTreeMode('simple')">Tree view</button>
-    <button id="btn-all" class="view-toggle-btn" onclick="setTreeMode('complex')">All Twygs</button>
+    <button id="btn-tree" class="view-toggle-btn active">Tree view</button>
+    <button id="btn-all" class="view-toggle-btn">All Twygs</button>
   </div>
     <div id="save-ind">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg>
       Saved
     </div>
-    <button class="hbtn" onclick="resetView()">Fit to screen</button>
+    <button class="hbtn" id="btn-fit">Fit to screen</button>
     <a class="hbtn" href="/timeline" title="Timeline view">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2v20M2 12h4M18 12h4M2 6h4M18 6h4M2 18h4M18 18h4"/></svg>
       Timeline
     </a>
     <div class="export-wrap">
-      <button class="hbtn" onclick="toggleExportMenu()" id="export-btn">Export ▾</button>
+      <button class="hbtn" id="export-btn">Export ▾</button>
       <div id="export-menu" class="export-menu">
-        <button onclick="exportTree('png')" class="export-item">
+        <button id="btn-export-png" class="export-item">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
           Save as Image
         </button>
-        <button onclick="exportTree('pdf')" class="export-item">
+        <button id="btn-export-pdf" class="export-item">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8M16 17H8M10 9H8"/></svg>
           Save as PDF
         </button>
       </div>
     </div>
-    <button class="hbtn acc" onclick="openModal(null)">+ Add member</button>
-    <button class="zb gear-btn" onclick="openSettings()" title="Settings">
+    <button class="hbtn acc" id="btn-add-member">+ Add member</button>
+    <button class="zb gear-btn" id="btn-settings-gear" title="Settings">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
     </button>
-    <div class="uavatar" id="uavatar" onclick="openSettings()" title="Settings"><span id="uinitial">?</span></div>
+    <div class="uavatar" id="uavatar" title="Settings"><span id="uinitial">?</span></div>
   </div>
 </div>
 
@@ -98,9 +98,9 @@
 </div>
 
 <div id="zc">
-  <button class="zb" onclick="zoomBy(1.25)">+</button>
-  <button class="zb" onclick="zoomBy(0.8)">−</button>
-  <button class="zb zb-fit" onclick="resetView()">⊡</button>
+  <button class="zb" id="btn-zoom-in">+</button>
+  <button class="zb" id="btn-zoom-out">−</button>
+  <button class="zb zb-fit" id="btn-zoom-fit">⊡</button>
 </div>
 
 <div id="leg">
@@ -125,7 +125,7 @@
 <!-- OVERLAY CARD -->
 <div id="card">
   <div class="ctop">
-    <button class="ccls" onclick="closeCard()">✕</button>
+    <button class="ccls" id="btn-close-card">✕</button>
     <div class="cavatar" id="cavatar"></div>
     <div class="cmeta">
       <div class="cbar" id="cbar"></div>
@@ -143,9 +143,9 @@
 <div id="members-panel">
   <div class="mp-head">
     <div class="mp-title">All members</div>
-    <button class="mp-close" onclick="closeMembersPanel()">✕</button>
+    <button class="mp-close" id="btn-close-members">✕</button>
   </div>
-  <div class="mp-search"><input id="mp-search-input" placeholder="Search…" oninput="renderMembersList()"/></div>
+  <div class="mp-search"><input id="mp-search-input" placeholder="Search…"/></div>
   <div class="mp-list" id="mp-list"></div>
 </div>
 
@@ -153,23 +153,23 @@
 <div id="timeline-panel">
   <div class="tl-head">
     <div class="tl-title">Timeline</div>
-    <button class="mp-close" onclick="closeTimeline()">✕</button>
+    <button class="mp-close" id="btn-close-timeline">✕</button>
   </div>
   <div class="tl-body" id="tl-body"></div>
 </div>
 
 <!-- ADD CONNECTION MODAL -->
-<div id="conn-bg" onclick="if(event.target===this)closeConnModal()">
+<div id="conn-bg">
   <div id="conn-modal">
     <div class="conn-title">Add Connection</div>
     <div class="conn-sub" id="conn-sub"></div>
-    <input class="conn-search" id="conn-search" placeholder="Search members…" oninput="filterConnList()"/>
+    <input class="conn-search" id="conn-search" placeholder="Search members…"/>
     <div class="conn-list" id="conn-list"></div>
     <div class="conn-rel-label">Relationship</div>
     <select class="mi" id="conn-rel" style="width:100%"></select>
     <div class="conn-foot">
-      <button class="mcan" onclick="closeConnModal()">Cancel</button>
-      <button class="madd" onclick="saveConnection()">Add Connection</button>
+      <button class="mcan" id="btn-conn-cancel">Cancel</button>
+      <button class="madd" id="btn-conn-save">Add Connection</button>
     </div>
   </div>
 </div>
@@ -183,7 +183,7 @@
 </div>
 
 <!-- LINK CODE MODAL -->
-<div id="link-bg" onclick="if(event.target===this)closeLinkModal()">
+<div id="link-bg">
   <div id="link-modal">
     <div id="link-modal-content"></div>
   </div>
@@ -193,7 +193,7 @@
 <div id="settings-panel">
   <div class="sp-head">
     <div class="sp-title">Settings</div>
-    <button class="sp-close" onclick="closeSettings()">✕</button>
+    <button class="sp-close" id="btn-close-settings">✕</button>
   </div>
   <div class="sp-body">
 
@@ -205,7 +205,7 @@
           <div class="sp-user-name" id="sp-name"></div>
           <div class="sp-user-email" id="sp-email"></div>
         </div>
-        <button class="sp-signout" onclick="signOut()">Sign out</button>
+        <button class="sp-signout" id="btn-signout">Sign out</button>
       </div>
       <div class="sp-stats">
         <div class="sp-stat"><div class="sp-stat-num" id="sp-member-count">0</div><div class="sp-stat-lbl">Members</div></div>
@@ -215,18 +215,18 @@
 
     <!-- TREE VIEW -->
     <div>
-      <div class="sp-collapse-hdr" onclick="toggleSection('sec-view')">
+      <div class="sp-collapse-hdr" id="hdr-sec-view">
         <span class="sp-collapse-title">Tree View</span>
         <span class="sp-collapse-icon open" id="icon-sec-view">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
         </span>
       </div>
       <div class="sp-collapse-body open" id="sec-view">
-        <div class="sp-option active" id="sp-opt-simple" onclick="setSettingsMode('simple')" style="margin-bottom:8px">
+        <div class="sp-option active" id="sp-opt-simple"  style="margin-bottom:8px">
           <div><div class="sp-option-label">Tree View</div><div class="sp-option-sub">Parent-child, spouse, sibling only</div></div>
           <div class="sp-option-check"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#04070c" stroke-width="3" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg></div>
         </div>
-        <div class="sp-option" id="sp-opt-complex" onclick="setSettingsMode('complex')">
+        <div class="sp-option" id="sp-opt-complex" >
           <div><div class="sp-option-label">All Twygs</div><div class="sp-option-sub">All connections including extended family</div></div>
           <div class="sp-option-check"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#04070c" stroke-width="3" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg></div>
         </div>
@@ -236,7 +236,7 @@
 
     <!-- LINKED TREES (opens card modal) -->
     <div>
-      <div class="sp-collapse-hdr" onclick="toggleSection('sec-links')">
+      <div class="sp-collapse-hdr" id="hdr-sec-links">
         <span class="sp-collapse-title">Linked Trees</span>
         <span class="sp-collapse-icon" id="icon-sec-links">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
@@ -244,7 +244,7 @@
       </div>
       <div class="sp-collapse-body" id="sec-links">
         <div class="sp-helper" style="margin-bottom:10px">Connect your tree with other Twygie users through shared family members.</div>
-        <button onclick="closeSettings();openLinkCard()" class="sp-link-btn">
+        <button id="btn-manage-links" class="sp-link-btn">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
           Manage Linked Trees
         </button>
@@ -254,14 +254,14 @@
 
     <!-- CONNECTIONS -->
     <div>
-      <div class="sp-collapse-hdr" onclick="toggleSection('sec-conn')">
+      <div class="sp-collapse-hdr" id="hdr-sec-conn">
         <span class="sp-collapse-title">Connections</span>
         <span class="sp-collapse-icon" id="icon-sec-conn">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
         </span>
       </div>
       <div class="sp-collapse-body" id="sec-conn">
-        <div class="sp-option" id="sp-autoconn" onclick="toggleAutoConn()" style="cursor:pointer;margin-bottom:14px">
+        <div class="sp-option" id="sp-autoconn" style="cursor:pointer;margin-bottom:14px">
           <div><div class="sp-option-label">Auto-assign relationships</div><div class="sp-option-sub">Infer connections to you when adding Twygs (e.g. Wife's Mother → Mother-in-law)</div></div>
           <div class="toggle-wrap">
             <div id="ac-track" class="toggle-track toggle-track-on"></div>
@@ -270,12 +270,12 @@
         </div>
         <div class="sp-row-between">
           <span class="sp-label-sm">Custom connection types</span>
-          <button onclick="addCustomLineType()" class="sp-add-btn">+ Add</button>
+          <button id="btn-add-custom-type" class="sp-add-btn">+ Add</button>
         </div>
         <div class="sp-helper" style="margin-bottom:8px">Named types with custom colors for Add Connection.</div>
         <div id="custom-line-list"></div>
         <div class="sp-spacer-md"></div>
-        <button onclick="recalcAllRelationships()" class="sp-action-btn" style="margin-bottom:4px">↻ Recalculate all auto-connections</button>
+        <button id="btn-recalc" class="sp-action-btn" style="margin-bottom:4px">↻ Recalculate all auto-connections</button>
         <div class="sp-helper-sm" style="margin-bottom:4px">Re-runs relationship inference across your entire tree. Useful if grandparent or in-law connections are missing.</div>
         <div class="sp-spacer-md"></div>
       </div>
@@ -283,7 +283,7 @@
 
     <!-- APPEARANCE -->
     <div>
-      <div class="sp-collapse-hdr" onclick="toggleSection('sec-appear')">
+      <div class="sp-collapse-hdr" id="hdr-sec-appear">
         <span class="sp-collapse-title">Appearance</span>
         <span class="sp-collapse-icon" id="icon-sec-appear">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
@@ -291,31 +291,31 @@
       </div>
       <div class="sp-collapse-body" id="sec-appear">
         <div class="sp-label-upper">Node colors</div>
-        <div class="sp-color-row"><div class="sp-color-info"><div class="sp-color-label">You</div></div><div class="sp-color-swatch"><input type="color" id="ncolor-you" oninput="previewNodeColor('you',this.value)"/><div class="sp-color-preview" id="npreview-you"></div></div></div>
-        <div class="sp-color-row"><div class="sp-color-info"><div class="sp-color-label">Spouse / Partner</div></div><div class="sp-color-swatch"><input type="color" id="ncolor-spouse" oninput="previewNodeColor('spouse',this.value)"/><div class="sp-color-preview" id="npreview-spouse"></div></div></div>
-        <div class="sp-color-row"><div class="sp-color-info"><div class="sp-color-label">Parent</div></div><div class="sp-color-swatch"><input type="color" id="ncolor-parent" oninput="previewNodeColor('parent',this.value)"/><div class="sp-color-preview" id="npreview-parent"></div></div></div>
-        <div class="sp-color-row"><div class="sp-color-info"><div class="sp-color-label">Child</div></div><div class="sp-color-swatch"><input type="color" id="ncolor-child" oninput="previewNodeColor('child',this.value)"/><div class="sp-color-preview" id="npreview-child"></div></div></div>
-        <div class="sp-color-row"><div class="sp-color-info"><div class="sp-color-label">Sibling</div></div><div class="sp-color-swatch"><input type="color" id="ncolor-sibling" oninput="previewNodeColor('sibling',this.value)"/><div class="sp-color-preview" id="npreview-sibling"></div></div></div>
-        <div class="sp-color-row"><div class="sp-color-info"><div class="sp-color-label">Grandparent</div></div><div class="sp-color-swatch"><input type="color" id="ncolor-grandparent" oninput="previewNodeColor('grandparent',this.value)"/><div class="sp-color-preview" id="npreview-grandparent"></div></div></div>
-        <div class="sp-color-row"><div class="sp-color-info"><div class="sp-color-label">Extended / In-law</div></div><div class="sp-color-swatch"><input type="color" id="ncolor-extended" oninput="previewNodeColor('extended',this.value)"/><div class="sp-color-preview" id="npreview-extended"></div></div></div>
-        <div class="sp-color-row"><div class="sp-color-info"><div class="sp-color-label">Deceased</div></div><div class="sp-color-swatch"><input type="color" id="ncolor-deceased" oninput="previewNodeColor('deceased',this.value)"/><div class="sp-color-preview" id="npreview-deceased"></div></div></div>
-        <div class="sp-color-row"><div class="sp-color-info"><div class="sp-color-label">Young</div></div><div class="sp-color-swatch"><input type="color" id="ncolor-young" oninput="previewNodeColor('young',this.value)"/><div class="sp-color-preview" id="npreview-young"></div></div></div>
-        <button class="sp-color-reset" onclick="resetNodeColors()" style="margin-bottom:16px">Reset node colors</button>
+        <div class="sp-color-row"><div class="sp-color-info"><div class="sp-color-label">You</div></div><div class="sp-color-swatch"><input type="color" id="ncolor-you"/><div class="sp-color-preview" id="npreview-you"></div></div></div>
+        <div class="sp-color-row"><div class="sp-color-info"><div class="sp-color-label">Spouse / Partner</div></div><div class="sp-color-swatch"><input type="color" id="ncolor-spouse"/><div class="sp-color-preview" id="npreview-spouse"></div></div></div>
+        <div class="sp-color-row"><div class="sp-color-info"><div class="sp-color-label">Parent</div></div><div class="sp-color-swatch"><input type="color" id="ncolor-parent"/><div class="sp-color-preview" id="npreview-parent"></div></div></div>
+        <div class="sp-color-row"><div class="sp-color-info"><div class="sp-color-label">Child</div></div><div class="sp-color-swatch"><input type="color" id="ncolor-child"/><div class="sp-color-preview" id="npreview-child"></div></div></div>
+        <div class="sp-color-row"><div class="sp-color-info"><div class="sp-color-label">Sibling</div></div><div class="sp-color-swatch"><input type="color" id="ncolor-sibling"/><div class="sp-color-preview" id="npreview-sibling"></div></div></div>
+        <div class="sp-color-row"><div class="sp-color-info"><div class="sp-color-label">Grandparent</div></div><div class="sp-color-swatch"><input type="color" id="ncolor-grandparent"/><div class="sp-color-preview" id="npreview-grandparent"></div></div></div>
+        <div class="sp-color-row"><div class="sp-color-info"><div class="sp-color-label">Extended / In-law</div></div><div class="sp-color-swatch"><input type="color" id="ncolor-extended"/><div class="sp-color-preview" id="npreview-extended"></div></div></div>
+        <div class="sp-color-row"><div class="sp-color-info"><div class="sp-color-label">Deceased</div></div><div class="sp-color-swatch"><input type="color" id="ncolor-deceased"/><div class="sp-color-preview" id="npreview-deceased"></div></div></div>
+        <div class="sp-color-row"><div class="sp-color-info"><div class="sp-color-label">Young</div></div><div class="sp-color-swatch"><input type="color" id="ncolor-young"/><div class="sp-color-preview" id="npreview-young"></div></div></div>
+        <button class="sp-color-reset" id="btn-reset-node-colors" style="margin-bottom:16px">Reset node colors</button>
 
         <div class="sp-label-upper" style="margin:4px 0 8px">Line colors</div>
-        <div class="sp-color-row"><div class="sp-color-info"><div class="sp-color-label">Parent / Child</div><div class="sp-color-sub">Direct family line</div></div><div class="sp-color-swatch" id="swatch-parentChild"><input type="color" id="color-parentChild" oninput="previewLineColor('parentChild',this.value)"/><div class="sp-color-preview" id="preview-parentChild"></div></div></div>
-        <div class="sp-color-row"><div class="sp-color-info"><div class="sp-color-label">Spouse / Partner</div><div class="sp-color-sub">Marriage or partnership</div></div><div class="sp-color-swatch" id="swatch-spouse"><input type="color" id="color-spouse" oninput="previewLineColor('spouse',this.value)"/><div class="sp-color-preview" id="preview-spouse"></div></div></div>
-        <div class="sp-color-row"><div class="sp-color-info"><div class="sp-color-label">Sibling</div><div class="sp-color-sub">Brothers and sisters</div></div><div class="sp-color-swatch" id="swatch-sibling"><input type="color" id="color-sibling" oninput="previewLineColor('sibling',this.value)"/><div class="sp-color-preview" id="preview-sibling"></div></div></div>
-        <div class="sp-color-row"><div class="sp-color-info"><div class="sp-color-label">Extended / In-laws</div><div class="sp-color-sub">Labeled custom connections</div></div><div class="sp-color-swatch" id="swatch-labeled"><input type="color" id="color-labeled" oninput="previewLineColor('labeled',this.value)"/><div class="sp-color-preview" id="preview-labeled"></div></div></div>
-        <div class="sp-color-row"><div class="sp-color-info"><div class="sp-color-label">Extended Non-blood</div><div class="sp-color-sub">In-law family connections</div></div><div class="sp-color-swatch" id="swatch-inlaw"><input type="color" id="color-inlaw" oninput="previewLineColor('inlaw',this.value)"/><div class="sp-color-preview" id="preview-inlaw"></div></div></div>
-        <button class="sp-color-reset" onclick="resetLineColors()">Reset line colors</button>
+        <div class="sp-color-row"><div class="sp-color-info"><div class="sp-color-label">Parent / Child</div><div class="sp-color-sub">Direct family line</div></div><div class="sp-color-swatch" id="swatch-parentChild"><input type="color" id="color-parentChild"/><div class="sp-color-preview" id="preview-parentChild"></div></div></div>
+        <div class="sp-color-row"><div class="sp-color-info"><div class="sp-color-label">Spouse / Partner</div><div class="sp-color-sub">Marriage or partnership</div></div><div class="sp-color-swatch" id="swatch-spouse"><input type="color" id="color-spouse"/><div class="sp-color-preview" id="preview-spouse"></div></div></div>
+        <div class="sp-color-row"><div class="sp-color-info"><div class="sp-color-label">Sibling</div><div class="sp-color-sub">Brothers and sisters</div></div><div class="sp-color-swatch" id="swatch-sibling"><input type="color" id="color-sibling"/><div class="sp-color-preview" id="preview-sibling"></div></div></div>
+        <div class="sp-color-row"><div class="sp-color-info"><div class="sp-color-label">Extended / In-laws</div><div class="sp-color-sub">Labeled custom connections</div></div><div class="sp-color-swatch" id="swatch-labeled"><input type="color" id="color-labeled"/><div class="sp-color-preview" id="preview-labeled"></div></div></div>
+        <div class="sp-color-row"><div class="sp-color-info"><div class="sp-color-label">Extended Non-blood</div><div class="sp-color-sub">In-law family connections</div></div><div class="sp-color-swatch" id="swatch-inlaw"><input type="color" id="color-inlaw"/><div class="sp-color-preview" id="preview-inlaw"></div></div></div>
+        <button class="sp-color-reset" id="btn-reset-line-colors">Reset line colors</button>
         <div class="sp-spacer-lg"></div>
       </div>
     </div>
 
     <!-- ADVANCED -->
     <div>
-      <div class="sp-collapse-hdr" onclick="toggleSection('sec-adv')">
+      <div class="sp-collapse-hdr" id="hdr-sec-adv">
         <span class="sp-collapse-title">Advanced</span>
         <span class="sp-collapse-icon" id="icon-sec-adv">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
@@ -328,7 +328,7 @@
           <span class="sp-label-sm">years old and under</span>
         </div>
         <div class="sp-spacer-md"></div>
-        <div class="sp-option" id="sp-demo" onclick="toggleDemoMode()" style="cursor:pointer;margin-bottom:8px">
+        <div class="sp-option" id="sp-demo" style="cursor:pointer;margin-bottom:8px">
           <div><div class="sp-option-label">Demo Mode</div><div class="sp-option-sub">Creates a fresh tree on every reload. Saves are disabled. Turn off to return to your saved tree.</div></div>
           <div style="position:relative;width:36px;height:20px;flex-shrink:0">
             <div id="dm-track" style="position:absolute;inset:0;border-radius:100px;background:rgba(255,255,255,.12);transition:background .2s"></div>
@@ -340,7 +340,7 @@
     </div>
 
     <div class="sp-spacer-xl"></div>
-    <button class="sp-save" id="sp-save-btn" onclick="saveSettings()">Save preferences</button>
+    <button class="sp-save" id="sp-save-btn">Save preferences</button>
   </div>
   <div id="sp-toast">✓ Preferences saved</div>
 </div>
@@ -349,7 +349,7 @@
 <div id="tip"></div>
 
 <!-- ADD MEMBER MODAL -->
-<div id="mbg" onclick="if(event.target===this)closeModal()">
+<div id="mbg">
   <div id="modal">
     <div class="mt">Add a Twyg</div>
     <div class="ms" id="msub">Connect a new member to the tree</div>
@@ -411,8 +411,8 @@
       <label class="ml" style="display:flex;align-items:center;gap:8px;cursor:pointer">
         <span>Deceased?</span>
         <span class="toggle-wrap-sm">
-          <input type="checkbox" id="f-deceased" onchange="toggleDeathDate()" class="toggle-hidden"/>
-          <span id="f-deceased-track" class="toggle-track" style="cursor:pointer" onclick="document.getElementById('f-deceased').click()"></span>
+          <input type="checkbox" id="f-deceased" class="toggle-hidden"/>
+          <span id="f-deceased-track" class="toggle-track" style="cursor:pointer"></span>
           <span id="f-deceased-thumb" class="toggle-thumb-sm"></span>
         </span>
       </label>
@@ -537,7 +537,7 @@
           <span>+</span>
         </div>
         <label class="photo-btn" for="modal-photo-file" style="cursor:pointer">Upload photo</label>
-        <input type="file" id="modal-photo-file" accept="image/*" class="photo-file-hidden" onchange="handleModalPhoto(event)"/>
+        <input type="file" id="modal-photo-file" accept="image/*" class="photo-file-hidden"/>
       </div>
     </div>
     <div class="mf"><label class="ml">Story / Note</label>
@@ -545,8 +545,8 @@
     </div>
 
     <div class="mfoot">
-      <button class="mcan" onclick="closeModal()">Cancel</button>
-      <button class="madd" onclick="submitMember()">Add to Tree</button>
+      <button class="mcan" id="btn-modal-cancel">Cancel</button>
+      <button class="madd" id="btn-modal-submit">Add to Tree</button>
     </div>
   </div>
 </div>
