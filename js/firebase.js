@@ -418,11 +418,13 @@ function getNodeColor(p){
 function getGlowClass(p){ const cat=relCategory(p); const map={you:'you',deceased:'blue',young:'teal'}; return map[cat]||'amber'; }
 function getGlowFilter(p){ return 'gf-a'; } // Single filter — color driven by fill (nodeColors)
 function getConnectionCount(p){
-  // Count all connections: parents, children, spouse, siblings, customLinks
   let n=(p.parents||[]).length;
   n+=people.filter(x=>(x.parents||[]).includes(p.id)).length;
   if(p.spouseOf||(people.find(x=>x.spouseOf===p.id))) n+=1;
-  n+=Object.keys(p.customLinks||{}).length;
+  // Count relationships[] (v2) or fall back to customLinks
+  const relCount=(p.relationships||[]).length;
+  const clCount=Object.keys(p.customLinks||{}).length;
+  n+=Math.max(relCount, clCount); // use whichever is larger to avoid double-counting
   return n;
 }
 function getNodeRadius(p){ return p.isYou?13:9; }

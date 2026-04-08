@@ -34,43 +34,17 @@ function genderedRel(baseRel, gender){
 function getRelToYou(id){
   const you=people.find(p=>p.isYou); if(!you||id===you.id) return '';
   const p=peopleById[id]; if(!p) return '';
-  // Check structural relationships FIRST (these are always correct)
-  if((p.parents||[]).includes(you.id)) return genderedRel('Child',p.gender);
-  if((you.parents||[]).includes(id)) return genderedRel('Parent',p.gender);
-  if(p.spouseOf===you.id||you.spouseOf===id) return genderedRel('Spouse',p.gender);
-  // Then check explicit custom links
-  const ycl=you.customLinks&&you.customLinks[id];
-  if(ycl) return typeof ycl==='string'?ycl:ycl.label;
-  const pcl=p.customLinks&&p.customLinks[you.id];
-  if(pcl) return typeof pcl==='string'?pcl:pcl.label;
-  // Use stored relLabel — already specific ('Sister','Brother') just return as-is
-  if(p.relLabel){
-    // If it's already a specific label (not generic), return directly
-    const specific=['Father','Mother','Son','Daughter','Brother','Sister','Husband','Wife','Partner',
-      'Grandfather','Grandmother','Grandson','Granddaughter','Uncle','Aunt','Nephew','Niece','Cousin',
-      'Father-in-law','Mother-in-law','Brother-in-law','Sister-in-law','Godfather','Godmother',
-      'Stepfather','Stepmother','Stepson','Stepdaughter','Half-brother','Half-sister'];
-    if(specific.includes(p.relLabel)) return p.relLabel;
-    return genderedRel(p.relLabel,p.gender)||p.relLabel;
-  }
-  // Infer from tree structure (sibling check)
-  const myP=new Set(you.parents||[]);
-  if(myP.size&&(p.parents||[]).some(pp=>myP.has(pp))) return genderedRel('Sibling',p.gender);
-  const grandIds=new Set();
-  (you.parents||[]).forEach(pid=>{ const par=peopleById[pid]; if(par)(par.parents||[]).forEach(gid=>grandIds.add(gid)); });
-  if(grandIds.has(id)) return genderedRel('Grandparent',p.gender);
-  const myChildren=people.filter(x=>(x.parents||[]).includes(you.id));
-  for(const c of myChildren){ if((p.parents||[]).includes(c.id)) return genderedRel('Grandchild',p.gender); }
-  // Infer in-law: parent of spouse's parent
-  const spouseId=you.spouseOf||(people.find(x=>x.spouseOf===you.id)||{}).id;
-  if(spouseId){
-    const sp=peopleById[spouseId];
-    if(sp){
-      if((sp.parents||[]).includes(id)) return genderedRel('Parent',p.gender)+'-in-law';
-      const spSibs=people.filter(x=>x.id!==spouseId&&(x.parents||[]).some(pp=>(sp.parents||[]).includes(pp)));
-      if(spSibs.some(s=>s.id===id)) return genderedRel('Sibling',p.gender)+'-in-law';
-    }
-  }
+
+  // Check v2 relationships[] first (fastest, pre-computed)
+  const rel=getRel(you, p);
+  if(rel) return rel.label;
+
+  // Structural compute (catches anything not yet in relationships[])
+  const computed=computeRelationship(you.id, id);
+  if(computed) return computed.label;
+
+  // Legacy fallback
+  if(p.relLabel) return p.relLabel;
   return '';
 }
 
@@ -119,15 +93,26 @@ function relCategory(p){
   if(birthYear>0 && (currentYear-birthYear)<=youngAge) return 'young';
   const you=peopleById&&Object.values(peopleById).find(x=>x.isYou);
   if(!you) return 'default';
+  // Structural checks
   if((p.parents||[]).includes(you.id)) return 'child';
   if((you.parents||[]).includes(p.id)) return 'parent';
   if(p.spouseOf===you.id||you.spouseOf===p.id) return 'spouse';
   const myP=new Set(you.parents||[]);
   if(myP.size&&(p.parents||[]).some(pp=>myP.has(pp))) return 'sibling';
+  // Check relationships[] (v2)
+  const rel=getRel(you, p)||getRel(p, you);
+  if(rel){
+    const lbl=rel.label||'';
+    if(SIBLING_LABELS.has(lbl)) return 'sibling';
+    if(['Grandfather','Grandmother','Grandparent','Great-grandfather','Great-grandmother','Great-grandparent'].includes(lbl)) return 'grandparent';
+    return 'extended';
+  }
+  // Legacy customLinks fallback
   const ycl=you.customLinks&&you.customLinks[p.id];
   if(ycl){ const lt=typeof ycl==='string'?'labeled':ycl.lineType; if(lt==='sibling') return 'sibling'; return 'extended'; }
   const pcl=p.customLinks&&p.customLinks[you.id];
   if(pcl) return 'extended';
+  // Structural grandparent check
   const grandIds=new Set();
   (you.parents||[]).forEach(pid=>{ const par=peopleById[pid]; if(par)(par.parents||[]).forEach(gid=>grandIds.add(gid)); });
   if(grandIds.has(p.id)) return 'grandparent';

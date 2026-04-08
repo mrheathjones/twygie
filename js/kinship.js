@@ -354,46 +354,26 @@ function autoAssignToYou(newNodeId, anchorId, relToAnchor){
     });
   }
 
-  // ── INFERENCE LOOP: for remaining nodes not caught by structural cascade ──
+  // ── COMPUTE PASS: use structural resolver to find relationships to all nodes ──
+  // Instead of the old two-hop inference chain (anchor→existing→infer), directly
+  // compute the relationship between newNode and every other node structurally.
   people.forEach(existing=>{
     if(existing.id===newNodeId||existing.id===anchorId) return;
 
-    const anchorRelToExisting=getRelToYou_for(anchorId, existing.id);
-    if(!anchorRelToExisting) return;
+    // Skip if already linked structurally
+    if((existing.parents||[]).includes(newNodeId)||
+       (newNode.parents||[]).includes(existing.id)||
+       existing.spouseOf===newNodeId||newNode.spouseOf===existing.id) return;
 
-    const inferred=inferRelToYou(anchorRelToExisting, relToAnchor, newNode.gender||'');
-    if(!inferred) return;
+    // Skip if already has a relationship
+    const existingRel=getRel(existing, newNode);
+    if(existingRel) return;
 
-    // If this connection crosses a marriage boundary, add "-in-law" suffix
-    // (e.g. spouse→nephew should be "Nephew-in-law", not just "Nephew")
-    let finalLabel=inferred;
-    const youNode=people.find(p=>p.isYou);
-    if(youNode && !inferred.includes('-in-law')){
-      const isExistingSpouse=existing.spouseOf===youNode.id||youNode.spouseOf===existing.id;
-      const isNewNodeSpouse=newNode.spouseOf===youNode.id||youNode.spouseOf===newNode.id;
-      if((isExistingSpouse||isNewNodeSpouse) && BLOOD_LABELS.has(inferred) && !SPOUSE_SET.has(inferred)){
-        finalLabel=inferred+'-in-law';
-      }
-    }
+    // Compute structural relationship
+    const rel=computeRelationship(existing.id, newNodeId);
+    if(!rel||!rel.label) return;
 
-    const alreadyLinked=
-      (existing.parents||[]).includes(newNodeId)||
-      (newNode.parents||[]).includes(existing.id)||
-      existing.spouseOf===newNodeId||newNode.spouseOf===existing.id;
-    if(alreadyLinked) return;
-
-    // For customLinks: skip only if the exact label already exists
-    const existingCL=existing.customLinks&&existing.customLinks[newNodeId];
-    const reverseCL=newNode.customLinks&&newNode.customLinks[existing.id];
-    if(existingCL||reverseCL){
-      const existLabel=existingCL?(typeof existingCL==='string'?existingCL:existingCL.label||''):'';
-      const reverseLabel=reverseCL?(typeof reverseCL==='string'?reverseCL:reverseCL.label||''):'';
-      // Already has this exact label or its inverse — skip
-      if(existLabel===finalLabel||reverseLabel===finalLabel||reverseLabel===inverseLabel(finalLabel)) return;
-      // Different label exists — still apply (applyInferredRel will update)
-    }
-
-    applyInferredRel(existing, newNode, finalLabel);
+    applyInferredRel(existing, newNode, rel.label);
   });
 
   // ── SIBLING PROPAGATION: mirror relevant connections to isYou's siblings ──
@@ -433,47 +413,37 @@ function autoAssignToYou(newNodeId, anchorId, relToAnchor){
     ]);
 
     // Check newNode's connection to isYou (from isYou's perspective)
-    const youLink=youNode.customLinks&&youNode.customLinks[newNodeId];
+    const youRel=getRel(youNode, newNode);
+    const youLink=youRel||((youNode.customLinks&&youNode.customLinks[newNodeId])?youNode.customLinks[newNodeId]:null);
     if(youLink){
-      const youLabel=typeof youLink==='string'?youLink:youLink.label||'';
+      const youLabel=youRel?youRel.label:(typeof youLink==='string'?youLink:youLink.label||'');
       if(SIBLING_SHARED.has(youLabel)){
         youSibIds.forEach(sibId=>{
           const sib=peopleById[sibId]; if(!sib) return;
-          const alreadyLinked=
-            (sib.customLinks&&sib.customLinks[newNodeId])||
-            (newNode.customLinks&&newNode.customLinks[sibId])||
-            (sib.parents||[]).includes(newNodeId)||
-            (newNode.parents||[]).includes(sibId);
-          if(!alreadyLinked){
-            linkNodes(sib, newNode, youLabel, inverseLabel(youLabel));
-          }
+          if(getRel(sib, newNode)) return;
+          if((sib.parents||[]).includes(newNodeId)||(newNode.parents||[]).includes(sibId)) return;
+          linkNodes(sib, newNode, youLabel, inverseLabel(youLabel));
         });
       }
     }
 
-    // Reverse: check newNode's link FROM isYou (newNode's perspective)
-    const newLink=newNode.customLinks&&newNode.customLinks[youNode.id];
+    // Reverse: check newNode's link to isYou (newNode's perspective)
+    const newRel=getRel(newNode, youNode);
+    const newLink=newRel||((newNode.customLinks&&newNode.customLinks[youNode.id])?newNode.customLinks[youNode.id]:null);
     if(newLink){
-      const newLabel=typeof newLink==='string'?newLink:newLink.label||'';
+      const newLabel=newRel?newRel.label:(typeof newLink==='string'?newLink:newLink.label||'');
       if(SIBLING_SHARED.has(newLabel)){
         youSibIds.forEach(sibId=>{
           const sib=peopleById[sibId]; if(!sib) return;
-          const alreadyLinked=
-            (sib.customLinks&&sib.customLinks[newNodeId])||
-            (newNode.customLinks&&newNode.customLinks[sibId])||
-            (sib.parents||[]).includes(newNodeId)||
-            (newNode.parents||[]).includes(sibId);
-          if(!alreadyLinked){
-            // Use the inverse: if newNode sees isYou as "Nephew", sibling also sees newNode as "Uncle"
-            linkNodes(sib, newNode, inverseLabel(newLabel), newLabel);
-          }
+          if(getRel(sib, newNode)) return;
+          if((sib.parents||[]).includes(newNodeId)||(newNode.parents||[]).includes(sibId)) return;
+          linkNodes(sib, newNode, inverseLabel(newLabel), newLabel);
         });
       }
     }
   }
 
-  // Post-processing: remove any connections that can't be traced through real family structure
-  cleanFalseConnections();
+  // Post-processing: fix any in-laws that ended up in parents[]
   cleanFalseParents();
 }
 
@@ -770,7 +740,11 @@ function getRelToYou_for(targetId, fromId, _depth){
     }
   }
 
-  // ── 9. Fallback: explicit customLinks (last resort) ──
+  // ── 9. Fallback: declared relationships[] (v2) ──
+  const declaredRel=(from.relationships||[]).find(r=>r.targetId===targetId);
+  if(declaredRel) return declaredRel.label;
+
+  // ── 10. Fallback: explicit customLinks (legacy) ──
   if(from.customLinks&&from.customLinks[targetId]){
     const v=from.customLinks[targetId];
     return typeof v==='string'?v:v.label;
@@ -778,39 +752,60 @@ function getRelToYou_for(targetId, fromId, _depth){
   return '';
 }
 
+// ── computeRelationship: the single source of truth for any two nodes ──
+// Returns {label, category} or null
+function computeRelationship(fromId, targetId){
+  const label=getRelToYou_for(fromId, targetId);
+  if(!label) return null;
+  return {label, category:getRelCategory(label)};
+}
+
 function recalcAllRelationships(force){
   if(!force&&!autoConnections){ appAlert('Enable auto-assign first.'); return; }
+
+  // Step 1: Run autoAssignToYou for every direct connection
   const seen=new Set();
   people.forEach(p=>{
-    // For each of p's parents: re-run as if p was just added with that parent as anchor
     (p.parents||[]).forEach(parentId=>{
       const key=p.id+'|'+parentId;
       if(seen.has(key)) return; seen.add(key);
-      const par=people.find(x=>x.id===parentId); if(!par) return;
-      const relLabel=genderedRel('Child',p.gender);
-      autoAssignToYou(p.id, parentId, relLabel);
+      autoAssignToYou(p.id, parentId, genderedRel('Child',p.gender));
     });
-    // For spouse: re-run as if spouse was just added
     if(p.spouseOf){
-      const spouseKey=[p.id,p.spouseOf].sort().join('|');
-      if(!seen.has(spouseKey)){
-        seen.add(spouseKey);
-        const spLabel=genderedRel('Spouse',p.gender);
-        autoAssignToYou(p.id, p.spouseOf, spLabel);
-        autoAssignToYou(p.spouseOf, p.id, spLabel);
+      const key=[p.id,p.spouseOf].sort().join('|');
+      if(!seen.has(key)){
+        seen.add(key);
+        autoAssignToYou(p.id, p.spouseOf, genderedRel('Spouse',p.gender));
       }
     }
-    // For customLinks: re-run for sibling, uncle, cousin, etc.
-    Object.entries(p.customLinks||{}).forEach(([tid,v])=>{
-      const key=[p.id,tid].sort().join('|');
-      if(seen.has(key)) return; seen.add(key);
-      const label=typeof v==='string'?v:v.label||'';
-      if(!label) return;
-      autoAssignToYou(p.id, tid, label);
-    });
   });
-  // Clean up any false cross-family connections (co-grandparent/in-law artifacts)
-  cleanFalseConnections();
+
+  // Step 2: Compute pass — find missing relationships for every node pair
+  // Uses the structural resolver (common ancestor) to discover relationships
+  // that the cascade missed
+  const youNode=people.find(p=>p.isYou);
+  if(youNode){
+    people.forEach(node=>{
+      if(node.isYou) return;
+      // Already connected structurally?
+      if((youNode.parents||[]).includes(node.id)||(node.parents||[]).includes(youNode.id)) return;
+      if(youNode.spouseOf===node.id||node.spouseOf===youNode.id) return;
+      // Already has a relationship?
+      if(getRel(youNode, node)) return;
+      // Try to compute one
+      const rel=computeRelationship(youNode.id, node.id);
+      if(rel&&rel.label){
+        addRel(youNode, node, rel.label, rel.category);
+        // Also write legacy customLinks
+        if(!youNode.customLinks) youNode.customLinks={};
+        if(!node.customLinks) node.customLinks={};
+        const ltype=rel.category==='blood'?'blood':'labeled';
+        youNode.customLinks[node.id]={label:rel.label,lineType:ltype};
+        node.customLinks[youNode.id]={label:inverseLabel(rel.label),lineType:ltype};
+      }
+    });
+  }
+
   rebuild(); render(); scheduleSave();
   // Flash feedback
   const btn=event.target;

@@ -462,10 +462,11 @@ async function removePerson(id){
     });
   }
   people=people.filter(p=>!rm.has(p.id));
-  // Clean up spouse and customLink references
+  // Clean up spouse, customLink, and relationships[] references
   people.forEach(p=>{
     if(p.spouseOf&&rm.has(p.spouseOf)) delete p.spouseOf;
     if(p.customLinks) Object.keys(p.customLinks).forEach(k=>{ if(rm.has(k)) delete p.customLinks[k]; });
+    if(p.relationships) p.relationships=p.relationships.filter(r=>!rm.has(r.targetId));
   });
   rebuild([]); closeCard(); render(); scheduleSave();
 }
