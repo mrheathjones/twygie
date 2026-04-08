@@ -162,10 +162,16 @@ function drawBranches(){
   const showNonBlood=treeMode!=='bloodline'; // spouse, in-law, non-blood labeled
   const showExtended=treeMode==='complex'||treeMode==='bloodline'||treeMode==='bonds'; // extended connections
 
-  // Build blood-family set: all nodes reachable from isYou via parents[] chains (up + down)
-  // Used to detect marriage-boundary connections (blood label but crosses spouse line)
+  // Build blood-family set: all nodes reachable from isYou via blood connections
+  // Traces through parents[], sibling customLinks, and parent/child customLinks
   const youNode=people.find(p=>p.isYou);
   const bloodFamily=new Set();
+  const BLOOD_CHILD_LABELS=new Set(['Son','Daughter','Child','Stepson','Stepdaughter','Stepchild',
+    'Grandson','Granddaughter','Grandchild','Great-grandson','Great-granddaughter','Great-grandchild']);
+  const BLOOD_PARENT_LABELS=new Set(['Father','Mother','Parent','Stepfather','Stepmother',
+    'Grandfather','Grandmother','Grandparent','Great-grandfather','Great-grandmother','Great-grandparent']);
+  const BLOOD_SIBLING_LABELS=new Set(['Brother','Sister','Sibling','Half-brother','Half-sister',
+    'Stepbrother','Stepsister']);
   if(youNode){
     const queue=[youNode.id];
     while(queue.length){
@@ -173,11 +179,29 @@ function drawBranches(){
       if(bloodFamily.has(nid)) continue;
       bloodFamily.add(nid);
       const n=peopleById[nid]; if(!n) continue;
-      (n.parents||[]).forEach(pid=>queue.push(pid)); // ancestors
-      people.filter(c=>(c.parents||[]).includes(nid)).forEach(c=>queue.push(c.id)); // descendants
-      // siblings (shared parents)
+      // Trace through parents[] array
+      (n.parents||[]).forEach(pid=>queue.push(pid));
+      people.filter(c=>(c.parents||[]).includes(nid)).forEach(c=>queue.push(c.id));
+      // Trace through sibling customLinks
       (n.parents||[]).forEach(pid=>{
         people.filter(s=>s.id!==nid&&(s.parents||[]).includes(pid)).forEach(s=>queue.push(s.id));
+      });
+      // Trace through blood-type customLinks
+      Object.entries(n.customLinks||{}).forEach(([tid,v])=>{
+        const lbl=typeof v==='string'?v:v.label||'';
+        if(BLOOD_CHILD_LABELS.has(lbl)||BLOOD_PARENT_LABELS.has(lbl)||BLOOD_SIBLING_LABELS.has(lbl)){
+          queue.push(tid);
+        }
+      });
+      // Reverse: anyone who has a blood customLink pointing TO this node
+      people.forEach(other=>{
+        const cl=other.customLinks&&other.customLinks[nid];
+        if(cl){
+          const lbl=typeof cl==='string'?cl:cl.label||'';
+          if(BLOOD_CHILD_LABELS.has(lbl)||BLOOD_PARENT_LABELS.has(lbl)||BLOOD_SIBLING_LABELS.has(lbl)){
+            queue.push(other.id);
+          }
+        }
       });
     }
   }

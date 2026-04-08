@@ -333,6 +333,18 @@ function autoAssignToYou(newNodeId, anchorId, relToAnchor){
     const inferred=inferRelToYou(anchorRelToExisting, relToAnchor, newNode.gender||'');
     if(!inferred) return;
 
+    // If this connection crosses a marriage boundary, add "-in-law" suffix
+    // (e.g. spouse→nephew should be "Nephew-in-law", not just "Nephew")
+    let finalLabel=inferred;
+    const youNode=people.find(p=>p.isYou);
+    if(youNode && !inferred.includes('-in-law')){
+      const isExistingSpouse=existing.spouseOf===youNode.id||youNode.spouseOf===existing.id;
+      const isNewNodeSpouse=newNode.spouseOf===youNode.id||youNode.spouseOf===newNode.id;
+      if((isExistingSpouse||isNewNodeSpouse) && BLOOD_LABELS.has(inferred) && !SPOUSE_SET.has(inferred)){
+        finalLabel=inferred+'-in-law';
+      }
+    }
+
     const alreadyLinked=
       (existing.parents||[]).includes(newNodeId)||
       (newNode.parents||[]).includes(existing.id)||
@@ -341,7 +353,7 @@ function autoAssignToYou(newNodeId, anchorId, relToAnchor){
       (newNode.customLinks&&newNode.customLinks[existing.id]);
     if(alreadyLinked) return;
 
-    applyInferredRel(existing, newNode, inferred);
+    applyInferredRel(existing, newNode, finalLabel);
   });
 
   // Post-processing: remove any connections that can't be traced through real family structure
