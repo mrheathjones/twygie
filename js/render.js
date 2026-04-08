@@ -409,14 +409,35 @@ function drawBranches(){
                          ['Uncle','Aunt','Great-uncle','Great-aunt'].includes(lbl2);
       if(isUncleAunt && youParents.length){
         // p is isYou's uncle/aunt → p is a sibling of isYou's parents
-        // Find which parent group(s) the parents are in and add p there
         youParents.forEach(parId=>{
+          // Check if parId is already in a parent group
+          let foundGroup=false;
           Object.entries(parentChildMap).forEach(([pid,children])=>{
-            if(children.has(parId)&&!children.has(p.id)){ children.add(p.id); }
+            if(children.has(parId)&&!children.has(p.id)){ children.add(p.id); foundGroup=true; }
           });
-          // If no parentChildMap entry exists for parent's parents, check parent's parents
+          if(foundGroup) return;
+
+          // No group found — find grandparent to create one
           const par=peopleById[parId];
-          if(par) (par.parents||[]).forEach(gpId=>{
+          const gpIds=[];
+          // From parent's parents[]
+          if(par) (par.parents||[]).forEach(gid=>gpIds.push(gid));
+          // From isYou's Grandfather/Grandmother customLinks (if parent has no parents[])
+          if(!gpIds.length){
+            Object.entries(youNode.customLinks||{}).forEach(([tid,v])=>{
+              const gl=typeof v==='string'?v:v.label||'';
+              if(['Grandfather','Grandmother','Grandparent'].includes(gl)) gpIds.push(tid);
+            });
+            // Also reverse: grandparent has customLink to isYou
+            people.forEach(gp=>{
+              const cl=gp.customLinks&&gp.customLinks[youNode.id];
+              if(cl){
+                const gl=typeof cl==='string'?cl:cl.label||'';
+                if(['Grandchild','Grandson','Granddaughter'].includes(gl)) gpIds.push(gp.id);
+              }
+            });
+          }
+          gpIds.forEach(gpId=>{
             if(!parentChildMap[gpId]) parentChildMap[gpId]=new Set();
             parentChildMap[gpId].add(parId);
             parentChildMap[gpId].add(p.id);
