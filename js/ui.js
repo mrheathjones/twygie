@@ -476,7 +476,7 @@ function editConnRel(fromId, toId, connType){
     ['Nephews & Nieces',['Nephew','Niece','Grand-nephew','Grand-niece']],
     ['First Cousins',['First Cousin','First Cousin Once Removed','First Cousin Twice Removed']],
     ['Second Cousins',['Second Cousin','Second Cousin Once Removed','Second Cousin Twice Removed']],
-    ['In-Laws',['Father-in-law','Mother-in-law','Son-in-law','Daughter-in-law','Brother-in-law','Sister-in-law']],
+    ['In-Laws',['Father-in-law','Mother-in-law','Son-in-law','Daughter-in-law','Brother-in-law','Sister-in-law','Uncle-in-law','Aunt-in-law','Nephew-in-law','Niece-in-law']],
     ['Other',['Godfather','Godmother','Godchild','Guardian','Family Friend','Other']],
   ];
 
@@ -660,6 +660,8 @@ function buildConnRelOptions(name){
       ['Father-in-law',`Father-in-law of ${n}`],['Mother-in-law',`Mother-in-law of ${n}`],
       ['Son-in-law',`Son-in-law of ${n}`],['Daughter-in-law',`Daughter-in-law of ${n}`],
       ['Brother-in-law',`Brother-in-law of ${n}`],['Sister-in-law',`Sister-in-law of ${n}`],
+      ['Uncle-in-law',`Uncle-in-law of ${n}`],['Aunt-in-law',`Aunt-in-law of ${n}`],
+      ['Nephew-in-law',`Nephew-in-law of ${n}`],['Niece-in-law',`Niece-in-law of ${n}`],
       ['Grandfather-in-law',`Grandfather-in-law of ${n}`],['Grandmother-in-law',`Grandmother-in-law of ${n}`],
     ]),
     og('── Other ──','labeled',[
@@ -714,8 +716,8 @@ function saveConnection(){
   const type=rel.slice(0,dashIdx);
   const label=rel.slice(dashIdx+1);
 
-  const mGender={'father':'male','grandfather':'male','stepfather':'male','son':'male','grandson':'male','stepson':'male','brother':'male','half-brother':'male','husband':'male','uncle':'male','nephew':'male','brother-in-law':'male','godfather':'male'};
-  const fGender={'mother':'female','grandmother':'female','stepmother':'female','daughter':'female','granddaughter':'female','stepdaughter':'female','sister':'female','half-sister':'female','wife':'female','aunt':'female','niece':'female','sister-in-law':'female','godmother':'female'};
+  const mGender={'father':'male','grandfather':'male','stepfather':'male','son':'male','grandson':'male','stepson':'male','brother':'male','half-brother':'male','husband':'male','uncle':'male','nephew':'male','brother-in-law':'male','uncle-in-law':'male','nephew-in-law':'male','godfather':'male'};
+  const fGender={'mother':'female','grandmother':'female','stepmother':'female','daughter':'female','granddaughter':'female','stepdaughter':'female','sister':'female','half-sister':'female','wife':'female','aunt':'female','niece':'female','sister-in-law':'female','aunt-in-law':'female','niece-in-law':'female','godmother':'female'};
   const lkey=label.toLowerCase();
   if(!other.gender){ if(mGender[lkey]) other.gender='male'; else if(fGender[lkey]) other.gender='female'; }
 
