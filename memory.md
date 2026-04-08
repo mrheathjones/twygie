@@ -1,7 +1,7 @@
 # Twygie — Technical Memory
 
 ## Stack
-- **Frontend**: Single HTML file (family-tree.html / index.html) — vanilla JS + SVG
+- **Frontend**: Modular vanilla JS + SVG — 10 JS modules, 7 CSS files, HTML shell
 - **Auth**: Firebase Auth compat SDK v10.8.0
 - **Database**: Cloud Firestore compat SDK v10.8.0
 - **Hosting**: Vercel (auto-deploy from GitHub main branch)
@@ -12,15 +12,40 @@
 ## File Structure
 ```
 twygie/
-├── family-tree.html   # Main app (authenticated tree view)
-├── index.html         # Copy of family-tree.html (Vercel root)
-├── login.html         # Login page
-├── timeline.html      # Horizontal timeline view (/timeline)
-├── vercel.json        # Route config (cleanUrls + rewrites)
-├── firestore.rules    # Firestore security rules (Phase 1)
-├── plan.md            # Roadmap
-├── memory.md          # This file
-└── journal.md         # Dev log
+├── index.html              # Main app HTML shell (loads CSS + JS modules)
+├── login.html              # Login page
+├── timeline.html           # Horizontal timeline view (/timeline)
+├── family-tree.html        # OLD MONOLITH — kept as rollback backup
+├── styles/
+│   ├── base.css            # Reset, CSS variables, typography, loading, atmosphere
+│   ├── tree.css            # SVG nodes, branches, glow/pulse animations, labels
+│   ├── header.css          # Header bar, logo, nav buttons, view toggle, export menu
+│   ├── cards.css           # Overlay card, link modal, branded modal, bridge badges
+│   ├── panels.css          # Members panel, timeline panel, zoom, legend, tooltip
+│   ├── settings.css        # Settings overlay, toggles, color pickers, helpers
+│   └── forms.css           # Add member modal, form inputs, buttons
+├── js/
+│   ├── constants.js        # BLOOD_LABELS, relationship sets, INVERSE_REL
+│   ├── firebase.js         # Firebase config, auth, encryption, load/save, data mgmt
+│   ├── render.js           # SVG rendering: drawNodes, drawBranches, glow, layout
+│   ├── kinship.js          # Relationship inference, auto-assign, structural validation
+│   ├── settings.js         # Settings panel, color pickers, custom connection types
+│   ├── linking.js          # Tree linking, TWYG codes, sharing tiers, auto-adopt
+│   ├── ui.js               # Node card, editing, connection management, selection
+│   ├── panels.js           # Members panel, tooltip, transform state, scrim
+│   ├── export.js           # PNG/PDF export
+│   └── app.js              # Pan/zoom, add member form, event listeners
+├── vercel.json             # Route config (cleanUrls + rewrites)
+├── firestore.rules         # Firestore security rules
+├── plan.md                 # Roadmap
+├── memory.md               # This file
+└── journal.md              # Dev log
+```
+
+### Script Load Order (matters — globals are shared)
+```
+constants.js → firebase.js → render.js → kinship.js → settings.js →
+linking.js → ui.js → panels.js → export.js → app.js
 ```
 
 ---
@@ -160,14 +185,15 @@ function saveSettings(){
 ## Deployment
 ```bash
 cd /home/claude/twygie
-cp family-tree.html index.html
-# ALWAYS validate JS before pushing:
-python3 -c "extract inline <script>" > /tmp/check.js
-node --check /tmp/check.js
+# Validate ALL JS files before pushing:
+for f in js/*.js; do node --check "$f" || echo "FAIL: $f"; done
+# Or combined check (simulates browser load order):
+cat js/constants.js js/firebase.js js/render.js js/kinship.js js/settings.js js/linking.js js/ui.js js/panels.js js/export.js js/app.js > /tmp/combined.js && node --check /tmp/combined.js
 git add . && git commit -m "..." && git push https://{GH_TOKEN}@github.com/mrheathjones/twygie.git main
 ```
 - Vercel auto-deploys in ~30s after push
 - Rotate GH/Vercel tokens after use — never leave in chat
+- No build step needed — Vercel serves styles/ and js/ as static files
 
 ## Vercel IDs
 - Team: `team_nrD8szUQ8HeSzhD71HrIvJGB`
@@ -177,10 +203,10 @@ git add . && git commit -m "..." && git push https://{GH_TOKEN}@github.com/mrhea
 
 ## Known Gotchas
 
-1. **JS validation is mandatory** — always `node --check` before pushing. File truncation from Python str-replace has crashed the app multiple times.
-2. **byId is stale before rebuild()** — always use `P.find(p=>p.id===id)` when accessing nodes before a rebuild, especially in autoAssign and removeConn.
-3. **position:relative on settings panel** — will override the CSS class's `position:fixed`, causing the panel to float. Never add inline position style to #settings-panel.
-4. **settings save was async** — `await settingsDoc().set()` used to block the UI. Now fire-and-forget. Don't revert to async.
+1. **JS validation is mandatory** — always `node --check` each file before pushing. The modular split reduces truncation risk vs the old monolith, but syntax errors in one file still break the app.
+2. **Script load order matters** — all JS files share global scope via `<script>` tags. constants.js must load first; app.js must load last. See index.html for the full order.
+3. **peopleById is stale before rebuild()** — always use `people.find(p=>p.id===id)` when accessing nodes before a rebuild, especially in autoAssign and removeConn.
+4. **Settings save is fire-and-forget** — `settingsDoc().set()` runs in background. Don't revert to `await`.
 5. **Photos as base64 in Firestore** — approaching 1MB doc limit for nodes with large photos. Future: use Firebase Storage.
 6. **connType missing from sibs array** — auto-detected siblings from shared parents had no connType, causing remove to silently fail. Always include connType in every chip's connection object.
 
@@ -377,7 +403,7 @@ treeLinks/{linkId}
 
 **Auto-adopt**: `adoptBatch()` — standalone global function
 - Sorts parents-first, multi-pass (up to 5) adoption
-- Remaps old→new IDs across sharedNodes, sorted, and P[] after each adopt
+- Remaps old→new IDs across sharedNodes, sorted, and people[] after each adopt
 - Adopted nodes flagged `_adopted:true` → double-ring visual on tree
 - Preference stored on `treeLinks.autoAdopt.{uid}`, triggered at end of `loadSharedNodes()`
 - `window._appReady` guard prevents auto-adopt during initial boot

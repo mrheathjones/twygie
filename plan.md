@@ -369,3 +369,19 @@ When sharing nodes with a linked user, the data is re-encrypted with a **shared 
 2. ✅ Spouse addition links co-parent to children regardless of auto-connections toggle
 3. ✅ Inference table: 3 bugs fixed, 11 missing rules added, Step defaults removed
 4. ✅ Siblings copy parents and trigger full isDirChild cascade
+
+---
+
+## Session 11 — Modular Refactoring
+
+### Completed
+- Split 5,186-line monolith (family-tree.html) into 18 modular files
+- 7 CSS files in styles/ (base, tree, header, cards, panels, settings, forms)
+- 10 JS modules in js/ (constants, firebase, render, kinship, settings, linking, ui, panels, export, app)
+- 507 variable/function renames (P→people, byId→peopleById, se→createSvgElement, etc.)
+- Inline styles reduced from 75 to 31 (remaining are dynamic JS-controlled colors)
+- 5 JS functions converted from inline style manipulation to classList toggles
+- 5 dead functions removed
+- 9 relationship constants consolidated into constants.js
+- Module documentation headers with dependency maps on all files
+- memory.md and plan.md updated to reflect new architecture
