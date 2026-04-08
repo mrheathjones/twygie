@@ -324,7 +324,7 @@
       <div class="sp-collapse-body" id="sec-adv">
         <div class="sp-helper" style="margin-bottom:8px">"Young" threshold — members this age or under get the young color.</div>
         <div class="sp-row">
-          <input class="ei" id="sp-young-age" type="number" min="0" max="30" class="ei" style="width:80px" placeholder="17"/>
+          <input class="ei" id="sp-young-age" type="number" min="0" max="30" style="width:80px" placeholder="17"/>
           <span class="sp-label-sm">years old and under</span>
         </div>
         <div class="sp-spacer-md"></div>
@@ -361,7 +361,7 @@
 
     <div class="mf">
       <label class="ml">Gender</label>
-      <select class="mi" id="fgender" class="select-native">
+      <select class="mi select-native" id="fgender">
         <option value="">Prefer not to say</option>
         <option value="male">Male</option>
         <option value="female">Female</option>
@@ -372,7 +372,7 @@
     <div class="mf">
       <label class="ml">Date of Birth</label>
       <div class="mf-row c3">
-        <select class="mi" id="fdob-month" class="select-native">
+        <select class="mi select-native" id="fdob-month">
           <option value="">Month</option>
           <option value="1">January</option><option value="2">February</option><option value="3">March</option>
           <option value="4">April</option><option value="5">May</option><option value="6">June</option>
@@ -387,7 +387,7 @@
     <div class="mf mf-row c2">
       <div><label class="ml">City</label><input class="mi" id="fcity" placeholder="City"/></div>
       <div><label class="ml">State / Region</label>
-        <select class="mi" id="fstate" class="select-native">
+        <select class="mi select-native" id="fstate">
           <option value="">Select state…</option>
           <option>Alabama</option><option>Alaska</option><option>Arizona</option><option>Arkansas</option>
           <option>California</option><option>Colorado</option><option>Connecticut</option><option>Delaware</option>
@@ -418,7 +418,7 @@
       </label>
       <div id="f-death-fields" class="death-fields">
         <div class="mf-row c3">
-          <select class="mi" id="fdod-month" class="select-native">
+          <select class="mi select-native" id="fdod-month">
             <option value="">Month</option>
             <option value="1">January</option><option value="2">February</option><option value="3">March</option>
             <option value="4">April</option><option value="5">May</option><option value="6">June</option>
@@ -433,7 +433,7 @@
 
     <div class="mf">
       <label class="ml">Relationship to <span id="rel-to-label">tree</span></label>
-      <select class="mi" id="fr" class="select-native">
+      <select class="mi select-native" id="fr">
         <option value="">— No relationship (standalone) —</option>
         <optgroup label="── Children ──">
           <option value="Son">Son</option>
@@ -541,7 +541,7 @@
       </div>
     </div>
     <div class="mf"><label class="ml">Story / Note</label>
-      <textarea class="mi" id="fstory" rows="2" placeholder="A brief memory or note…" class="textarea-resize"></textarea>
+      <textarea class="mi textarea-resize" id="fstory" rows="2" placeholder="A brief memory or note…"></textarea>
     </div>
 
     <div class="mfoot">
