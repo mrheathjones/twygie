@@ -426,3 +426,48 @@ Built as a separate HTML page (timeline.html) with:
 - New line category: "Extended non-blood" (inlaw) — dashed pink (#dc6488) for in-law connections
 - 6 line categories total: parent-child, sibling, extended blood, spouse, extended non-blood, non-blood
 - Legend and Settings updated with new inlaw color picker
+
+---
+
+## Session 11 — April 8, 2026 — Modular Refactoring
+
+### Monolith Split
+- Split 5,186-line family-tree.html into 18 modular files
+- index.html → app.html (571-line HTML shell, renamed for cleanUrls compat)
+- 9 CSS files in styles/ (base, tree, header, cards, panels, settings, forms, timeline, login)
+- 12 JS modules in js/ (constants, firebase, render, kinship, settings, linking, ui, panels, export, app, timeline, login)
+- login.html: 523 → 150 lines + login.css + login.js
+- timeline.html: 609 → 45 lines + timeline.css + timeline.js
+- All JS syntax validated, all HTML onclick handlers verified
+
+### Variable & Function Renames (507 references)
+- P → people, byId → peopleById, nxt → nextNodeId
+- se() → createSvgElement(), NS → SVG_NS
+- gr() → getGlowRadius(), nr() → getNodeRadius()
+- col() → getNodeColor(), gclass() → getGlowClass(), gfilt() → getGlowFilter()
+- orb() → deterministicOffset(), bstyle() → getBranchStyle()
+- connCount() → getConnectionCount(), brRgba() → getBranchRgba()
+- showTip/hideTip → showTooltip/hideTooltip
+- tx/ty → panX/panY, drag → isDragging, applyT → applyTransform
+- Local g() in kinship.js → gendered() (gender-aware label selector)
+- selId → selectedNodeId, addFor → addForNodeId, nodeDrag → nodeDragState
+
+### Code Quality
+- 75 → 31 inline styles (remaining are dynamic JS-controlled colors)
+- 5 JS functions converted from style.X= to classList toggles
+- 5 dead functions removed (toggleTreeMode, openTimeline, hexToAlpha, rgbToHex, deleteConnection)
+- 9 relationship constants consolidated into constants.js
+- Module documentation headers with dependency maps on all files
+- 12 console.log → debug() gated utility (window.TWYGIE_DEBUG)
+- 60 inline onclick/oninput/onchange → addEventListener via initEventListeners()
+- Fixed 7 duplicate class attributes on form elements
+- All family-tree.html references → /app, login.html → /login
+
+### Bug Fixes
+- **404 on /app**: Renamed index.html → app.html for Vercel cleanUrls compatibility
+- **gendered is not defined**: Rename script missed `const g=` definition (only matched `g(` calls)
+- **Sibling lines missing in Tree View**: Auto-detected sibling rendering was placed after the `if(simple) return` gate — moved before it
+- **Sibling lines deleted by cleanFalseConnections**: hasSharedParent() only checked parents[] arrays; siblings were validated as invalid when parents were stored in customLinks. Fix: trust all sibling customLinks + expanded hasSharedParent to check customLinks
+- **Sibling label detection**: Expanded isSibLabel to include Stepbrother, Stepsister, Sibling
+- **Robust sibling rendering**: Added parent-centric sibling detection via parentChildMap that checks parents[], child-type customLinks, and parent-type customLinks
+- **Timeline logo lost gold**: Fixed color from var(--text) to var(--gold)

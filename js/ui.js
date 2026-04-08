@@ -127,7 +127,19 @@ function fillCard(p){
   av.style.borderColor=c;
   av.innerHTML=p.photo?`<img src="${p.photo}"/>`:`<span style="color:${c}">${initials(p)}</span>`;
   document.getElementById('cname').textContent=p.isYou?'You':fullName(p);
-  document.getElementById('cdob').textContent=dobDisplay(p);
+  // Show birth + death dates
+  let dateText=dobDisplay(p);
+  if(p.death||(p.dod&&p.dod.year)){
+    const months=['','January','February','March','April','May','June','July','August','September','October','November','December'];
+    const dod=p.dod||{};
+    const dParts=[];
+    if(dod.month) dParts.push(months[parseInt(dod.month)]||'');
+    if(dod.day) dParts.push(dod.day+(dod.year?',':''));
+    if(dod.year) dParts.push(dod.year);
+    else if(p.death) dParts.push(p.death);
+    if(dParts.length) dateText+=' — d. '+dParts.join(' ');
+  }
+  document.getElementById('cdob').textContent=dateText;
   document.getElementById('cplace').textContent=placeDisplay(p);
 
   // Anniversary display
@@ -272,6 +284,24 @@ function editCard(id){
         <input class="ei" id="ei-dob-year" type="number" value="${p.dob&&p.dob.year||p.birth||''}" placeholder="Year"/>
       </div>
     </div>
+    <div class="ef"><label class="el" style="display:flex;align-items:center;gap:8px;cursor:pointer">
+      <span>Deceased</span>
+      <span class="toggle-wrap-sm">
+        <input type="checkbox" id="ei-deceased" class="toggle-hidden" ${(p.death||(p.dod&&p.dod.year))?'checked':''}/>
+        <span id="ei-deceased-track" class="toggle-track${(p.death||(p.dod&&p.dod.year))?' toggle-track-on':''}" style="cursor:pointer"></span>
+        <span id="ei-deceased-thumb" class="toggle-thumb-sm${(p.death||(p.dod&&p.dod.year))?' on':''}"></span>
+      </span>
+    </label>
+    <div id="ei-death-fields" class="death-fields" style="${(p.death||(p.dod&&p.dod.year))?'display:block':''}">
+      <div class="ef-row c3">
+        <select class="ei" id="ei-dod-month" style="appearance:none">
+          <option value="">Month</option>
+          ${months.slice(1).map((m,i)=>`<option value="${i+1}" ${(p.dod&&p.dod.month)==(i+1)?'selected':''}>${m}</option>`).join('')}
+        </select>
+        <input class="ei" id="ei-dod-day" type="number" value="${p.dod&&p.dod.day||''}" placeholder="Day" min="1" max="31"/>
+        <input class="ei" id="ei-dod-year" type="number" value="${p.dod&&p.dod.year||p.death||''}" placeholder="Year"/>
+      </div>
+    </div></div>
     <div class="ef ef-row c2">
       <div><label class="el">City</label><input class="ei" id="ei-city" value="${(p.city||'').replace(/"/g,'&quot;')}" placeholder="City"/></div>
       <div><label class="el">State</label><select class="ei" id="ei-state" style="appearance:none">${stateSelectOpts(p.state||"")}</select></div>
@@ -301,6 +331,18 @@ function editCard(id){
     <button class="cancelbtn" onclick="fillCard(peopleById['${id}'])">Cancel</button>
   </div>`;
   document.getElementById('ei-first').focus();
+  // Wire up deceased toggle
+  const decCb=document.getElementById('ei-deceased');
+  const decTrack=document.getElementById('ei-deceased-track');
+  const decThumb=document.getElementById('ei-deceased-thumb');
+  const decFields=document.getElementById('ei-death-fields');
+  if(decTrack) decTrack.addEventListener('click',()=>{ decCb.checked=!decCb.checked; syncDeceasedToggle(); });
+  if(decCb) decCb.addEventListener('change', syncDeceasedToggle);
+  function syncDeceasedToggle(){
+    if(decTrack) decTrack.classList.toggle('toggle-track-on',decCb.checked);
+    if(decThumb) decThumb.classList.toggle('on',decCb.checked);
+    if(decFields) decFields.style.display=decCb.checked?'block':'none';
+  }
 }
 
 function handlePhotoUpload(event,id){
@@ -330,6 +372,21 @@ function saveCard(id){
     year:document.getElementById('ei-dob-year').value
   };
   p.birth=parseInt(p.dob.year)||p.birth||null;
+  // Save deceased state + death date
+  const decCb=document.getElementById('ei-deceased');
+  if(decCb){
+    if(decCb.checked){
+      p.dod={
+        month:document.getElementById('ei-dod-month')?.value||'',
+        day:document.getElementById('ei-dod-day')?.value||'',
+        year:document.getElementById('ei-dod-year')?.value||''
+      };
+      p.death=parseInt(p.dod.year)||null;
+    } else {
+      p.dod=null;
+      p.death=null;
+    }
+  }
   p.city=document.getElementById('ei-city').value.trim();
   p.state=document.getElementById('ei-state').value||'';
   p.note=document.getElementById('ei-note').value.trim();
