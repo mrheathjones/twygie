@@ -765,8 +765,6 @@ function getRelToYou_for(targetId, fromId, _depth){
 
 function recalcAllRelationships(force){
   if(!force&&!autoConnections){ appAlert('Enable auto-assign first.'); return; }
-  // Run autoAssignToYou for every node against every other node it's directly connected to
-  // Iterate over every direct structural connection in the tree
   const seen=new Set();
   people.forEach(p=>{
     // For each of p's parents: re-run as if p was just added with that parent as anchor
@@ -774,7 +772,7 @@ function recalcAllRelationships(force){
       const key=p.id+'|'+parentId;
       if(seen.has(key)) return; seen.add(key);
       const par=people.find(x=>x.id===parentId); if(!par) return;
-      const relLabel=genderedRel('Child',p.gender); // e.g. "Son" from parent's view
+      const relLabel=genderedRel('Child',p.gender);
       autoAssignToYou(p.id, parentId, relLabel);
     });
     // For spouse: re-run as if spouse was just added
@@ -787,6 +785,14 @@ function recalcAllRelationships(force){
         autoAssignToYou(p.spouseOf, p.id, spLabel);
       }
     }
+    // For customLinks: re-run for sibling, uncle, cousin, etc.
+    Object.entries(p.customLinks||{}).forEach(([tid,v])=>{
+      const key=[p.id,tid].sort().join('|');
+      if(seen.has(key)) return; seen.add(key);
+      const label=typeof v==='string'?v:v.label||'';
+      if(!label) return;
+      autoAssignToYou(p.id, tid, label);
+    });
   });
   // Clean up any false cross-family connections (co-grandparent/in-law artifacts)
   cleanFalseConnections();
