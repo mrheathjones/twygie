@@ -489,3 +489,28 @@ Built as a separate HTML page (timeline.html) with:
 - gendered() definition missed by rename script: const g= vs g( regex mismatch
 - hasSharedParent too narrow: expanded to check customLinks parent-child relationships
 - cleanFalseConnections too aggressive: now trusts all sibling customLinks
+
+### Relationship Engine v2 (Session 11 continued)
+
+**Phase 1 — Data Model:**
+- Added relationships[] array to Person schema
+- Each relationship: {targetId, label, category, structural}
+- Categories: 'blood' (solid), 'bond' (dashed pink), 'custom' (dashed purple)
+- Helper functions: addRel(), removeRel(), getRel(), getAllRels(), getRelCategory()
+- Migration: customLinks auto-converted to relationships[] on load via rebuild()
+- burnTwygs clears relationships[]
+
+**Phase 2 — Renderer:**
+- drawBranches reads relationships[] — category determines line style directly
+- No more runtime BLOOD_LABELS/crossesMarriage classification
+- Sibling → solid orange, blood → solid purple, bond → dashed pink, custom → dashed purple
+
+**Phase 3 — Simplified Auto-assign:**
+- computeRelationship(): single source of truth wrapper over structural resolver
+- Replaced 30-line inference loop with 12-line compute pass
+- getRelToYou badge: 40 lines → 6 lines (relationships[] → computeRelationship → fallback)
+- relCategory: checks relationships[] for node coloring
+- Removed cleanFalseConnections from autoAssignToYou
+- removePerson/getConnectionCount updated for relationships[]
+
+**Design Doc:** Full architecture written in plan.md covering three-layer model, migration plan, edge cases, and future AI engine integration.
