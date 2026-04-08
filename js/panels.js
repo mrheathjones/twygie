@@ -53,15 +53,49 @@ function renderMembersList(){
 
 // ─── TIMELINE ────────────────────────────────────────────────────────────────
 
-function openTimeline(){
-  renderTimeline();
-  document.getElementById('timeline-panel').classList.add('open');
-  document.getElementById('scrim').classList.add('on');
-}
 function closeTimeline(){
   document.getElementById('timeline-panel').classList.remove('open');
   if(!selectedNodeId&&!document.getElementById('members-panel').classList.contains('open'))
     document.getElementById('scrim').classList.remove('on');
+}
+
+
+// ─── TOOLTIP ─────────────────────────────────────────────────────────────────
+function calcAge(p){
+  const birthYear=parseInt(p.dob&&p.dob.year)||p.birth||null;
+  if(!birthYear) return null;
+  const deathYear=parseInt(p.dod&&p.dod.year)||p.death||null;
+  const endYear=deathYear||(new Date().getFullYear());
+  return endYear-birthYear;
+}
+
+function showTooltip(e,p){
+  if(selectedNodeId||nodeDragState) return;
+  const t=document.getElementById('tip');
+  const photoHtml=p.photo?`<div class="tip-photo"><img src="${p.photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/></div>`:'';
+  const rel=getRelToYou(p.id);
+  const age=calcAge(p);
+  const ageStr=age?(p.death||(p.dod&&p.dod.year)?` · ${age} yrs`:(` · Age ${age}`)):'';
+  t.innerHTML=`${photoHtml}<span>${fullName(p)}${rel?' · '+rel:''}${ageStr}</span>`;
+  t.style.left=(e.clientX+14)+'px'; t.style.top=(e.clientY-12)+'px';
+  t.classList.add('show');
+}
+function hideTooltip(){ document.getElementById('tip').classList.remove('show'); }
+
+// ─── SCRIM CLICK ─────────────────────────────────────────────────────────────
+function handleScrimClick(e){
+  if(document.getElementById('settings-panel').classList.contains('open')){ closeSettings(); return; }
+  if(document.getElementById('members-panel').classList.contains('open')){ closeMembersPanel(); return; }
+  if(document.getElementById('timeline-panel').classList.contains('open')){ closeTimeline(); return; }
+  closeCard();
+}
+
+// ─── TRANSFORM ────────────────────────────────────────────────────────────────
+let panX=0, panY=0, scale=1;
+function applyTransform(anim=false){
+  const tg=document.getElementById('tg');
+  if(anim){ tg.classList.add('anim'); setTimeout(()=>tg.classList.remove('anim'),700); }
+  tg.style.transform=`translate(${panX}px,${panY}px) scale(${scale})`;
 }
 
 function renderTimeline(){
@@ -138,42 +172,4 @@ function renderTimeline(){
   });
 
   body.innerHTML=html;
-}
-
-// ─── TOOLTIP ─────────────────────────────────────────────────────────────────
-function calcAge(p){
-  const birthYear=parseInt(p.dob&&p.dob.year)||p.birth||null;
-  if(!birthYear) return null;
-  const deathYear=parseInt(p.dod&&p.dod.year)||p.death||null;
-  const endYear=deathYear||(new Date().getFullYear());
-  return endYear-birthYear;
-}
-
-function showTooltip(e,p){
-  if(selectedNodeId||nodeDragState) return;
-  const t=document.getElementById('tip');
-  const photoHtml=p.photo?`<div class="tip-photo"><img src="${p.photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/></div>`:'';
-  const rel=getRelToYou(p.id);
-  const age=calcAge(p);
-  const ageStr=age?(p.death||(p.dod&&p.dod.year)?` · ${age} yrs`:(` · Age ${age}`)):'';
-  t.innerHTML=`${photoHtml}<span>${fullName(p)}${rel?' · '+rel:''}${ageStr}</span>`;
-  t.style.left=(e.clientX+14)+'px'; t.style.top=(e.clientY-12)+'px';
-  t.classList.add('show');
-}
-function hideTooltip(){ document.getElementById('tip').classList.remove('show'); }
-
-// ─── SCRIM CLICK ─────────────────────────────────────────────────────────────
-function handleScrimClick(e){
-  if(document.getElementById('settings-panel').classList.contains('open')){ closeSettings(); return; }
-  if(document.getElementById('members-panel').classList.contains('open')){ closeMembersPanel(); return; }
-  if(document.getElementById('timeline-panel').classList.contains('open')){ closeTimeline(); return; }
-  closeCard();
-}
-
-// ─── TRANSFORM ────────────────────────────────────────────────────────────────
-let panX=0, panY=0, scale=1;
-function applyTransform(anim=false){
-  const tg=document.getElementById('tg');
-  if(anim){ tg.classList.add('anim'); setTimeout(()=>tg.classList.remove('anim'),700); }
-  tg.style.transform=`translate(${panX}px,${panY}px) scale(${scale})`;
 }

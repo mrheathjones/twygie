@@ -285,7 +285,6 @@ function setTreeMode(mode){
   }
   render();
 }
-function toggleTreeMode(){ setTreeMode(treeMode==='simple'?'complex':'simple'); }
 function updateCount(){ document.getElementById('mcnum').textContent=people.length; }
 function fullName(p){ return p.name||[(p.firstName||''),(p.lastName||'')].filter(Boolean).join(' ')||'Unknown'; }
 

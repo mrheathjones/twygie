@@ -525,14 +525,6 @@ async function removeConnFromCard(fromId, toId, connType){
   selectNode(fromId);
 }
 
-function deleteConnection(fromId, toId){
-  const from=peopleById[fromId]; const to=peopleById[toId]; if(!from||!to) return;
-  if(from.customLinks) delete from.customLinks[toId];
-  if(to.customLinks) delete to.customLinks[fromId];
-  if(to.relLabel) delete to.relLabel;
-  rebuild(); render(); scheduleSave();
-  selectNode(fromId);
-}
 
 // ─── ADD CONNECTION MODAL ────────────────────────────────────────────────────
 let connectionForNodeId=null, connectionSelectedNodeId=null;
