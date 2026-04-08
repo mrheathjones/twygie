@@ -457,6 +457,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-famil
   <div class="lr"><div id="leg-sibling" style="width:18px;height:3px;background:#dc8c3c;border-radius:2px"></div>Sibling</div>
   <div class="lr"><div id="leg-blood-ext" style="width:18px;height:3px;background:#a064dc;border-radius:2px"></div>Extended blood</div>
   <div class="lr"><div id="leg-spouse" style="width:18px;height:0;border-top:2px dashed #648cdc"></div>Spouse</div>
+  <div class="lr"><div id="leg-inlaw" style="width:18px;height:0;border-top:2px dashed #dc6488"></div>Extended non-blood</div>
   <div class="lr"><div id="leg-labeled" style="width:18px;height:0;border-top:2px dashed #a064dc"></div>Non-blood</div>
 </div>
 
@@ -645,6 +646,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-famil
         <div class="sp-color-row"><div class="sp-color-info"><div class="sp-color-label">Spouse / Partner</div><div class="sp-color-sub">Marriage or partnership</div></div><div class="sp-color-swatch" id="swatch-spouse"><input type="color" id="color-spouse" oninput="previewLineColor('spouse',this.value)"/><div class="sp-color-preview" id="preview-spouse"></div></div></div>
         <div class="sp-color-row"><div class="sp-color-info"><div class="sp-color-label">Sibling</div><div class="sp-color-sub">Brothers and sisters</div></div><div class="sp-color-swatch" id="swatch-sibling"><input type="color" id="color-sibling" oninput="previewLineColor('sibling',this.value)"/><div class="sp-color-preview" id="preview-sibling"></div></div></div>
         <div class="sp-color-row"><div class="sp-color-info"><div class="sp-color-label">Extended / In-laws</div><div class="sp-color-sub">Labeled custom connections</div></div><div class="sp-color-swatch" id="swatch-labeled"><input type="color" id="color-labeled" oninput="previewLineColor('labeled',this.value)"/><div class="sp-color-preview" id="preview-labeled"></div></div></div>
+        <div class="sp-color-row"><div class="sp-color-info"><div class="sp-color-label">Extended Non-blood</div><div class="sp-color-sub">In-law family connections</div></div><div class="sp-color-swatch" id="swatch-inlaw"><input type="color" id="color-inlaw" oninput="previewLineColor('inlaw',this.value)"/><div class="sp-color-preview" id="preview-inlaw"></div></div></div>
         <button class="sp-color-reset" onclick="resetLineColors()">Reset line colors</button>
         <div style="height:12px"></div>
       </div>
@@ -1742,9 +1744,12 @@ function syncLegend(){
   // Non-blood = labeled color dashed
   const lb=document.getElementById('leg-labeled');
   if(lb){ const c=lineColors.labeled||DEFAULT_LINE_COLORS.labeled; lb.style.background='transparent'; lb.style.height='0'; lb.style.borderTop=`2px dashed ${c}`; }
+  // Extended non-blood (in-laws) = inlaw color dashed
+  const il=document.getElementById('leg-inlaw');
+  if(il){ const c=lineColors.inlaw||DEFAULT_LINE_COLORS.inlaw; il.style.background='transparent'; il.style.height='0'; il.style.borderTop=`2px dashed ${c}`; }
 }
 function syncColorPickers(){
-  ['parentChild','spouse','sibling','labeled'].forEach(key=>{
+  ['parentChild','spouse','sibling','labeled','inlaw'].forEach(key=>{
     const input=document.getElementById(`color-${key}`);
     const prev=document.getElementById(`preview-${key}`);
     if(input){ input.value=lineColors[key]||DEFAULT_LINE_COLORS[key]; }
@@ -3043,6 +3048,7 @@ const DEFAULT_LINE_COLORS = {
   spouse:      '#648cdc',
   sibling:     '#dc8c3c',
   labeled:     '#a064dc',
+  inlaw:       '#dc6488',
 };
 let lineColors = {...DEFAULT_LINE_COLORS};
 
@@ -3145,8 +3151,9 @@ function drawBranches(){
       const label=typeof v==='string'?v:v.label||'';
       // ALWAYS derive lineType from current BLOOD_LABELS — never trust stored lineType
       const isSibLabel=['Brother','Sister','Half-brother','Half-sister'].includes(label);
-      const lineType=isSibLabel?'sibling':BLOOD_LABELS.has(label)?'blood':'labeled';
-      // Siblings: show in both modes. Blood extended (grandparent etc): All Twygs only
+      const isInLaw=label.includes('-in-law');
+      const lineType=isSibLabel?'sibling':isInLaw?'inlaw':BLOOD_LABELS.has(label)?'blood':'labeled';
+      // Siblings: show in both modes. Blood extended: All Twygs only. In-law/labeled: drawn below
       if(lineType!=='sibling'&&lineType!=='blood') return;
       if(lineType==='blood'&&simple) return;
       const key=[p.id,tid].sort().join('|');
@@ -3195,14 +3202,14 @@ function drawBranches(){
     });
   });
 
-  // ── Non-blood labeled customLinks (dashed, All Twygs only) ──
+  // ── In-law + non-blood labeled customLinks (dashed, All Twygs only) ──
   const extDrawn=new Set();
   P.forEach(p=>{
     Object.entries(p.customLinks||{}).forEach(([tid,v])=>{
       const label=typeof v==='string'?v:v.label||'';
-      // ALWAYS derive lineType from current BLOOD_LABELS — never trust stored lineType
       const isSibLabel=['Brother','Sister','Half-brother','Half-sister'].includes(label);
-      const lineType=isSibLabel?'sibling':BLOOD_LABELS.has(label)?'blood':'labeled';
+      const isInLaw=label.includes('-in-law');
+      const lineType=isSibLabel?'sibling':isInLaw?'inlaw':BLOOD_LABELS.has(label)?'blood':'labeled';
       // Skip blood types (drawn above) and siblings
       if(lineType==='sibling'||lineType==='blood') return;
       const key=[p.id,tid].sort().join('|');
@@ -3212,9 +3219,9 @@ function drawBranches(){
       const mx=(p.x+other.x)/2, my=(p.y+other.y)/2-30;
       const path=se('path');
       path.setAttribute('d',`M ${p.x} ${p.y} Q ${mx} ${my} ${other.x} ${other.y}`);
-      path.setAttribute('stroke', brRgba('labeled', .68));
-      path.setAttribute('stroke-width','2');
-      path.setAttribute('stroke-dasharray','7,5');
+      path.setAttribute('stroke', brRgba(isInLaw?'inlaw':'labeled', .68));
+      path.setAttribute('stroke-width',isInLaw?'2.5':'2');
+      path.setAttribute('stroke-dasharray',isInLaw?'8,4':'7,5');
       path.setAttribute('fill','none');
       path.setAttribute('class','br');
       path.dataset.src=p.id; path.dataset.dst=tid;
