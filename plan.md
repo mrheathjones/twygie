@@ -113,16 +113,48 @@ An interactive, beautiful family tree web app. Each family member is a "Twyg" �
 - [x] Timeline view — horizontal timeline page with zoom (Session 10)
 
 ### Medium-term
-- [ ] **Phase 2 — Client-Side Encryption** ✅ DONE (Session 10)
-- [ ] Timeline view (by birth year) ✅ DONE (Session 10)
-- [ ] GEDCOM import
-- [ ] Export tree as image/PDF ✅ DONE (Session 10)
+- [x] **Phase 2 — Client-Side Encryption** ✅ DONE (Session 10)
+- [x] Timeline view (by birth year) ✅ DONE (Session 10)
+- [x] Export tree as image/PDF ✅ DONE (Session 10)
+- [ ] GEDCOM import (Ancestry/FamilySearch)
+- [ ] **Anniversary Capture**
+  - When spouse connection is made, prompt to enter Wedding Date
+  - Shows anniversary info in the node card info section
+- [ ] **View Modifiers** — layout modes for the tree
+  - Compact: nodes cluster close in a tight orb pattern
+  - Relaxed: nodes spread out a bit (current default)
+  - Expanded: exploded view like stars in space
+  - Traditional: classic top-down family tree layout
 
 ### Long-term
 - [x] **Phase 3a — Tree Linking infrastructure** (Session 10) — link codes, bridge nodes, real-time sync
 - [x] **Phase 3b — Bridge Display** (Session 10) — gold dashed ring on tree nodes, legend entry
 - [x] **Phase 3c — Sharing Tiers** (Session 10) — Share All/Bridge Only, auto-adopt, shared encryption, branded modals
 - [ ] **Phase 3c follow-up** — in-law line rendering for adopted nodes, Selective sharing tier
+- [ ] **Link Tree Enhancement**
+  - Send link invitation via email, text, or in-app notification
+  - Click node → Link Twyg → delivery options (retains Share All + Auto-Adopt)
+    - Email
+    - Text
+    - Notify/Share
+    - Generate Code
+- [ ] **Leafs** — new tab for shared stories & memories
+  - Stories shared by nodes: memories, funny stories, photos, etc.
+  - Share access to individual nodes so they can contribute their own stories
+  - Stories can be "linked" to other nodes (like Add Connection)
+- [ ] **Timeline Enhancement** — chronological family story
+  - String together event dates + Leafs to tell the family story
+    - Person A + Person B got married
+    - Person C + Person D had a baby
+    - Person E passed away
+  - Interactive timeline of all family events
+- [ ] **Child Accounts**
+  - Create accounts for children under a certain age
+    - Option: email or username-based
+    - Option: password or account PIN for easy use
+    - Ability to reset password/PIN
+  - Manage child account permissions
+    - Allow/disallow features: CRUD nodes, stories, timeline, contribute
 - [ ] Mobile app (iOS/Android)
 - [ ] AI story generation from notes
 - [ ] Birthday/anniversary notifications
