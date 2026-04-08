@@ -1362,6 +1362,34 @@ function autoAssignToYou(newNodeId, anchorId, relToAnchor){
 
   // Post-processing: remove any connections that can't be traced through real family structure
   cleanFalseConnections();
+  cleanFalseParents();
+}
+
+// Remove parent-child connections where the "parent" is actually an in-law
+function cleanFalseParents(){
+  P.forEach(p=>{
+    if(!(p.parents||[]).length) return;
+    const validParents=p.parents.filter(pid=>{
+      const par=byId[pid]||P.find(x=>x.id===pid);
+      if(!par) return false;
+      // Check if this "parent" has an in-law customLink to p (meaning they're NOT a real parent)
+      const cl=par.customLinks?.[p.id];
+      if(cl){
+        const label=typeof cl==='string'?cl:cl.label||'';
+        if(label.includes('-in-law')) return false; // Remove: in-laws aren't parents
+      }
+      const cl2=p.customLinks?.[pid];
+      if(cl2){
+        const label=typeof cl2==='string'?cl2:cl2.label||'';
+        if(label.includes('-in-law')) return false;
+      }
+      return true;
+    });
+    if(validParents.length!==p.parents.length){
+      console.log('cleanFalseParents: fixed',fullName(p),'parents from',p.parents.length,'to',validParents.length);
+      p.parents=validParents;
+    }
+  });
 }
 
 // Generic getRelToYou from any node's perspective (not just isYou)
@@ -1604,8 +1632,8 @@ function cleanFalseConnections(){
         // Siblings must share at least one parent
         valid=hasSharedParent(p, other);
       } else if(lt==='blood'||lt==='labeled'){
-        // If the label is in BLOOD_LABELS, trust the auto-assign system
-        if(BLOOD_LABELS.has(label)) valid=true;
+        // If the label is in BLOOD_LABELS or is an in-law type, trust the auto-assign system
+        if(BLOOD_LABELS.has(label)||label.includes('-in-law')) valid=true;
         // Otherwise validate there's a real blood OR in-law path
         else valid=hasBloodPath(p, other)||hasInLawPath(p, other);
       } else {
