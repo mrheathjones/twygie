@@ -105,7 +105,7 @@ const DEFAULT_NODE_COLORS = {
   sibling:     '#e87a5a',
   grandparent: '#b89ae8',
   extended:    '#e8c87a',
-  deceased:    '#6b9ec2',
+  deceased:    '#c27070',
   young:       '#4ecdb4',
   default:     '#f0b845',
 };
