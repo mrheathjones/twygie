@@ -55,12 +55,14 @@ function inferRelToYou(anchorRelToYou, newRelToAnchor, gender) {
     if(isChild(r))      return gendered('Grandson','Granddaughter','Grandchild');
     if(isGrandchild(r)) return gendered('Great-grandson','Great-granddaughter','Great-grandchild');
     if(isGreatGC(r))    return gendered('Great-great-grandson','Great-great-granddaughter','Great-great-grandchild');
+    if(isSibling(r))    return gendered('Son','Daughter','Child'); // child's sibling = also your child
   }
   // ── Grandchild's relatives ─────────────────────────────────────────────────
   if(isGrandchild(a)){
     if(isSpouse(r))     return gendered('Grandson-in-law','Granddaughter-in-law','Grandchild-in-law');
     if(isChild(r))      return gendered('Great-grandson','Great-granddaughter','Great-grandchild');
     if(isGrandchild(r)) return gendered('Great-great-grandson','Great-great-granddaughter','Great-great-grandchild');
+    if(isSibling(r))    return gendered('Grandson','Granddaughter','Grandchild'); // grandchild's sibling = also your grandchild
   }
   // ── Great-grandchild's relatives ──────────────────────────────────────────
   if(isGreatGC(a)){
@@ -103,11 +105,13 @@ function inferRelToYou(anchorRelToYou, newRelToAnchor, gender) {
   }
   // ── Parent's relatives ─────────────────────────────────────────────────────
   if(isParent(a)){
+    if(isChild(r))      return gendered('Brother','Sister','Sibling'); // parent's other child = your sibling
     if(isSibling(r))    return gendered('Uncle','Aunt','Aunt/Uncle');
     if(isParent(r))     return gendered('Grandfather','Grandmother','Grandparent');
     if(isSpouse(r))     return gendered('Father','Mother','Parent');
     if(isGrandpar(r))   return gendered('Great-grandfather','Great-grandmother','Great-grandparent');
     if(isNieceNeph(r))  return 'Cousin';
+    if(isGrandchild(r)) return gendered('Nephew','Niece','Niece/Nephew'); // parent's grandchild (not through you) = nephew/niece
   }
   // ── Grandparent's relatives ────────────────────────────────────────────────
   if(isGrandpar(a)){
@@ -132,6 +136,22 @@ function inferRelToYou(anchorRelToYou, newRelToAnchor, gender) {
     if(isChild(r))      return gendered('Nephew','Niece','Niece/Nephew');
     if(isSpouse(r))     return gendered('Brother-in-law','Sister-in-law','Sibling-in-law');
     if(isGrandchild(r)) return gendered('Grand-nephew','Grand-niece','Grand-niece/Nephew');
+    // Your sibling shares your parents/grandparents/uncles/cousins
+    if(isParent(r))     return gendered('Father','Mother','Parent');
+    if(isGrandpar(r))   return gendered('Grandfather','Grandmother','Grandparent');
+    if(isGreatGP(r))    return gendered('Great-grandfather','Great-grandmother','Great-grandparent');
+    if(isUncleAunt(r)){
+      const isGreat=r.startsWith('great');
+      return isGreat?gendered('Great-uncle','Great-aunt','Great-aunt/Uncle'):gendered('Uncle','Aunt','Aunt/Uncle');
+    }
+    if(isNieceNeph(r))  return gendered('Nephew','Niece','Niece/Nephew');
+    if(isCousin(r)){
+      // sibling's cousin = your cousin (same degree + removal)
+      if(r==='first cousin') return 'First Cousin';
+      if(r==='second cousin') return 'Second Cousin';
+      if(r==='third cousin') return 'Third Cousin';
+      return r.split(' ').map(w=>w[0].toUpperCase()+w.slice(1)).join(' '); // preserve full label
+    }
   }
   // ── Uncle/Aunt's relatives ─────────────────────────────────────────────────
   if(isUncleAunt(a)){
@@ -140,10 +160,14 @@ function inferRelToYou(anchorRelToYou, newRelToAnchor, gender) {
     if(isGrandchild(r)) return isGreat?'First Cousin Twice Removed':'First Cousin Once Removed';
     if(isSibling(r))    return isGreat?gendered('Great-grand-uncle','Great-grand-aunt','Great-grand-aunt/Uncle'):gendered('Great-uncle','Great-aunt','Great-aunt/Uncle');
     if(isSpouse(r))     return isGreat?gendered('Great-uncle','Great-aunt','Great-aunt/Uncle'):gendered('Uncle','Aunt','Uncle/Aunt');
+    if(isParent(r))     return isGreat?gendered('Great-great-grandfather','Great-great-grandmother','Great-great-grandparent'):gendered('Great-grandfather','Great-grandmother','Great-grandparent');
   }
   // ── Nephew/Niece's relatives ──────────────────────────────────────────────
   if(isNieceNeph(a)){
     if(isChild(r))      return gendered('Grand-nephew','Grand-niece','Grand-niece/Nephew');
+    if(isSibling(r))    return gendered('Nephew','Niece','Niece/Nephew'); // nephew's sibling = also your nephew
+    if(isSpouse(r))     return gendered('Nephew-in-law','Niece-in-law','Niece/Nephew-in-law');
+    if(isParent(r))     return gendered('Brother','Sister','Sibling'); // nephew's parent = your sibling
   }
   // ── Cousin's relatives ────────────────────────────────────────────────────
   if(isCousin(a)){
@@ -154,6 +178,7 @@ function inferRelToYou(anchorRelToYou, newRelToAnchor, gender) {
       if(a==='second cousin once removed') return 'Second Cousin Twice Removed';
       return a+' Once Removed';
     }
+    if(isSibling(r))                       return a.split(' ').map(w=>w[0].toUpperCase()+w.slice(1)).join(' '); // cousin's sibling = same cousin
     if(a==='first cousin'&&isParent(r))    return gendered('Uncle','Aunt','Uncle/Aunt');
     if(a==='first cousin'&&isSpouse(r))    return 'Cousin-in-law';
   }
@@ -356,6 +381,82 @@ function autoAssignToYou(newNodeId, anchorId, relToAnchor){
     applyInferredRel(existing, newNode, finalLabel);
   });
 
+  // ── SIBLING PROPAGATION: mirror relevant connections to isYou's siblings ──
+  // If newNode is linked to isYou as Uncle/Cousin/Grandparent/etc, isYou's
+  // siblings should get the same link. Without this, downstream inferences
+  // (e.g. cousin Jon ↔ sister Maddy) fail because getRelToYou_for can't
+  // find how the anchor relates to the sibling.
+  const youNode=people.find(p=>p.isYou);
+  if(youNode){
+    // Find isYou's siblings (from parents[] + sibling customLinks)
+    const youSibIds=new Set();
+    const yp=youNode.parents||[];
+    people.forEach(s=>{
+      if(s.id===youNode.id||s.isYou) return;
+      if((s.parents||[]).some(pid=>yp.includes(pid))) youSibIds.add(s.id);
+    });
+    Object.entries(youNode.customLinks||{}).forEach(([tid,v])=>{
+      const l=typeof v==='string'?v:v.label||'';
+      if(['Brother','Sister','Sibling','Half-brother','Half-sister','Stepbrother','Stepsister'].includes(l))
+        youSibIds.add(tid);
+    });
+
+    // Relationship types that are the SAME for all siblings
+    const SIBLING_SHARED=new Set([
+      'Uncle','Aunt','Great-uncle','Great-aunt','Great-grand-uncle','Great-grand-aunt',
+      'Grandfather','Grandmother','Grandparent',
+      'Great-grandfather','Great-grandmother','Great-grandparent',
+      'Great-great-grandfather','Great-great-grandmother','Great-great-grandparent',
+      'Nephew','Niece','Grand-nephew','Grand-niece',
+      'Great-grand-nephew','Great-grand-niece',
+      'First Cousin','Second Cousin','Third Cousin',
+      'First Cousin Once Removed','First Cousin Twice Removed','First Cousin Thrice Removed',
+      'Second Cousin Once Removed','Second Cousin Twice Removed','Second Cousin Thrice Removed',
+      'Third Cousin Once Removed','Third Cousin Twice Removed','Third Cousin Thrice Removed',
+      'Uncle-in-law','Aunt-in-law','Nephew-in-law','Niece-in-law',
+      'Grandfather-in-law','Grandmother-in-law',
+    ]);
+
+    // Check newNode's connection to isYou (from isYou's perspective)
+    const youLink=youNode.customLinks&&youNode.customLinks[newNodeId];
+    if(youLink){
+      const youLabel=typeof youLink==='string'?youLink:youLink.label||'';
+      if(SIBLING_SHARED.has(youLabel)){
+        youSibIds.forEach(sibId=>{
+          const sib=peopleById[sibId]; if(!sib) return;
+          const alreadyLinked=
+            (sib.customLinks&&sib.customLinks[newNodeId])||
+            (newNode.customLinks&&newNode.customLinks[sibId])||
+            (sib.parents||[]).includes(newNodeId)||
+            (newNode.parents||[]).includes(sibId);
+          if(!alreadyLinked){
+            linkNodes(sib, newNode, youLabel, inverseLabel(youLabel));
+          }
+        });
+      }
+    }
+
+    // Reverse: check newNode's link FROM isYou (newNode's perspective)
+    const newLink=newNode.customLinks&&newNode.customLinks[youNode.id];
+    if(newLink){
+      const newLabel=typeof newLink==='string'?newLink:newLink.label||'';
+      if(SIBLING_SHARED.has(newLabel)){
+        youSibIds.forEach(sibId=>{
+          const sib=peopleById[sibId]; if(!sib) return;
+          const alreadyLinked=
+            (sib.customLinks&&sib.customLinks[newNodeId])||
+            (newNode.customLinks&&newNode.customLinks[sibId])||
+            (sib.parents||[]).includes(newNodeId)||
+            (newNode.parents||[]).includes(sibId);
+          if(!alreadyLinked){
+            // Use the inverse: if newNode sees isYou as "Nephew", sibling also sees newNode as "Uncle"
+            linkNodes(sib, newNode, inverseLabel(newLabel), newLabel);
+          }
+        });
+      }
+    }
+  }
+
   // Post-processing: remove any connections that can't be traced through real family structure
   cleanFalseConnections();
   cleanFalseParents();
@@ -458,12 +559,48 @@ function getRelToYou_for(targetId, fromId){
   }
 
   // ── 7. Explicit customLinks — from's own stored label for target only ───────
-  // (NOT t.customLinks[fromId] — that's target's perspective, which can mislead)
-  // (NOT t.relLabel — that's a global label from isYou's perspective, not from's)
   if(from.customLinks&&from.customLinks[targetId]){
     const v=from.customLinks[targetId];
     return typeof v==='string'?v:v.label;
   }
+
+  // ── 8. Through isYou: if from is isYou's sibling, reuse isYou's label for target ──
+  // This enables multi-hop inference: if isYou↔Henry = Uncle, and Maddy is isYou's
+  // sibling, then getRelToYou_for(Henry, Maddy) = "Uncle" (same as isYou's perspective)
+  const youRef=people.find(p=>p.isYou);
+  if(youRef && from.id!==youRef.id){
+    const SAME_FOR_SIBLINGS=new Set([
+      'Uncle','Aunt','Great-uncle','Great-aunt','Great-grand-uncle','Great-grand-aunt',
+      'Grandfather','Grandmother','Grandparent',
+      'Great-grandfather','Great-grandmother','Great-grandparent',
+      'Nephew','Niece','Grand-nephew','Grand-niece',
+      'First Cousin','Second Cousin','Third Cousin',
+      'First Cousin Once Removed','First Cousin Twice Removed',
+      'Uncle-in-law','Aunt-in-law','Nephew-in-law','Niece-in-law',
+    ]);
+    // Check if from is isYou's sibling
+    const yp=new Set(youRef.parents||[]);
+    const isSibOfYou=(yp.size&&(from.parents||[]).some(pid=>yp.has(pid)))||
+      (youRef.customLinks&&Object.entries(youRef.customLinks).some(([k,v])=>{
+        if(k!==from.id) return false;
+        const l=typeof v==='string'?v:v.label||'';
+        return ['Brother','Sister','Sibling','Half-brother','Half-sister'].includes(l);
+      }));
+    if(isSibOfYou && youRef.customLinks && youRef.customLinks[targetId]){
+      const yv=youRef.customLinks[targetId];
+      const youLabel=typeof yv==='string'?yv:yv.label||'';
+      if(SAME_FOR_SIBLINGS.has(youLabel)) return youLabel;
+    }
+    // Reverse: check target's customLink to isYou and use its inverse
+    // e.g., Henry sees isYou as "Nephew" → inverse = "Uncle" → Henry appears as "Uncle" to sibling too
+    if(isSibOfYou && t.customLinks && t.customLinks[youRef.id]){
+      const tv=t.customLinks[youRef.id];
+      const tLabel=typeof tv==='string'?tv:tv.label||'';
+      const inv=inverseLabel(tLabel);
+      if(SAME_FOR_SIBLINGS.has(inv)) return inv;
+    }
+  }
+
   return '';
 }
 
