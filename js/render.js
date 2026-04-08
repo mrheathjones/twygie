@@ -204,6 +204,27 @@ function drawBranches(){
         }
       });
     }
+    // Post-BFS cleanup: remove married-in spouses from bloodFamily.
+    // When spouses are added to children's parents[], the BFS incorrectly
+    // traces through them. Fix: remove anyone who is a spouse of a blood
+    // member but is NOT a direct ancestor of isYou.
+    const ancestors=new Set();
+    const aq=[youNode.id];
+    while(aq.length){
+      const aid=aq.shift();
+      if(ancestors.has(aid)) continue;
+      ancestors.add(aid);
+      const an=peopleById[aid]; if(!an) continue;
+      (an.parents||[]).forEach(pid=>aq.push(pid));
+    }
+    people.forEach(p=>{
+      if(!bloodFamily.has(p.id)||p.isYou) return;
+      if(ancestors.has(p.id)) return; // direct ancestor — always blood
+      const spouseId=p.spouseOf||(people.find(x=>x.spouseOf===p.id)||{}).id;
+      if(spouseId&&bloodFamily.has(spouseId)){
+        bloodFamily.delete(p.id);
+      }
+    });
   }
   function crossesMarriage(idA, idB){
     // If both are blood family or both are NOT blood family, it's same-side
