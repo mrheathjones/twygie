@@ -366,7 +366,7 @@ function subscribeActiveLinks(){
     const oldJson=JSON.stringify(activeLinks.map(fingerprint).sort());
     activeLinks=combined;
     if(newJson!==oldJson){
-      console.log('Tree links updated:',activeLinks.length,'active link(s)');
+      debug('Tree links updated:',activeLinks.length,'active link(s)');
       autoUploadSharedData().then(()=>loadSharedNodes()).then(()=>render());
     }
   };
@@ -456,7 +456,7 @@ async function toggleShareLevel(linkId, newLevel){
     appAlert('Link not found. Try closing and reopening the link manager.');
     return;
   }
-  console.log('toggleShareLevel:',linkId,newLevel,'userA:',link.userA,'userB:',link.userB,'me:',currentUser.uid);
+  debug('toggleShareLevel:',linkId,newLevel,'userA:',link.userA,'userB:',link.userB,'me:',currentUser.uid);
 
   try{
     if(newLevel==='all'){
@@ -478,7 +478,7 @@ async function toggleShareLevel(linkId, newLevel){
         };
       });
       const encrypted=await encryptShared(sharedKey, sharedData);
-      console.log('Shared data size:',encrypted.length,'chars for',people.length,'nodes');
+      debug('Shared data size:',encrypted.length,'chars for',people.length,'nodes');
 
       await db.collection('treeLinks').doc(linkId).update({
         [`shareLevel.${currentUser.uid}`]:'all',
@@ -552,7 +552,7 @@ async function autoUploadSharedData(){
     const myData=link.sharedData?.[currentUser.uid];
     if(myLevel==='all'&&!myData){
       try{
-        console.log('Auto-uploading shared data for link',link.id);
+        debug('Auto-uploading shared data for link',link.id);
         const sharedKey=await deriveSharedKey(link.userA, link.userB);
         const sharedData=people.map(p=>{
           const spouseId=p.spouseOf||(people.find(x=>x.spouseOf===p.id)||{}).id||null;
@@ -569,7 +569,7 @@ async function autoUploadSharedData(){
           };
         });
         const encrypted=await encryptShared(sharedKey, sharedData);
-        console.log('Auto-upload shared data size:',encrypted.length,'chars for',people.length,'nodes');
+        debug('Auto-upload shared data size:',encrypted.length,'chars for',people.length,'nodes');
         await db.collection('treeLinks').doc(link.id).update({
           [`sharedData.${currentUser.uid}`]:encrypted
         });
@@ -714,7 +714,7 @@ async function loadSharedNodes(){
       if(link.autoAdopt?.[currentUser.uid]){
         const toAdopt=[...sharedNodes.filter(sn=>sn._linkId===link.id)];
         if(toAdopt.length){
-          console.log('Auto-adopting',toAdopt.length,'shared nodes from',link.id);
+          debug('Auto-adopting',toAdopt.length,'shared nodes from',link.id);
           adoptBatch(toAdopt);
           // Clear flag so it doesn't re-run
           db.collection('treeLinks').doc(link.id).update({[`autoAdopt.${currentUser.uid}`]:false}).catch(()=>{});

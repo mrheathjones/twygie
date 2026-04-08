@@ -102,3 +102,11 @@ const INVERSE_REL = {
 };
 
 function inverseLabel(lbl) { return INVERSE_REL[lbl] || lbl; }
+
+// ─── DEBUG LOGGING ───────────────────────────────────────────────────────────
+// Set window.TWYGIE_DEBUG = true in browser console to enable verbose logging
+// console.warn and console.error always fire regardless of this flag
+
+function debug(...args) {
+  if (window.TWYGIE_DEBUG) console.log('[Twygie]', ...args);
+}

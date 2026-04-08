@@ -192,7 +192,7 @@ async function loadTree(){
   if(demoMode){
     // Demo mode: fresh tree every reload, saves blocked (treeLoaded stays false)
     people=makeDefaultTree(currentUser);
-    console.log('Demo Mode: fresh tree created. Saves are disabled.');
+    debug('Demo Mode: fresh tree created. Saves are disabled.');
   } else {
     try{
       const snap=await userDoc().get();
@@ -203,7 +203,7 @@ async function loadTree(){
           try{
             people=await decryptPeople(encryptionKey, d.encryptedData);
             treeLoaded=true;
-            console.log('Tree loaded and decrypted successfully.');
+            debug('Tree loaded and decrypted successfully.');
           }catch(decErr){
             console.error('Decryption failed:',decErr);
             people=makeDefaultTree(currentUser||{displayName:''});
@@ -213,7 +213,7 @@ async function loadTree(){
           // ── Legacy plaintext format — migrate to encrypted ──
           people=d.people;
           treeLoaded=true;
-          console.log('Legacy plaintext tree loaded. Migrating to encrypted format...');
+          debug('Legacy plaintext tree loaded. Migrating to encrypted format...');
           // Auto-migrate: save in encrypted format immediately
           if(encryptionKey){
             try{
@@ -225,7 +225,7 @@ async function loadTree(){
                 nodeCount:people.length,
                 updatedAt:firebase.firestore.FieldValue.serverTimestamp()
               });
-              console.log('Migration complete — tree data is now encrypted.');
+              debug('Migration complete — tree data is now encrypted.');
             }catch(migErr){ console.warn('Migration save failed — will retry on next save:',migErr); }
           }
         } else {

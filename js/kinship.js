@@ -370,7 +370,7 @@ function cleanFalseParents(){
       return true;
     });
     if(validParents.length!==p.parents.length){
-      console.log('cleanFalseParents: fixed',fullName(p),'parents from',p.parents.length,'to',validParents.length);
+      debug('cleanFalseParents: fixed',fullName(p),'parents from',p.parents.length,'to',validParents.length);
       p.parents=validParents;
     }
   });
@@ -635,7 +635,7 @@ function cleanFalseConnections(){
     if(nodeA&&nodeA.customLinks) delete nodeA.customLinks[b];
     if(nodeB&&nodeB.customLinks) delete nodeB.customLinks[a];
   });
-  if(toRemove.length) console.log('cleanFalseConnections: removed',toRemove.length,'invalid connection(s)');
+  if(toRemove.length) debug('cleanFalseConnections: removed',toRemove.length,'invalid connection(s)');
 }
 
 function toggleAutoConn(){
