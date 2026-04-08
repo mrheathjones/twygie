@@ -155,32 +155,7 @@ function inferRelToYou(anchorRelToYou, newRelToAnchor, gender) {
  * newNodeId = the new/updated node
  */
 // Direct parent/child labels that use parents[] (green lines) not customLinks
-const DIRECT_PARENT_SET=new Set(['Father','Mother','Stepfather','Stepmother','Parent']);
-const DIRECT_CHILD_SET =new Set(['Son','Daughter','Stepson','Stepdaughter','Child']);
-const SPOUSE_SET       =new Set(['Husband','Wife','Partner']);
-
-// Inverse relationship labels — so both nodes store from their own perspective
-const INVERSE_REL={
-  'Father':'Son','Mother':'Daughter','Son':'Father','Daughter':'Mother',
-  'Grandfather':'Grandson','Grandmother':'Granddaughter',
-  'Grandson':'Grandfather','Granddaughter':'Grandmother',
-  'Great-grandfather':'Great-grandson','Great-grandmother':'Great-granddaughter',
-  'Great-grandson':'Great-grandfather','Great-granddaughter':'Great-grandmother',
-  'Great-great-grandfather':'Great-great-grandson','Great-great-grandmother':'Great-great-granddaughter',
-  'Great-great-grandson':'Great-great-grandfather','Great-great-granddaughter':'Great-great-grandmother',
-  'Uncle':'Nephew','Aunt':'Niece','Nephew':'Uncle','Niece':'Aunt',
-  'Grand-nephew':'Grand-uncle','Grand-niece':'Grand-aunt',
-  'Great-uncle':'Grand-nephew','Great-aunt':'Grand-niece',
-  'Stepfather':'Stepson','Stepmother':'Stepdaughter',
-  'Stepson':'Stepfather','Stepdaughter':'Stepmother',
-  'Father-in-law':'Son-in-law','Mother-in-law':'Daughter-in-law',
-  'Son-in-law':'Father-in-law','Daughter-in-law':'Mother-in-law',
-  'Brother-in-law':'Brother-in-law','Sister-in-law':'Sister-in-law',
-  'Grandfather-in-law':'Grandson-in-law','Grandmother-in-law':'Granddaughter-in-law',
-  'Grandson-in-law':'Grandfather-in-law','Granddaughter-in-law':'Grandmother-in-law',
-  'Godfather':'Godchild','Godmother':'Godchild','Godchild':'Godparent',
-};
-function inverseLabel(lbl){ return INVERSE_REL[lbl]||lbl; }
+// Constants (DIRECT_PARENT_SET, DIRECT_CHILD_SET, SPOUSE_SET, INVERSE_REL, inverseLabel) moved to constants.js
 
 function applyInferredRel(fromNode, toNode, inferred){
   // Direct parent-child → parents[] (green line)

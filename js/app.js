@@ -71,10 +71,6 @@ function handleModalPhoto(event){
   reader.readAsDataURL(file);
 }
 
-const CHILD_RELS=['Son','Daughter','Grandson','Granddaughter','Great-grandson','Great-granddaughter','Great-great-grandson','Great-great-granddaughter','Stepson','Stepdaughter','Nephew','Niece','Grand-nephew','Grand-niece','Great-grand-nephew','Great-grand-niece','Godson','Goddaughter'];
-const PARENT_RELS=['Father','Mother','Grandfather','Grandmother','Great-grandfather','Great-grandmother','Great-great-grandfather','Great-great-grandmother','Stepfather','Stepmother','Father-in-law','Mother-in-law','Uncle','Aunt','Great-uncle','Great-aunt','Great-grand-uncle','Great-grand-aunt','Godfather','Godmother'];
-const SPOUSE_RELS=['Husband','Wife','Partner'];
-const SIBLING_RELS=['Brother','Sister','Brother-in-law','Sister-in-law','Half-brother','Half-sister','Stepbrother','Stepsister','Cousin','First Cousin','First Cousin Once Removed','First Cousin Twice Removed','First Cousin Thrice Removed','Second Cousin','Second Cousin Once Removed','Second Cousin Twice Removed','Second Cousin Thrice Removed','Third Cousin','Third Cousin Once Removed','Third Cousin Twice Removed','Third Cousin Thrice Removed'];
 
 function toggleDeathDate(){
   const cb=document.getElementById('f-deceased');

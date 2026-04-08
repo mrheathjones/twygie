@@ -135,41 +135,7 @@ function getBranchRgba(key, o){
   return `rgba(${r},${g},${b},${o})`;
 }
 
-const BLOOD_LABELS=new Set([
-  // Direct line — ascending
-  'Father','Mother','Parent','Stepfather','Stepmother','Stepparent',
-  'Grandfather','Grandmother','Grandparent',
-  'Great-grandfather','Great-grandmother','Great-grandparent',
-  'Great-great-grandfather','Great-great-grandmother','Great-great-grandparent',
-  // Direct line — descending
-  'Son','Daughter','Child','Stepson','Stepdaughter','Stepchild',
-  'Grandson','Granddaughter','Grandchild',
-  'Great-grandson','Great-granddaughter','Great-grandchild',
-  'Great-great-grandson','Great-great-granddaughter','Great-great-grandchild',
-  // Siblings
-  'Brother','Sister','Sibling','Half-brother','Half-sister','Stepbrother','Stepsister',
-  // Aunts/Uncles
-  'Uncle','Aunt',
-  'Great-uncle','Great-aunt',
-  'Great-grand-uncle','Great-grand-aunt',
-  // Nephews/Nieces
-  'Nephew','Niece',
-  'Grand-nephew','Grand-niece',
-  'Great-grand-nephew','Great-grand-niece',
-  // In-laws (connected by marriage)
-  'Father-in-law','Mother-in-law','Parent-in-law',
-  'Son-in-law','Daughter-in-law','Child-in-law',
-  'Brother-in-law','Sister-in-law','Sibling-in-law',
-  // Godparents
-  'Godfather','Godmother',
-  // Cousins (all degrees and removes — blood by consanguinity)
-  'Cousin','First Cousin',
-  'First Cousin Once Removed','First Cousin Twice Removed','First Cousin Thrice Removed',
-  'Second Cousin',
-  'Second Cousin Once Removed','Second Cousin Twice Removed','Second Cousin Thrice Removed',
-  'Third Cousin',
-  'Third Cousin Once Removed','Third Cousin Twice Removed','Third Cousin Thrice Removed',
-]);
+// BLOOD_LABELS moved to constants.js
 
 function drawBranches(){
   const bG=document.getElementById('bG');
