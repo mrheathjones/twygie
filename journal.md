@@ -471,3 +471,21 @@ Built as a separate HTML page (timeline.html) with:
 - **Sibling label detection**: Expanded isSibLabel to include Stepbrother, Stepsister, Sibling
 - **Robust sibling rendering**: Added parent-centric sibling detection via parentChildMap that checks parents[], child-type customLinks, and parent-type customLinks
 - **Timeline logo lost gold**: Fixed color from var(--text) to var(--gold)
+
+### Features Added (Session 11 continued)
+- **4 View Modes**: Tree View | All Twygs | Roots | Bonds
+  - Roots: blood relatives only (parent-child, sibling, extended blood)
+  - Bonds: non-blood only (spouse, in-law, family friends)
+  - Uses showBlood/showNonBlood/showExtended flags in drawBranches
+- **Deceased Toggle in Edit Card**: checkbox with death date fields, saves dod/death
+- **Deceased Node Color**: #6b9ec2 (blue) → #c27070 (muted red) — was identical to parent blue
+- **Aunt/Uncle/Nephew/Niece-in-law**: dropdown, constants, inverse mappings, gender inference
+- **Cross-Marriage Line Classification**: bloodFamily BFS + spouseOf check reclassifies blood labels crossing marriage boundary as Extended Bonds
+- **Legend/UI Renames**: Nodes→Twygs, Lines→Connections, Extended blood→Extended Roots, Extended non-blood→Extended Bonds, Non-blood→Bonds
+
+### Additional Bug Fixes
+- Spouse lines missing: saveConnection only set spouseOf one direction; rendering now also checks customLinks for Husband/Wife/Partner labels
+- bloodFamily set incomplete: expanded BFS to trace through blood-type customLinks + post-BFS cleanup removes married-in spouses
+- gendered() definition missed by rename script: const g= vs g( regex mismatch
+- hasSharedParent too narrow: expanded to check customLinks parent-child relationships
+- cleanFalseConnections too aggressive: now trusts all sibling customLinks

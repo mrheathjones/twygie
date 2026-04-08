@@ -1,7 +1,7 @@
 # Twygie — Technical Memory
 
 ## Stack
-- **Frontend**: Modular vanilla JS + SVG — 10 JS modules, 7 CSS files, HTML shell
+- **Frontend**: Modular vanilla JS + SVG — 12 JS modules, 9 CSS files, 3 HTML shells
 - **Auth**: Firebase Auth compat SDK v10.8.0
 - **Database**: Cloud Firestore compat SDK v10.8.0
 - **Hosting**: Vercel (auto-deploy from GitHub main branch)
@@ -12,10 +12,9 @@
 ## File Structure
 ```
 twygie/
-├── index.html              # Main app HTML shell (loads CSS + JS modules)
+├── app.html                # Main app HTML shell (loads CSS + JS modules)
 ├── login.html              # Login page
 ├── timeline.html           # Horizontal timeline view (/timeline)
-├── family-tree.html        # OLD MONOLITH — kept as rollback backup
 ├── styles/
 │   ├── base.css            # Reset, CSS variables, typography, loading, atmosphere
 │   ├── tree.css            # SVG nodes, branches, glow/pulse animations, labels
@@ -23,7 +22,9 @@ twygie/
 │   ├── cards.css           # Overlay card, link modal, branded modal, bridge badges
 │   ├── panels.css          # Members panel, timeline panel, zoom, legend, tooltip
 │   ├── settings.css        # Settings overlay, toggles, color pickers, helpers
-│   └── forms.css           # Add member modal, form inputs, buttons
+│   ├── forms.css           # Add member modal, form inputs, buttons
+│   ├── timeline.css        # Timeline page styles
+│   └── login.css           # Login page styles
 ├── js/
 │   ├── constants.js        # BLOOD_LABELS, relationship sets, INVERSE_REL
 │   ├── firebase.js         # Firebase config, auth, encryption, load/save, data mgmt
@@ -34,7 +35,9 @@ twygie/
 │   ├── ui.js               # Node card, editing, connection management, selection
 │   ├── panels.js           # Members panel, tooltip, transform state, scrim
 │   ├── export.js           # PNG/PDF export
-│   └── app.js              # Pan/zoom, add member form, event listeners
+│   ├── app.js              # Pan/zoom, add member form, event listeners
+│   ├── timeline.js         # Timeline page (self-contained with own Firebase init)
+│   └── login.js            # Login page (self-contained with own Firebase init)
 ├── vercel.json             # Route config (cleanUrls + rewrites)
 ├── firestore.rules         # Firestore security rules
 ├── plan.md                 # Roadmap
@@ -68,7 +71,7 @@ familyTrees/{userId}
   ownerEmail: string
 
 userSettings/{userId}
-  defaultView: 'simple' | 'complex'
+  defaultView: 'simple' | 'complex' | 'bloodline' | 'bonds'
   lineColors: { parentChild, spouse, sibling, labeled }
   nodeColors: { you, spouse, parent, child, sibling, grandparent, extended, deceased, young, default }
   youngAge: number

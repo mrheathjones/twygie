@@ -54,17 +54,21 @@ An interactive, beautiful family tree web app. Each family member is a "Twyg" �
 - [x] Enable/disable toggle in Settings (persisted to Firestore)
 
 ### Connection Lines
-- [x] Color-coded: Parent/Child (green solid bold), Sibling (orange solid bold), Extended blood (purple solid), Spouse (blue dashed), Non-blood (purple dashed)
-- [x] Blood = solid bold; Non-blood = dashed — BLOOD_LABELS set drives this
-- [x] Tree View: parent-child, sibling, spouse only
-- [x] All Twygs: everything including extended blood and non-blood
-- [x] Dual view buttons with active highlight (Tree view / All Twygs)
+- [x] Color-coded: Parent/Child (green solid), Sibling (orange solid), Extended Roots (purple solid), Spouse (blue dashed), Extended Bonds (pink dashed), Bonds (purple dashed)
+- [x] Blood = solid; Non-blood = dashed — BLOOD_LABELS set drives this
+- [x] Cross-marriage detection: blood labels crossing a marriage boundary render as Extended Bonds
+- [x] 4 view modes with active highlight:
+  - Tree View: parent-child, sibling, spouse only
+  - All Twygs: everything including extended family
+  - Roots: blood relatives only — no in-laws or bonds
+  - Bonds: non-blood only — spouse, in-laws, family friends
 - [x] Line colors fully configurable in Settings per type
 
 ### Node Cards
 - [x] Glassmorphism overlay card on click with zoom-to-node
 - [x] Shows: name, DOB, birthplace, relationship badge, story, all connections
-- [x] Edit mode: all fields including death date toggle, state dropdown, photo
+- [x] Edit mode: all fields including deceased toggle with death date, state dropdown, photo
+- [x] Death date display: "b. 1940 — d. 2020" format on card
 - [x] Edit existing connection inline (pencil icon → dropdown)
 - [x] Delete any connection (× on each chip)
 - [x] "Add a Twyg" button pre-connected to this node
@@ -372,16 +376,33 @@ When sharing nodes with a linked user, the data is re-encrypted with a **shared 
 
 ---
 
-## Session 11 — Modular Refactoring
+## Session 11 — Modular Refactoring + Features (April 8, 2026)
 
-### Completed
-- Split 5,186-line monolith (family-tree.html) into 18 modular files
-- 7 CSS files in styles/ (base, tree, header, cards, panels, settings, forms)
-- 10 JS modules in js/ (constants, firebase, render, kinship, settings, linking, ui, panels, export, app)
-- 507 variable/function renames (P→people, byId→peopleById, se→createSvgElement, etc.)
-- Inline styles reduced from 75 to 31 (remaining are dynamic JS-controlled colors)
-- 5 JS functions converted from inline style manipulation to classList toggles
-- 5 dead functions removed
-- 9 relationship constants consolidated into constants.js
-- Module documentation headers with dependency maps on all files
-- memory.md and plan.md updated to reflect new architecture
+### Modular Refactoring (30+ commits)
+- Split 5,186-line monolith into 24 modular files (3 HTML + 9 CSS + 12 JS)
+- index.html → app.html (renamed for Vercel cleanUrls compatibility)
+- login.html: 523 → 150 lines + login.css + login.js
+- timeline.html: 609 → 45 lines + timeline.css + timeline.js
+- 507 variable/function renames for readability
+- 60 inline onclick handlers → addEventListener via initEventListeners()
+- 75 → 31 inline styles, 5 dead functions removed, 7 duplicate class attributes fixed
+- Module documentation headers with DEFINES/READS/WRITES dependency maps
+- 12 console.log → debug() gated utility (window.TWYGIE_DEBUG)
+- family-tree.html monolith deleted after full validation
+
+### New Features
+- **4 View Modes**: Tree View, All Twygs, Roots (blood only), Bonds (non-blood only)
+- **Deceased Toggle**: in edit card with death date fields, "b. 1940 — d. 2020" display
+- **Deceased Node Color**: changed from blue (#6b9ec2) to muted red (#c27070)
+- **Aunt/Uncle/Nephew/Niece-in-law**: added to dropdown, constants, inverse mappings
+- **Cross-Marriage Line Classification**: blood labels crossing spouse boundary render as Extended Bonds
+- **Legend Renames**: Nodes→Twygs, Lines→Connections, Extended blood→Extended Roots, Extended non-blood→Extended Bonds, Non-blood→Bonds
+
+### Bug Fixes
+- 404 on /app: cleanUrls processes before rewrites — renamed index.html→app.html
+- gendered() not defined: rename script missed definition (const g= vs g()
+- Sibling lines missing in Tree View: auto-detected siblings placed after simple-mode return
+- Sibling lines deleted by cleanFalseConnections: hasSharedParent only checked parents[]
+- Spouse lines missing: saveConnection only set spouseOf in one direction
+- Cross-marriage detection: bloodFamily BFS expanded to trace customLinks + spouseOf check
+- Auto-assign in-law suffix for spouse→blood-relative connections
