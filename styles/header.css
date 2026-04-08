@@ -1,0 +1,19 @@
+/* ═══ header.css ═══ Header bar, logo, member count, nav buttons, avatar ═══ */
+
+/* HEADER */
+#hdr{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:16px 24px;
+  background:linear-gradient(to bottom,rgba(4,7,12,.92) 0%,transparent 100%);pointer-events:none}
+#hdr>*{pointer-events:all}
+.logo{font-family:'Cormorant Garamond',serif;font-size:1.15rem;font-weight:600;letter-spacing:.07em;color:var(--gold);display:flex;align-items:center;gap:9px}
+#mcount{display:flex;align-items:center;gap:6px;padding:5px 13px;border-radius:100px;background:rgba(255,255,255,.05);border:1px solid var(--border);font-size:.78rem;color:var(--muted);cursor:pointer;transition:all .2s}
+#mcount:hover{background:rgba(200,168,75,.1);border-color:rgba(200,168,75,.25);color:var(--gold)}
+#mcount strong{color:var(--text);font-weight:600}
+.hbtns{display:flex;align-items:center;gap:8px}
+.hbtn{padding:6px 15px;border-radius:100px;background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--text);font-family:'Outfit',sans-serif;font-size:.78rem;cursor:pointer;transition:all .2s}
+.hbtn:hover{background:rgba(200,168,75,.12);border-color:rgba(200,168,75,.28);color:var(--gold)}
+.hbtn.acc{background:var(--gold);color:#04070c;border-color:transparent;font-weight:600}
+.hbtn.acc:hover{background:#d4b454}
+#save-ind{font-size:.72rem;color:var(--muted);opacity:0;transition:opacity .3s;display:flex;align-items:center;gap:5px}
+#save-ind.show{opacity:1}
+.uavatar{width:30px;height:30px;border-radius:50%;background:rgba(200,168,75,.15);border:1px solid rgba(200,168,75,.3);display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:600;color:var(--gold);cursor:pointer;overflow:hidden}
+.uavatar img{width:100%;height:100%;object-fit:cover}

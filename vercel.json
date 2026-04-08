@@ -1,7 +1,7 @@
 {
   "cleanUrls": true,
   "rewrites": [
-    { "source": "/app", "destination": "/family-tree.html" }
+    { "source": "/app", "destination": "/index.html" }
   ],
   "redirects": [
     { "source": "/", "destination": "/login", "permanent": false }

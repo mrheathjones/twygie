@@ -1,0 +1,51 @@
+/* ═══ tree.css ═══ SVG tree canvas, branches, nodes, glow/pulse animations, labels ═══ */
+
+/* TREE */
+#wrap{position:fixed;inset:0;z-index:1;user-select:none}
+#svg{width:100%;height:100%;overflow:visible}
+#tg{transform-origin:0 0;will-change:transform}
+#tg.anim{transition:transform .65s cubic-bezier(.4,0,.2,1)}
+
+/* BRANCHES */
+.br{fill:none;stroke-linecap:round;transition:opacity .3s}
+.br.dim{opacity:.07}.br.lit{opacity:1}
+
+/* NODES */
+.nd{cursor:grab}
+.nd.dragging{cursor:grabbing}
+.nd .core{transition:filter .2s ease,opacity .3s}
+.nd.dim .core,.nd.dim .hi,.nd.dim .lbl{opacity:.14}
+.nd.sel .core{filter:brightness(1.7)}
+
+/* PULSATE — opacity only, no translate */
+@keyframes pa{0%,100%{opacity:.35}50%{opacity:.68}}
+@keyframes pb{0%,100%{opacity:.25}50%{opacity:.52}}
+@keyframes py{0%,100%{opacity:.50}50%{opacity:1.0}}
+@keyframes pt{0%,100%{opacity:.32}50%{opacity:.62}}
+/* Young: fast double-flash pulse — opacity only, no scale/transform */
+@keyframes pyoung{
+  0%{opacity:.15}
+  25%{opacity:.85}
+  50%{opacity:.25}
+  75%{opacity:.72}
+  100%{opacity:.15}
+}
+/* Extra outer ring for young nodes — opacity ripple only */
+@keyframes pyoung-outer{
+  0%{opacity:.04}
+  45%{opacity:.22}
+  100%{opacity:.04}
+}
+.gp{transform-origin:center}
+.gp.amber{animation:pa 3.4s ease-in-out infinite}
+.gp.blue{animation:pb 4.3s ease-in-out infinite}
+.gp.you{animation:py 2.5s ease-in-out infinite}
+.gp.teal{animation:pt 3.8s ease-in-out infinite}
+.gp.young-spark{animation:pyoung 1.8s ease-in-out infinite;transform-origin:center}
+.gp.young-outer{animation:pyoung-outer 1.8s ease-in-out infinite;transform-origin:center}
+/* Hover: freeze animation + brighten */
+.nd:hover .gp{animation:none!important;opacity:.9;filter:brightness(1.5)}
+.nd:hover .core{filter:brightness(1.4)}
+
+.nlbl{font-family:'Outfit',sans-serif;font-size:10.5px;font-weight:400;letter-spacing:.03em;fill:rgba(221,216,204,.52);pointer-events:none}
+.nlbl.you{font-weight:600;fill:rgba(240,239,235,.85);font-size:11.5px}

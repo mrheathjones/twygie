@@ -1,0 +1,18 @@
+/* ═══ base.css ═══ Reset, CSS variables, typography, loading screen, atmosphere ═══ */
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#04070c;--border:rgba(255,255,255,0.09);--text:#ddd8cc;--muted:rgba(221,216,204,0.42);--gold:#c8a84b;--green:rgba(100,200,140,.8)}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-family:'Outfit',sans-serif;color:var(--text)}
+
+/* LOADING */
+#loading{position:fixed;inset:0;z-index:900;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;transition:opacity .4s}
+#loading.fade{opacity:0;pointer-events:none}
+#loading.gone{display:none}
+.load-ring{width:40px;height:40px;border-radius:50%;border:2px solid rgba(200,168,75,.15);border-top-color:rgba(200,168,75,.7);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.load-txt{font-size:.82rem;color:var(--muted);letter-spacing:.04em}
+
+/* ATMOSPHERE */
+#atm{position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(ellipse 58% 72% at 50% 46%,rgba(52,26,6,.65) 0%,transparent 100%),
+    radial-gradient(ellipse 30% 35% at 50% 10%,rgba(10,5,2,.6) 0%,transparent 100%)}
