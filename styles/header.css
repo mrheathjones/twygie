@@ -17,3 +17,18 @@
 #save-ind.show{opacity:1}
 .uavatar{width:30px;height:30px;border-radius:50%;background:rgba(200,168,75,.15);border:1px solid rgba(200,168,75,.3);display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:600;color:var(--gold);cursor:pointer;overflow:hidden}
 .uavatar img{width:100%;height:100%;object-fit:cover}
+
+/* View toggle group */
+.view-toggle{display:flex;gap:0;border-radius:100px;overflow:hidden;border:1px solid var(--border);background:rgba(255,255,255,.04)}
+.view-toggle-btn{padding:5px 14px;border:none;font-family:'Outfit',sans-serif;font-size:.76rem;cursor:pointer;transition:all .2s;background:transparent;color:var(--muted)}
+.view-toggle-btn.active{background:var(--gold);color:#04070c;font-weight:600}
+
+/* Export dropdown */
+.export-wrap{position:relative;display:inline-block}
+.export-menu{display:none;position:absolute;top:100%;right:0;margin-top:6px;background:#0d1520;border:1px solid var(--border);border-radius:10px;overflow:hidden;min-width:160px;box-shadow:0 12px 32px rgba(0,0,0,.5);z-index:500}
+.export-menu.open{display:block}
+.export-item{display:flex;align-items:center;gap:8px;width:100%;padding:10px 16px;border:none;background:transparent;color:var(--text);font-family:Outfit,sans-serif;font-size:.82rem;cursor:pointer;text-align:left;transition:background .15s}
+.export-item:hover{background:rgba(255,255,255,.06)}
+
+/* Settings gear button */
+.gear-btn{width:30px;height:30px}

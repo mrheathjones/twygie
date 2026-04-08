@@ -280,12 +280,8 @@ function setTreeMode(mode){
   const tBtn=document.getElementById('btn-tree');
   const aBtn=document.getElementById('btn-all');
   if(tBtn&&aBtn){
-    tBtn.style.background=mode==='simple'?'var(--gold)':'transparent';
-    tBtn.style.color=mode==='simple'?'#04070c':'var(--muted)';
-    tBtn.style.fontWeight=mode==='simple'?'600':'400';
-    aBtn.style.background=mode==='complex'?'var(--gold)':'transparent';
-    aBtn.style.color=mode==='complex'?'#04070c':'var(--muted)';
-    aBtn.style.fontWeight=mode==='complex'?'600':'400';
+    tBtn.classList.toggle('active', mode==='simple');
+    aBtn.classList.toggle('active', mode==='complex');
   }
   render();
 }

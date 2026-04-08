@@ -521,9 +521,9 @@ function drawNodes(){
 
       // Draw connection lines from shared node to parents and spouse
       const bG=document.getElementById('bG');
-      const drawSharedLine=(tx,ty,color)=>{
+      const drawSharedLine=(targetX,targetY,color)=>{
         const path=createSvgElement('path');
-        path.setAttribute('d',`M ${ox} ${oy} L ${tx} ${ty}`);
+        path.setAttribute('d',`M ${ox} ${oy} L ${targetX} ${targetY}`);
         path.setAttribute('stroke',color||'rgba(200,168,75,0.15)');
         path.setAttribute('stroke-width','1.5');
         path.setAttribute('stroke-dasharray','4,3');

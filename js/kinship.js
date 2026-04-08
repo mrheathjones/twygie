@@ -658,8 +658,8 @@ function syncAutoConnToggle(){
   const track=document.getElementById('ac-track');
   const thumb=document.getElementById('ac-thumb');
   const opt=document.getElementById('sp-autoconn');
-  if(track) track.style.background=autoConnections?'rgba(200,168,75,.7)':'rgba(255,255,255,.12)';
-  if(thumb) thumb.style.transform=autoConnections?'translateX(18px)':'translateX(0)';
+  if(track) track.classList.toggle('toggle-track-on',autoConnections);
+  if(thumb) thumb.classList.toggle('on',autoConnections);
   if(opt) opt.classList.toggle('active',autoConnections);
 }
 
@@ -671,8 +671,8 @@ function syncDemoToggle(){
   const track=document.getElementById('dm-track');
   const thumb=document.getElementById('dm-thumb');
   const opt=document.getElementById('sp-demo');
-  if(track) track.style.background=demoMode?'rgba(200,168,75,.7)':'rgba(255,255,255,.12)';
-  if(thumb) thumb.style.transform=demoMode?'translateX(18px)':'translateX(0)';
+  if(track) track.classList.toggle('toggle-track-on',demoMode);
+  if(thumb) thumb.classList.toggle('on',demoMode);
   if(opt) opt.classList.toggle('active',demoMode);
 }
 

@@ -4,12 +4,12 @@
 
 function toggleExportMenu(){
   const m=document.getElementById('export-menu');
-  m.style.display=m.style.display==='none'?'block':'none';
-  if(m.style.display==='block'){
+  const isOpen=m.classList.toggle('open');
+  if(isOpen){
     setTimeout(()=>document.addEventListener('click',closeExportMenu,{once:true}),10);
   }
 }
-function closeExportMenu(){ document.getElementById('export-menu').style.display='none'; }
+function closeExportMenu(){ document.getElementById('export-menu').classList.remove('open'); }
 
 async function exportTree(format){
   closeExportMenu();

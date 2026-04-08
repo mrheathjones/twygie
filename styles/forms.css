@@ -20,3 +20,10 @@
 .mcan:hover{color:var(--text)}
 .madd{padding:7px 20px;background:var(--gold);border:none;border-radius:8px;color:#04070c;font-family:'Outfit',sans-serif;font-size:.82rem;font-weight:600;cursor:pointer;transition:all .2s}
 .madd:hover{background:#d4b454}
+
+/* Form helpers */
+.select-native{-webkit-appearance:none;appearance:none}
+.textarea-resize{resize:vertical}
+.label-optional{font-size:.7em;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0}
+.death-fields{display:none;margin-top:8px}
+.photo-file-hidden{display:none}

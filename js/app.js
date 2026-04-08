@@ -9,23 +9,23 @@ function resetView(){
   const y0=Math.min(...ys)-70, y1=Math.max(...ys)+100;
   const W=window.innerWidth, H=window.innerHeight;
   scale=Math.min(1,W/(x1-x0),(H-80)/(y1-y0))*.88;
-  tx=(W-(x1-x0)*scale)/2-x0*scale;
-  ty=(H-(y1-y0)*scale)/2-y0*scale+18;
-  applyT(true);
+  panX=(W-(x1-x0)*scale)/2-x0*scale;
+  panY=(H-(y1-y0)*scale)/2-y0*scale+18;
+  applyTransform(true);
 }
 function zoomBy(f){
   const cx=window.innerWidth/2, cy=window.innerHeight/2;
-  tx=cx-(cx-tx)*f; ty=cy-(cy-ty)*f;
-  scale=Math.max(.12,Math.min(6,scale*f)); applyT();
+  panX=cx-(cx-panX)*f; panY=cy-(cy-panY)*f;
+  scale=Math.max(.12,Math.min(6,scale*f)); applyTransform();
 }
 
 // ─── PAN ─────────────────────────────────────────────────────────────────────
-let drag=false, dsx=0, dsy=0;
+let isDragging=false, dragStartX=0, dragStartY=0;
 const wrap=document.getElementById('wrap');
 
 wrap.addEventListener('mousedown',e=>{
   if(e.target.closest('.nd')) return;
-  drag=true; dsx=e.clientX-tx; dsy=e.clientY-ty;
+  isDragging=true; dragStartX=e.clientX-panX; dragStartY=e.clientY-panY;
   wrap.style.cursor='grabbing'; hideTooltip();
 });
 
@@ -34,26 +34,26 @@ wrap.addEventListener('wheel',e=>{
   const f=e.deltaY<0?1.11:.9;
   const r=wrap.getBoundingClientRect();
   const mx=e.clientX-r.left, my=e.clientY-r.top;
-  tx=mx-(mx-tx)*f; ty=my-(my-ty)*f;
-  scale=Math.max(.12,Math.min(6,scale*f)); applyT();
+  panX=mx-(mx-panX)*f; panY=my-(my-panY)*f;
+  scale=Math.max(.12,Math.min(6,scale*f)); applyTransform();
 },{passive:false});
 
-let ltD=0, tpan=false, tdsx=0, tdsy=0;
+let lastPinchDist=0, isTouchPanning=false, touchStartX=0, touchStartY=0;
 wrap.addEventListener('touchstart',e=>{
   if(e.target.closest('.nd')) return;
-  if(e.touches.length===1){ tpan=true; tdsx=e.touches[0].clientX-tx; tdsy=e.touches[0].clientY-ty; }
-  else if(e.touches.length===2){ tpan=false; ltD=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY); }
+  if(e.touches.length===1){ isTouchPanning=true; touchStartX=e.touches[0].clientX-panX; touchStartY=e.touches[0].clientY-panY; }
+  else if(e.touches.length===2){ isTouchPanning=false; lastPinchDist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY); }
 },{passive:true});
 wrap.addEventListener('touchmove',e=>{
   if(nodeDragState) return;
-  if(e.touches.length===1&&tpan){ tx=e.touches[0].clientX-tdsx; ty=e.touches[0].clientY-tdsy; applyT(); }
+  if(e.touches.length===1&&isTouchPanning){ panX=e.touches[0].clientX-touchStartX; panY=e.touches[0].clientY-touchStartY; applyTransform(); }
   else if(e.touches.length===2){
     const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
-    const f=d/ltD; ltD=d;
+    const f=d/lastPinchDist; lastPinchDist=d;
     const cx=(e.touches[0].clientX+e.touches[1].clientX)/2;
     const cy2=(e.touches[0].clientY+e.touches[1].clientY)/2;
-    tx=cx-(cx-tx)*f; ty=cy2-(cy2-ty)*f;
-    scale=Math.max(.12,Math.min(6,scale*f)); applyT();
+    panX=cx-(cx-panX)*f; panY=cy2-(cy2-panY)*f;
+    scale=Math.max(.12,Math.min(6,scale*f)); applyTransform();
   }
 },{passive:true});
 
@@ -83,8 +83,8 @@ function toggleDeathDate(){
   const thumb=document.getElementById('f-deceased-thumb');
   if(!fields||!cb) return;
   fields.style.display=cb.checked?'block':'none';
-  if(track) track.style.background=cb.checked?'rgba(200,168,75,.5)':'rgba(255,255,255,.12)';
-  if(thumb) thumb.style.transform=cb.checked?'translateX(15px)':'translateX(0)';
+  if(track) track.classList.toggle('toggle-track-on',cb.checked);
+  if(thumb) thumb.classList.toggle('on',cb.checked);
 }
 
 function refreshModalRelOptions(){

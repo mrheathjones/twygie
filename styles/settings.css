@@ -57,3 +57,29 @@
 .sp-user-email{font-size:.74rem;color:var(--muted)}
 .sp-signout{padding:6px 12px;background:transparent;border:1px solid rgba(180,80,80,.25);border-radius:7px;color:rgba(200,100,100,.6);font-family:'Outfit',sans-serif;font-size:.76rem;cursor:pointer;transition:all .2s;white-space:nowrap}
 .sp-signout:hover{border-color:rgba(200,100,100,.5);color:rgba(220,120,120,.9)}
+
+/* Toggle switch */
+.toggle-wrap{position:relative;width:36px;height:20px;flex-shrink:0}
+.toggle-wrap-sm{position:relative;display:inline-block;width:32px;height:17px}
+.toggle-track{position:absolute;inset:0;border-radius:100px;background:rgba(255,255,255,.12);transition:background .2s}
+.toggle-track-on{background:rgba(200,168,75,.7)}
+.toggle-thumb{position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+.toggle-thumb.on{transform:translateX(18px)}
+.toggle-thumb-sm{position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:#fff;transition:transform .2s;pointer-events:none}
+.toggle-thumb-sm.on{transform:translateX(15px)}
+.toggle-hidden{opacity:0;width:0;height:0;position:absolute}
+
+/* Settings helpers */
+.sp-helper{font-size:.78rem;color:var(--muted);line-height:1.5}
+.sp-helper-sm{font-size:.68rem;color:var(--muted);line-height:1.4}
+.sp-label-upper{font-size:.67rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:8px}
+.sp-label-sm{font-size:.75rem;color:var(--muted)}
+.sp-spacer-sm{height:4px}
+.sp-spacer-md{height:8px}
+.sp-spacer-lg{height:12px}
+.sp-spacer-xl{height:14px}
+.sp-row{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.sp-row-between{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.sp-action-btn{width:100%;padding:8px;background:rgba(200,168,75,.08);border:1px solid rgba(200,168,75,.25);border-radius:8px;color:var(--gold);font-size:.78rem;cursor:pointer;font-family:'Outfit',sans-serif}
+.sp-add-btn{padding:3px 9px;background:rgba(200,168,75,.12);border:1px solid rgba(200,168,75,.3);border-radius:6px;color:var(--gold);font-size:.72rem;cursor:pointer}
+.sp-link-btn{width:100%;padding:10px;background:rgba(200,168,75,.08);border:1px solid rgba(200,168,75,.25);border-radius:8px;color:var(--gold);font-size:.82rem;cursor:pointer;font-family:'Outfit',sans-serif;display:flex;align-items:center;justify-content:center;gap:6px}

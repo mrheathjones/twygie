@@ -171,9 +171,9 @@ function handleScrimClick(e){
 }
 
 // ─── TRANSFORM ────────────────────────────────────────────────────────────────
-let tx=0, ty=0, scale=1;
-function applyT(anim=false){
+let panX=0, panY=0, scale=1;
+function applyTransform(anim=false){
   const tg=document.getElementById('tg');
   if(anim){ tg.classList.add('anim'); setTimeout(()=>tg.classList.remove('anim'),700); }
-  tg.style.transform=`translate(${tx}px,${ty}px) scale(${scale})`;
+  tg.style.transform=`translate(${panX}px,${panY}px) scale(${scale})`;
 }

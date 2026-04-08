@@ -29,7 +29,7 @@ document.addEventListener('mousemove',e=>{
     }
     return;
   }
-  if(drag){ tx=e.clientX-dsx; ty=e.clientY-dsy; applyT(); }
+  if(isDragging){ panX=e.clientX-dragStartX; panY=e.clientY-dragStartY; applyTransform(); }
 });
 
 document.addEventListener('mouseup',e=>{
@@ -38,7 +38,7 @@ document.addEventListener('mouseup',e=>{
     else scheduleSave();
     nodeDragState=null; return;
   }
-  drag=false; document.getElementById('wrap').style.cursor='';
+  isDragging=false; document.getElementById('wrap').style.cursor='';
 });
 
 document.addEventListener('touchmove',e=>{
@@ -59,7 +59,7 @@ document.addEventListener('touchend',()=>{
     else scheduleSave();
     nodeDragState=null;
   }
-  tpan=false;
+  isTouchPanning=false;
 });
 
 // ─── SELECTION ────────────────────────────────────────────────────────────────
@@ -100,9 +100,9 @@ function selectNode(id){
 function zoomTo(p){
   if(!p) return;
   const s=2.1;
-  tx=window.innerWidth/2-p.x*s;
-  ty=window.innerHeight/2-p.y*s;
-  scale=s; applyT(true);
+  panX=window.innerWidth/2-p.x*s;
+  panY=window.innerHeight/2-p.y*s;
+  scale=s; applyTransform(true);
 }
 
 function fillCard(p){
