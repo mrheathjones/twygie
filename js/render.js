@@ -375,6 +375,26 @@ function drawBranches(){
   });
 
   // Draw sibling lines between all children of each parent
+  // First, expand parentChildMap transitively via sibling customLinks:
+  // If A↔B are siblings (customLink) and B is a child of parent P,
+  // then A is also a child of P (they share the parent through siblingship)
+  const SIB_LABELS=new Set(['Brother','Sister','Sibling','Half-brother','Half-sister','Stepbrother','Stepsister']);
+  let changed=true;
+  while(changed){
+    changed=false;
+    people.forEach(p=>{
+      Object.entries(p.customLinks||{}).forEach(([tid,v])=>{
+        const lbl=typeof v==='string'?v:v.label||'';
+        if(!SIB_LABELS.has(lbl)) return;
+        // p and tid are siblings — merge their parent groups
+        Object.entries(parentChildMap).forEach(([pid,children])=>{
+          if(children.has(p.id)&&!children.has(tid)){ children.add(tid); changed=true; }
+          if(children.has(tid)&&!children.has(p.id)){ children.add(p.id); changed=true; }
+        });
+      });
+    });
+  }
+
   Object.values(parentChildMap).forEach(childSet=>{
     const kids=[...childSet];
     for(let i=0;i<kids.length;i++){
