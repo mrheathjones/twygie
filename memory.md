@@ -400,3 +400,16 @@ treeLinks/{linkId}
 - In-law connection lines may not draw for adopted nodes that had lineType:'labeled' stored before BLOOD_LABELS update — re-check in next session
 - Selective sharing tier (Phase 3c intermediate) not yet implemented — only Bridge Only and Share All
 - Photos in shared data stripped (Firestore 1MB limit) — future: Firebase Storage with URLs
+
+### Line Categories (6 total — Session 10 Final)
+- Solid green:  Parent/Child (structural parents[])
+- Solid orange: Sibling (customLinks lineType='sibling')
+- Solid purple: Extended blood (customLinks, label in BLOOD_LABELS)
+- Dashed blue:  Spouse (structural spouseOf)
+- Dashed pink:  Extended non-blood / In-law (label contains '-in-law')
+- Dashed purple: Non-blood (everything else — friends, godparents, custom)
+
+**DEFAULT_LINE_COLORS**: parentChild=#64b464, spouse=#648cdc, sibling=#dc8c3c, labeled=#a064dc, inlaw=#dc6488
+**lineType detection at draw time**: always derived from label text + BLOOD_LABELS. Never uses stored v.lineType.
+**cleanFalseConnections**: trusts BLOOD_LABELS labels AND '-in-law' labels. Only validates non-family labeled connections.
+**cleanFalseParents()**: runs after every autoAssignToYou. Removes parent-child where "parent" has an in-law customLink to child.

@@ -414,3 +414,15 @@ Built as a separate HTML page (timeline.html) with:
 - Both drawBranches sections re-check BLOOD_LABELS at draw time (fixes stale lineType)
 - recalcAllRelationships(force) parameter added — adoptBatch forces recalc for in-law links
 - Godfather/Godmother added to BLOOD_LABELS
+
+### Relationship & Line Rendering Fixes (Session 10 — Final)
+- SIBLING_RELS expanded: all cousin variants, half/step-siblings
+- CHILD_RELS expanded: godchildren, great-grand-nephew/niece
+- PARENT_RELS expanded: godparents, great-grand-uncle/aunt
+- Sibling handler split: direct siblings copy parents, cousins/in-laws get customLink only
+- cleanFalseConnections: trusts BLOOD_LABELS + any '-in-law' label (doesn't delete)
+- cleanFalseParents(): new guard removes false parent-child connections for in-laws
+- drawBranches: ALWAYS derives lineType from BLOOD_LABELS at draw time (never uses stored)
+- New line category: "Extended non-blood" (inlaw) — dashed pink (#dc6488) for in-law connections
+- 6 line categories total: parent-child, sibling, extended blood, spouse, extended non-blood, non-blood
+- Legend and Settings updated with new inlaw color picker
