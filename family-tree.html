@@ -108,6 +108,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-famil
 .cname{font-family:'Cormorant Garamond',serif;font-size:1.6rem;font-weight:600;color:var(--text);line-height:1.15;margin-bottom:3px}
 .cdob{font-size:.82rem;color:var(--muted);margin-bottom:2px}
 .cplace{font-size:.78rem;color:rgba(200,168,75,.62);font-style:italic}
+.canniv{font-size:.75rem;color:rgba(200,168,75,.5);margin-top:4px;display:flex;align-items:center;gap:5px}
 .crel-badge{display:inline-block;margin-top:5px;padding:2px 9px;border-radius:20px;font-size:.68rem;letter-spacing:.06em;text-transform:uppercase;background:rgba(100,200,140,.1);border:1px solid rgba(100,200,140,.2);color:rgba(120,220,160,.8)}
 .cbody{flex:1;overflow-y:auto;padding:14px 22px 18px}
 .cbody::-webkit-scrollbar{width:2px}
@@ -469,6 +470,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-famil
       <div class="cname" id="cname"></div>
       <div class="cdob" id="cdob"></div>
       <div class="cplace" id="cplace"></div>
+      <div class="canniv" id="canniv"></div>
       <div id="crel-badge"></div>
     </div>
   </div>
@@ -3554,6 +3556,26 @@ function fillCard(p){
   document.getElementById('cdob').textContent=dobDisplay(p);
   document.getElementById('cplace').textContent=placeDisplay(p);
 
+  // Anniversary display
+  const annivEl=document.getElementById('canniv');
+  const spNode=p.spouseOf?byId[p.spouseOf]:P.find(x=>x.spouseOf===p.id);
+  const wd=p.weddingDate||(spNode&&spNode.weddingDate)||null;
+  if(wd&&(wd.month||wd.day||wd.year)){
+    const months=['','January','February','March','April','May','June','July','August','September','October','November','December'];
+    const parts=[];
+    if(wd.month)parts.push(months[parseInt(wd.month)]||'');
+    if(wd.day)parts.push(wd.day+(wd.year?',':''));
+    if(wd.year)parts.push(wd.year);
+    let annivText='💍 Married '+parts.join(' ');
+    if(wd.year){
+      const yrs=new Date().getFullYear()-parseInt(wd.year);
+      if(yrs>0) annivText+=` · ${yrs} year${yrs>1?'s':''}`
+    }
+    annivEl.textContent=annivText;
+  } else {
+    annivEl.textContent='';
+  }
+
   const rel=getRelToYou(p.id);
   const relBadge=document.getElementById('crel-badge');
   relBadge.innerHTML=(!p.isYou&&rel)?`<span class="crel-badge">${rel}</span>`:'';
@@ -3690,6 +3712,17 @@ function editCard(id){
     </div>
     <div class="ef"><label class="el">Story</label>
       <textarea class="ei" id="ei-note" rows="3" style="resize:vertical" placeholder="A brief memory or note…">${p.note||''}</textarea></div>
+    ${(p.spouseOf||P.find(x=>x.spouseOf===p.id))?`
+    <div class="ef"><label class="el">💍 Wedding Date</label>
+      <div class="ef-row c3">
+        <select class="ei" id="ei-wd-month" style="appearance:none">
+          <option value="">Month</option>
+          ${months.slice(1).map((m,i)=>`<option value="${i+1}" ${(p.weddingDate&&p.weddingDate.month)==(i+1)?'selected':''}>${m}</option>`).join('')}
+        </select>
+        <input class="ei" id="ei-wd-day" type="number" value="${p.weddingDate&&p.weddingDate.day||''}" placeholder="Day" min="1" max="31"/>
+        <input class="ei" id="ei-wd-year" type="number" value="${p.weddingDate&&p.weddingDate.year||''}" placeholder="Year"/>
+      </div>
+    </div>`:''}
     <button class="savebtn" onclick="saveCard('${id}')">Save changes</button>
     <button class="cancelbtn" onclick="fillCard(byId['${id}'])">Cancel</button>
   </div>`;
@@ -3726,6 +3759,16 @@ function saveCard(id){
   p.city=document.getElementById('ei-city').value.trim();
   p.state=document.getElementById('ei-state').value||'';
   p.note=document.getElementById('ei-note').value.trim();
+  // Save wedding date if fields exist
+  const wdMonth=document.getElementById('ei-wd-month');
+  if(wdMonth){
+    const wd={month:wdMonth.value,day:document.getElementById('ei-wd-day').value,year:document.getElementById('ei-wd-year').value};
+    if(wd.month||wd.day||wd.year){
+      p.weddingDate=wd;
+      const spouse=p.spouseOf?byId[p.spouseOf]:P.find(x=>x.spouseOf===p.id);
+      if(spouse) spouse.weddingDate=wd;
+    }
+  }
   rebuild([]); render(); scheduleSave(); selectNode(id);
 }
 
@@ -5031,7 +5074,56 @@ function submitMember(){
     }
   }
   rebuild([id]); closeModal(); render(); scheduleSave();
-  setTimeout(()=>selectNode(id),90);
+  setTimeout(()=>{
+    selectNode(id);
+    // Prompt for wedding date if spouse connection was just created
+    if(baseRel==='Spouse') promptWeddingDate(id);
+  },90);
+}
+
+// ─── WEDDING DATE PROMPT ────────────────────────────────────────────────────
+function promptWeddingDate(nodeId){
+  const p=byId[nodeId]; if(!p) return;
+  const spouseName=p.spouseOf?fullName(byId[p.spouseOf]):fullName(P.find(x=>x.spouseOf===nodeId)||{});
+  const nodeName=fullName(p);
+  const modal=document.getElementById('link-modal-content');
+  modal.innerHTML=`
+    <div style="font-size:.88rem;color:var(--text);margin-bottom:4px">💍 Wedding Date</div>
+    <div style="font-size:.78rem;color:var(--muted);margin-bottom:16px;line-height:1.5">
+      When did <strong>${nodeName}</strong> and <strong>${spouseName}</strong> get married?
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:16px">
+      <select id="wd-month" style="flex:1.2;padding:8px;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'Outfit',sans-serif;font-size:.82rem">
+        <option value="">Month</option>
+        <option value="1">January</option><option value="2">February</option><option value="3">March</option>
+        <option value="4">April</option><option value="5">May</option><option value="6">June</option>
+        <option value="7">July</option><option value="8">August</option><option value="9">September</option>
+        <option value="10">October</option><option value="11">November</option><option value="12">December</option>
+      </select>
+      <input id="wd-day" type="number" min="1" max="31" placeholder="Day" style="flex:.7;padding:8px;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'Outfit',sans-serif;font-size:.82rem"/>
+      <input id="wd-year" type="number" min="1900" max="2100" placeholder="Year" style="flex:.8;padding:8px;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'Outfit',sans-serif;font-size:.82rem"/>
+    </div>
+    <div style="display:flex;gap:6px">
+      <button onclick="saveWeddingDate('${nodeId}')" style="flex:1;padding:8px;background:var(--gold);border:none;border-radius:100px;color:#04070c;font-family:'Outfit',sans-serif;font-size:.82rem;font-weight:600;cursor:pointer">Save</button>
+      <button onclick="closeLinkModal()" style="flex:1;padding:8px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:100px;color:var(--muted);font-family:'Outfit',sans-serif;font-size:.82rem;cursor:pointer">Skip</button>
+    </div>
+  `;
+  document.getElementById('link-bg').classList.add('open');
+}
+
+function saveWeddingDate(nodeId){
+  const p=byId[nodeId]; if(!p) return;
+  const month=document.getElementById('wd-month').value;
+  const day=document.getElementById('wd-day').value;
+  const year=document.getElementById('wd-year').value;
+  if(!month&&!day&&!year){closeLinkModal();return}
+  p.weddingDate={month,day,year};
+  // Also set on spouse for easy access
+  const spouse=p.spouseOf?byId[p.spouseOf]:P.find(x=>x.spouseOf===p.id);
+  if(spouse) spouse.weddingDate={month,day,year};
+  closeLinkModal();
+  scheduleSave();
+  if(selId) selectNode(selId); // refresh card
 }
 </script>
 </body>
