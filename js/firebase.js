@@ -122,6 +122,40 @@ auth.onAuthStateChanged(async user => {
 });
 async function signOut(){ if(!await appConfirm('Sign out of Twygie?','Sign Out','Stay')) return; await auth.signOut(); window.location.href='/login'; }
 
+async function burnTwygs(){
+  const count=people.filter(p=>!p.isYou).length;
+  if(count===0){ await appAlert('Your tree is already empty.'); return; }
+
+  const step1=await appConfirm(
+    `🔥 Burn all ${count} Twygs?\n\nThis will permanently delete every member from your tree except you. This action cannot be undone.`,
+    'Continue','Cancel'
+  );
+  if(!step1) return;
+
+  const step2=await appConfirm(
+    `Are you absolutely sure?\n\nAll ${count} members, their connections, photos, stories, and relationship data will be permanently destroyed.`,
+    '🔥 Burn them all','Keep my Twygs'
+  );
+  if(!step2) return;
+
+  // Keep only isYou node, reset everything else
+  const you=people.find(p=>p.isYou);
+  if(you){
+    you.parents=[];
+    you.spouseOf=null;
+    you.customLinks={};
+    delete you.weddingDate;
+  }
+  people.length=0;
+  if(you) people.push(you);
+  peopleById={};
+  if(you) peopleById[you.id]=you;
+  rebuild([]); render(); await saveTree(false);
+  await appAlert(`${count} Twygs burned. Your tree is now empty.`);
+  closeSettings();
+  if(you) selectNode(you.id);
+}
+
 function toggleSection(id){
   const body=document.getElementById(id);
   const icon=document.getElementById('icon-'+id);

@@ -83,3 +83,7 @@
 .sp-action-btn{width:100%;padding:8px;background:rgba(200,168,75,.08);border:1px solid rgba(200,168,75,.25);border-radius:8px;color:var(--gold);font-size:.78rem;cursor:pointer;font-family:'Outfit',sans-serif}
 .sp-add-btn{padding:3px 9px;background:rgba(200,168,75,.12);border:1px solid rgba(200,168,75,.3);border-radius:6px;color:var(--gold);font-size:.72rem;cursor:pointer}
 .sp-link-btn{width:100%;padding:10px;background:rgba(200,168,75,.08);border:1px solid rgba(200,168,75,.25);border-radius:8px;color:var(--gold);font-size:.82rem;cursor:pointer;font-family:'Outfit',sans-serif;display:flex;align-items:center;justify-content:center;gap:6px}
+
+/* Burn Twygs danger button */
+.sp-burn-btn{width:100%;padding:10px;background:rgba(180,60,60,.12);border:1px solid rgba(180,60,60,.3);border-radius:100px;color:rgba(220,100,100,.9);font-family:'Outfit',sans-serif;font-size:.82rem;font-weight:600;cursor:pointer;transition:all .2s;letter-spacing:.03em}
+.sp-burn-btn:hover{background:rgba(180,60,60,.25);border-color:rgba(180,60,60,.5)}

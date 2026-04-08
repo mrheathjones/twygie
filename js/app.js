@@ -393,6 +393,7 @@ function initEventListeners() {
   on('btn-recalc',          'click', recalcAllRelationships);
   on('btn-reset-node-colors','click', resetNodeColors);
   on('btn-reset-line-colors','click', resetLineColors);
+  on('btn-burn-twygs',      'click', burnTwygs);
 
   // --- Settings: color pickers (node colors) ---
   ['you','spouse','parent','child','sibling','grandparent','extended','deceased','young'].forEach(key => {

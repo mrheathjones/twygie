@@ -376,6 +376,215 @@ When sharing nodes with a linked user, the data is re-encrypted with a **shared 
 
 ---
 
+
+---
+
+## Relationship Engine v2 — Design Document
+
+### Problem Statement
+
+The current relationship engine stores all non-direct relationships (uncle, cousin, grandparent, nephew) as flat `customLinks` — labeled key-value pairs between arbitrary node pairs. This creates systemic issues:
+
+1. **Structural relationships are indistinguishable from social ones.** "Uncle" between two nodes is stored identically to "Family Friend." The engine can't tell which are derivable from the tree and which are user-defined.
+
+2. **Incomplete parent chains.** When a grandfather is added, the system stores a "Grandfather" customLink to isYou instead of creating proper parent-child links (grandpa→parent→isYou). This means the structural tree is perpetually incomplete, requiring ever-more-complex workarounds (inferred parents, sibling propagation, transitive expansion).
+
+3. **Rendering mixed with inference.** `drawBranches()` re-derives relationship types at render time using `BLOOD_LABELS`, `crossesMarriage()`, BFS traversals, etc. It should just read a pre-computed relationship type.
+
+4. **Auto-assign is fragile.** The inference loop, `getRelToYou_for`, `cleanFalseConnections`, and `recalcAllRelationships` are collectively ~500 lines of workarounds for the incomplete data model.
+
+### Design Principles
+
+1. **Any relationship can be created at any time** regardless of whether intermediate nodes exist. You can add a cousin without the uncle/grandparent chain being present.
+
+2. **Relationships are structural when possible, declared when not.** The engine TRIES to build proper parent-child chains but falls back to declared relationships when the chain is incomplete.
+
+3. **Rendering is separate from inference.** A resolver computes relationship types; the renderer just reads them.
+
+4. **The AI Relationship Engine plugs in cleanly.** The declared relationship layer is exactly where an AI resolver would operate — converting natural language into structured relationship data.
+
+### Architecture: Three Layers
+
+#### Layer 1 — Structural (parents[], spouseOf)
+
+The skeleton of the family tree. Always correct when present.
+
+```
+Person {
+  id, name, gender, ...
+  parents: [parentId, ...]     // direct parent-child links
+  spouseOf: partnerId | null   // marriage link
+}
+```
+
+**Rules:**
+- Adding Father/Mother/Stepfather/Stepmother → `target.parents.push(newId)`
+- Adding Son/Daughter → `newNode.parents.push(targetId)`
+- Adding Husband/Wife/Partner → `spouseOf` both directions
+- Adding Grandfather → create grandpa, then add grandpa to parent's `parents[]` IF the parent exists. If parent doesn't exist, store as declared (Layer 2).
+
+**What structural links determine:**
+- Parent-child lines (green solid)
+- Spouse lines (blue dashed)
+- Sibling detection (shared parents)
+- Generation positioning (layout)
+
+#### Layer 2 — Declared (relationships[])
+
+User-stated relationships that may or may not have structural backing. Replaces the current `customLinks` object.
+
+```
+Person {
+  ...
+  relationships: [
+    {
+      targetId: "u5",
+      label: "Uncle",            // human-readable label
+      category: "blood",         // "blood" | "bond" | "custom"
+      structural: false          // true if backed by parents[]/spouseOf chain
+    }
+  ]
+}
+```
+
+**Categories:**
+- **blood**: Derived from shared ancestry. Uncle, Cousin, Grandparent, Nephew, Sibling, etc. Renders as solid lines (Extended Roots).
+- **bond**: Connected through marriage. In-laws, spouse's relatives. Renders as dashed lines (Extended Bonds).
+- **custom**: User-defined social relationships. Godparent, Family Friend, Guardian, custom types. Renders as dashed lines (Bonds).
+
+**Rules:**
+- Adding "Cousin" → creates a declared relationship with `category: "blood"`, `structural: false`
+- When the cousin's parent (uncle) is later added, the engine detects the structural chain is complete → sets `structural: true`
+- Declared relationships with `structural: true` are validated by the tree structure; if the chain breaks (node deleted), they revert to `structural: false`
+
+**What changes from customLinks:**
+- `customLinks` is an object keyed by targetId → only one link per pair
+- `relationships[]` is an array → allows the engine to store the label, category, and structural flag explicitly
+- `lineType` (the old 'blood'/'sibling'/'labeled'/'inlaw') is replaced by `category` which is set at creation time, not derived at render time
+
+#### Layer 3 — Computed (runtime only, never stored)
+
+A resolver that determines the relationship between any two nodes.
+
+```javascript
+function computeRelationship(nodeA, nodeB) {
+  // 1. Check structural: trace parents[] to find common ancestor
+  //    Use generation-distance math to classify
+  // 2. Check structural through spouse bridge: in-law detection
+  // 3. Fallback: check declared relationships[]
+  // Returns: { label, category, structural }
+}
+```
+
+**This is the ONLY source of truth for what relationship exists between two nodes.** The renderer calls it. The card display calls it. The inference engine calls it.
+
+### Rendering (Simplified)
+
+```javascript
+function drawBranches() {
+  // 1. Draw parent-child lines (from parents[])
+  // 2. Draw spouse lines (from spouseOf)
+  // 3. Draw relationship lines (from relationships[])
+  //    - category === 'blood' → solid line, Extended Roots color
+  //    - category === 'bond' → dashed line, Extended Bonds color
+  //    - category === 'custom' → dashed line, Bonds color
+  //    - Sibling special case: solid orange (detected from shared parents OR declared)
+}
+```
+
+No more `BLOOD_LABELS` set, no more `crossesMarriage()` BFS, no more runtime line type derivation. The category is pre-set when the relationship is created.
+
+### Auto-Assign (Enrichment, Not Source of Truth)
+
+When a new node is added:
+
+1. **Structural cascade:** If adding a direct parent/child/spouse, update `parents[]`/`spouseOf` and cascade (co-parent children, grandparent links, etc.)
+
+2. **Inference pass:** For each existing node, run `computeRelationship(newNode, existing)`. If a relationship is found that doesn't yet exist in `relationships[]`, add it as a declared relationship with `structural: true`.
+
+3. **Backfill pass:** Check if any existing declared relationships with `structural: false` can now be resolved structurally. If adding uncle X completes the chain for cousin Y, update cousin Y's declaration to `structural: true`.
+
+4. **Sibling propagation:** Relationships that are the same for all siblings (uncle, cousin, grandparent) are automatically mirrored to isYou's siblings.
+
+### Adding Intermediate Nodes Later
+
+**Scenario:** User adds cousin Jon without uncle Henry existing.
+
+1. Jon is created with `relationships: [{targetId: isYou, label: "First Cousin", category: "blood", structural: false}]`
+2. Solid purple line draws between Jon and isYou. Done.
+3. Later, user adds Henry as Uncle to isYou.
+4. Engine detects: "Henry is isYou's uncle. Jon is declared as isYou's cousin. Jon could be Henry's child."
+5. Engine suggests or auto-creates: Henry→Jon parent link, sets Jon's cousin declaration to `structural: true`.
+
+### Data Migration (one-time)
+
+Existing `customLinks` are converted to `relationships[]`:
+
+```javascript
+// For each person with customLinks:
+Object.entries(person.customLinks).forEach(([targetId, value]) => {
+  const label = typeof value === 'string' ? value : value.label;
+  const oldType = typeof value === 'string' ? 'labeled' : value.lineType;
+
+  // Determine category
+  let category;
+  if (oldType === 'sibling') category = 'blood';
+  else if (label.includes('-in-law')) category = 'bond';
+  else if (BLOOD_LABELS.has(label)) category = 'blood';
+  else category = 'custom';
+
+  person.relationships.push({
+    targetId,
+    label,
+    category,
+    structural: false  // will be validated by computeRelationship on next load
+  });
+});
+delete person.customLinks;
+```
+
+### Edge Cases
+
+**Deleting an intermediate node:**
+- If uncle is deleted, cousin Jon's declaration stays (`structural: false`). The line still draws. The user can add the uncle back later.
+
+**Conflicting declarations:**
+- If user declares A as "Uncle" and also as "Family Friend", both are stored. The renderer draws both lines. The card shows both connections.
+
+**Self-referential loops:**
+- `computeRelationship` has a depth limit (8 generations) to prevent infinite loops.
+
+**Multiple common ancestors:**
+- When two nodes share multiple ancestors (e.g., through both parents), `computeRelationship` uses the shortest path.
+
+### Implementation Plan
+
+**Phase 1 — Data model migration**
+- Add `relationships[]` to Person schema
+- Write migration: `customLinks` → `relationships[]`
+- Update `saveTree`/`loadTree` to handle new format
+- Burn Twygs: clean start option ✅ (implemented)
+
+**Phase 2 — Renderer refactor**
+- `drawBranches()` reads `relationships[]` category directly
+- Remove `BLOOD_LABELS`, `crossesMarriage()`, `isSibLabel` checks
+- Sibling detection: shared `parents[]` only (no more transitive expansion)
+
+**Phase 3 — Auto-assign simplification**
+- `computeRelationship()` replaces `getRelToYou_for()`, `inferRelToYou()`, and most of `autoAssignToYou()`
+- Remove `cleanFalseConnections()`, `hasSharedParent()`, `hasBloodPath()`, `hasInLawPath()`
+- Remove `inferredParents` preprocessing
+
+**Phase 4 — UI updates**
+- Card connections display reads `relationships[]`
+- Add Connection modal stores `category` on creation
+- Edit connection can change category
+
+**Phase 5 — AI Relationship Engine (future)**
+- Natural language input → AI resolves to label + category
+- AI validates tree consistency
+- AI suggests missing intermediate nodes
+
 ## Session 11 — Modular Refactoring + Features (April 8, 2026)
 
 ### Modular Refactoring (30+ commits)
