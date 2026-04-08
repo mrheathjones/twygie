@@ -464,6 +464,21 @@ function drawBranches(){
         const bSpouse=people.find(x=>x.spouseOf===kids[j]);
         if(aSpouse&&childSet.has(aSpouse.id)) continue;
         if(bSpouse&&childSet.has(bSpouse.id)) continue;
+        // Skip if a declared non-sibling relationship exists (e.g. "Sister-in-law" = bond)
+        const declA=getRel(a, b);
+        const declB=getRel(b, a);
+        if(declA && !SIBLING_LABELS.has(declA.label)) continue;
+        if(declB && !SIBLING_LABELS.has(declB.label)) continue;
+        // Skip if either node is a spouse — spouses share children's parents but aren't siblings
+        if(a.spouseOf || people.find(x=>x.spouseOf===kids[i])){
+          // a is someone's spouse — check if b is NOT a's structural sibling
+          const aParents=new Set(a.parents||[]);
+          if(!aParents.size || !(b.parents||[]).some(pid=>aParents.has(pid))) continue;
+        }
+        if(b.spouseOf || people.find(x=>x.spouseOf===kids[j])){
+          const bParents=new Set(b.parents||[]);
+          if(!bParents.size || !(a.parents||[]).some(pid=>bParents.has(pid))) continue;
+        }
         const key=[kids[i],kids[j]].sort().join('|');
         if(autoSibDrawn.has(key)||sibDrawn.has(key)) continue;
         autoSibDrawn.add(key);
