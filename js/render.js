@@ -395,6 +395,37 @@ function drawBranches(){
     });
   }
 
+  // Structural inference: if nodeX is Uncle/Aunt to isYou, then nodeX is a sibling
+  // of isYou's parents. Add them to the same parent group.
+  if(youNode){
+    const youParents=youNode.parents||[];
+    people.forEach(p=>{
+      // Check if p has an Uncle/Aunt relationship to isYou (via customLinks)
+      const clToYou=p.customLinks&&p.customLinks[youNode.id];
+      const clFromYou=youNode.customLinks&&youNode.customLinks[p.id];
+      const lbl1=clToYou?(typeof clToYou==='string'?clToYou:clToYou.label||''):'';
+      const lbl2=clFromYou?(typeof clFromYou==='string'?clFromYou:clFromYou.label||''):'';
+      const isUncleAunt=['Uncle','Aunt','Great-uncle','Great-aunt'].includes(lbl1)||
+                         ['Uncle','Aunt','Great-uncle','Great-aunt'].includes(lbl2);
+      if(isUncleAunt && youParents.length){
+        // p is isYou's uncle/aunt → p is a sibling of isYou's parents
+        // Find which parent group(s) the parents are in and add p there
+        youParents.forEach(parId=>{
+          Object.entries(parentChildMap).forEach(([pid,children])=>{
+            if(children.has(parId)&&!children.has(p.id)){ children.add(p.id); }
+          });
+          // If no parentChildMap entry exists for parent's parents, check parent's parents
+          const par=peopleById[parId];
+          if(par) (par.parents||[]).forEach(gpId=>{
+            if(!parentChildMap[gpId]) parentChildMap[gpId]=new Set();
+            parentChildMap[gpId].add(parId);
+            parentChildMap[gpId].add(p.id);
+          });
+        });
+      }
+    });
+  }
+
   Object.values(parentChildMap).forEach(childSet=>{
     const kids=[...childSet];
     for(let i=0;i<kids.length;i++){
