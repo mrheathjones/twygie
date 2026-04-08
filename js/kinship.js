@@ -657,8 +657,10 @@ function cleanFalseConnections(){
       let valid=false;
 
       if(lt==='sibling'){
-        // Siblings must share at least one parent
-        valid=hasSharedParent(p, other);
+        // Sibling customLinks are always intentionally created (submitMember or applyInferredRel).
+        // Trust them — the label itself (Brother/Sister/etc) is specific enough.
+        // hasSharedParent may fail when parent-child chains use customLinks instead of parents[].
+        valid=true;
       } else if(lt==='blood'||lt==='labeled'){
         // If the label is in BLOOD_LABELS or is an in-law type, trust the auto-assign system
         if(BLOOD_LABELS.has(label)||label.includes('-in-law')) valid=true;
