@@ -534,8 +534,52 @@ function collectDescendants(nodeId, maxGen){
 
 // Check if two nodes share at least one parent
 function hasSharedParent(a, b){
+  // Check parents[] array
   const ap=new Set(a.parents||[]);
-  return (b.parents||[]).some(p=>ap.has(p));
+  if((b.parents||[]).some(p=>ap.has(p))) return true;
+
+  // Also check via customLinks — parent might be connected through
+  // child-type labels (e.g. grandfather has "Son" link to both Hank and Lois)
+  // or parent-type labels (e.g. Hank has "Father" link to grandfather)
+  const CHILD_LABELS=new Set(['Son','Daughter','Child','Stepson','Stepdaughter','Stepchild']);
+  const PARENT_LABELS=new Set(['Father','Mother','Parent','Stepfather','Stepmother']);
+
+  // Build set of all "parents" of node a (from parents[] + customLinks)
+  const aParents=new Set(a.parents||[]);
+  Object.entries(a.customLinks||{}).forEach(([tid,v])=>{
+    const lbl=typeof v==='string'?v:v.label||'';
+    if(PARENT_LABELS.has(lbl)) aParents.add(tid);
+  });
+  // Check if any person has a child-type link to a
+  people.forEach(p=>{
+    Object.entries(p.customLinks||{}).forEach(([tid,v])=>{
+      if(tid===a.id){
+        const lbl=typeof v==='string'?v:v.label||'';
+        if(CHILD_LABELS.has(lbl)) aParents.add(p.id);
+      }
+    });
+  });
+
+  // Build set of all "parents" of node b
+  const bParents=new Set(b.parents||[]);
+  Object.entries(b.customLinks||{}).forEach(([tid,v])=>{
+    const lbl=typeof v==='string'?v:v.label||'';
+    if(PARENT_LABELS.has(lbl)) bParents.add(tid);
+  });
+  people.forEach(p=>{
+    Object.entries(p.customLinks||{}).forEach(([tid,v])=>{
+      if(tid===b.id){
+        const lbl=typeof v==='string'?v:v.label||'';
+        if(CHILD_LABELS.has(lbl)) bParents.add(p.id);
+      }
+    });
+  });
+
+  // Check for any shared parent
+  for(const pid of aParents){
+    if(bParents.has(pid)) return true;
+  }
+  return false;
 }
 
 // Check if two nodes are blood-related: share a common ancestor OR one descends from the other
