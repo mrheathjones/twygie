@@ -15,6 +15,7 @@ const CHILD_RELS = [
   'Great-grandson','Great-granddaughter','Great-great-grandson','Great-great-granddaughter',
   'Stepson','Stepdaughter','Nephew','Niece',
   'Grand-nephew','Grand-niece','Great-grand-nephew','Great-grand-niece',
+  'Nephew-in-law','Niece-in-law',
   'Godson','Goddaughter'
 ];
 
@@ -23,6 +24,7 @@ const PARENT_RELS = [
   'Great-grandfather','Great-grandmother','Great-great-grandfather','Great-great-grandmother',
   'Stepfather','Stepmother','Father-in-law','Mother-in-law',
   'Uncle','Aunt','Great-uncle','Great-aunt','Great-grand-uncle','Great-grand-aunt',
+  'Uncle-in-law','Aunt-in-law',
   'Godfather','Godmother'
 ];
 
@@ -98,6 +100,8 @@ const INVERSE_REL = {
   'Brother-in-law':'Brother-in-law','Sister-in-law':'Sister-in-law',
   'Grandfather-in-law':'Grandson-in-law','Grandmother-in-law':'Granddaughter-in-law',
   'Grandson-in-law':'Grandfather-in-law','Granddaughter-in-law':'Grandmother-in-law',
+  'Uncle-in-law':'Nephew-in-law','Aunt-in-law':'Niece-in-law',
+  'Nephew-in-law':'Uncle-in-law','Niece-in-law':'Aunt-in-law',
   'Godfather':'Godchild','Godmother':'Godchild','Godchild':'Godparent',
 };
 
