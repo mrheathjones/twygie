@@ -132,6 +132,7 @@ function openModal(forId){
 function closeModal(){ document.getElementById('mbg').classList.remove('open'); }
 
 function submitMember(){
+  try {
   const first=document.getElementById('fn-first').value.trim();
   const last=document.getElementById('fn-last').value.trim();
   const name=[first,last].filter(Boolean).join(' ');
@@ -266,6 +267,7 @@ function submitMember(){
     // Prompt for wedding date if spouse connection was just created
     if(baseRel==='Spouse') promptWeddingDate(id);
   },90);
+  } catch(e) { console.error('submitMember error:', e); appAlert('Error adding member: ' + e.message); }
 }
 
 // ─── WEDDING DATE PROMPT ────────────────────────────────────────────────────
@@ -414,4 +416,12 @@ function initEventListeners() {
 }
 
 // Run after DOM is ready (scripts are at bottom of body)
-initEventListeners();
+try {
+  initEventListeners();
+} catch(e) {
+  console.error('initEventListeners failed:', e);
+  // Fallback: retry on DOMContentLoaded
+  document.addEventListener('DOMContentLoaded', () => {
+    try { initEventListeners(); } catch(e2) { console.error('initEventListeners retry failed:', e2); }
+  });
+}
