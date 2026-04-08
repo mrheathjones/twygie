@@ -1596,8 +1596,10 @@ function cleanFalseConnections(){
         // Siblings must share at least one parent
         valid=hasSharedParent(p, other);
       } else if(lt==='blood'||lt==='labeled'){
-        // Blood and labeled connections: valid if there's a real blood OR in-law path
-        valid=hasBloodPath(p, other)||hasInLawPath(p, other);
+        // If the label is in BLOOD_LABELS, trust the auto-assign system
+        if(BLOOD_LABELS.has(label)) valid=true;
+        // Otherwise validate there's a real blood OR in-law path
+        else valid=hasBloodPath(p, other)||hasInLawPath(p, other);
       } else {
         // Custom/unknown lineTypes (user-created custom connection types) — always keep
         valid=true;
