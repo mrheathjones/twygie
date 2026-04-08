@@ -47,7 +47,7 @@ function makeLinkCode(){
 
 // Generate link code for a node and save invite to Firestore
 async function generateLinkCode(nodeId){
-  const p=byId[nodeId]; if(!p) return;
+  const p=peopleById[nodeId]; if(!p) return;
   const nm=fullName(p);
   const code=makeLinkCode();
   const nodeHash=await hashNode(p);
@@ -139,7 +139,7 @@ async function acceptLinkCode(){
     // Find matching node in our tree
     msg.textContent='Searching for matching Twyg…';
     let matchedNode=null;
-    for(const p of P){
+    for(const p of people){
       const h=await hashNode(p);
       if(h===invite.bridgeNodeHash){matchedNode=p;break}
     }
@@ -447,8 +447,8 @@ async function toggleShareLevel(linkId, newLevel){
       // Encrypt our people[] with the shared key and store in the link
       const sharedKey=await deriveSharedKey(link.userA, link.userB);
       // Share stripped-down node data (no customLinks internals, no isYou)
-      const sharedData=P.map(p=>{
-        const spouseId=p.spouseOf||(P.find(x=>x.spouseOf===p.id)||{}).id||null;
+      const sharedData=people.map(p=>{
+        const spouseId=p.spouseOf||(people.find(x=>x.spouseOf===p.id)||{}).id||null;
         return {
           id:p.id, name:fullName(p),
           firstName:p.firstName||'', lastName:p.lastName||'',
@@ -462,7 +462,7 @@ async function toggleShareLevel(linkId, newLevel){
         };
       });
       const encrypted=await encryptShared(sharedKey, sharedData);
-      console.log('Shared data size:',encrypted.length,'chars for',P.length,'nodes');
+      console.log('Shared data size:',encrypted.length,'chars for',people.length,'nodes');
 
       await db.collection('treeLinks').doc(linkId).update({
         [`shareLevel.${currentUser.uid}`]:'all',
@@ -494,8 +494,8 @@ function adoptBatch(nodes){
   let adopted=0;
   const sorted=[...nodes];
   sorted.sort((a,b)=>{
-    const aLocal=(a.parents||[]).every(pid=>byId[pid]);
-    const bLocal=(b.parents||[]).every(pid=>byId[pid]);
+    const aLocal=(a.parents||[]).every(pid=>peopleById[pid]);
+    const bLocal=(b.parents||[]).every(pid=>peopleById[pid]);
     if(aLocal&&!bLocal) return -1;
     if(!aLocal&&bLocal) return 1;
     return 0;
@@ -512,13 +512,13 @@ function adoptBatch(nodes){
         note:sn.note||'',relLabel:sn.relLabel||'',parents:[],spouseOf:null,
         customLinks:{},isYou:false,_adopted:true,
         x:sn.x||Math.random()*400+200,y:sn.y||Math.random()*400+200};
-      const parentIds=(sn.parents||[]).filter(pid=>byId[pid]);
+      const parentIds=(sn.parents||[]).filter(pid=>peopleById[pid]);
       node.parents=parentIds;
-      if(sn.spouseOf&&byId[sn.spouseOf]) node.spouseOf=sn.spouseOf;
-      P.push(node);byId[newId]=node;
+      if(sn.spouseOf&&peopleById[sn.spouseOf]) node.spouseOf=sn.spouseOf;
+      people.push(node);peopleById[newId]=node;
       sharedNodes.forEach(n=>{n.parents=(n.parents||[]).map(pid=>pid===oldId?newId:pid);if(n.spouseOf===oldId)n.spouseOf=newId});
       sorted.forEach(n=>{if(n.id!==oldId){n.parents=(n.parents||[]).map(pid=>pid===oldId?newId:pid);if(n.spouseOf===oldId)n.spouseOf=newId}});
-      P.forEach(n=>{if(n.id===newId)return;n.parents=(n.parents||[]).map(pid=>pid===oldId?newId:pid);if(n.spouseOf===oldId)n.spouseOf=newId});
+      people.forEach(n=>{if(n.id===newId)return;n.parents=(n.parents||[]).map(pid=>pid===oldId?newId:pid);if(n.spouseOf===oldId)n.spouseOf=newId});
       remaining.delete(oldId);
       sharedNodes=sharedNodes.filter(n=>n.id!==oldId);
       adopted++;
@@ -530,7 +530,7 @@ function adoptBatch(nodes){
 
 // Auto-upload shared data if our shareLevel is 'all' but data isn't uploaded yet
 async function autoUploadSharedData(){
-  if(!currentUser||!P.length) return;
+  if(!currentUser||!people.length) return;
   for(const link of activeLinks){
     const myLevel=link.shareLevel?.[currentUser.uid];
     const myData=link.sharedData?.[currentUser.uid];
@@ -538,8 +538,8 @@ async function autoUploadSharedData(){
       try{
         console.log('Auto-uploading shared data for link',link.id);
         const sharedKey=await deriveSharedKey(link.userA, link.userB);
-        const sharedData=P.map(p=>{
-          const spouseId=p.spouseOf||(P.find(x=>x.spouseOf===p.id)||{}).id||null;
+        const sharedData=people.map(p=>{
+          const spouseId=p.spouseOf||(people.find(x=>x.spouseOf===p.id)||{}).id||null;
           return {
             id:p.id, name:fullName(p),
             firstName:p.firstName||'', lastName:p.lastName||'',
@@ -553,7 +553,7 @@ async function autoUploadSharedData(){
           };
         });
         const encrypted=await encryptShared(sharedKey, sharedData);
-        console.log('Auto-upload shared data size:',encrypted.length,'chars for',P.length,'nodes');
+        console.log('Auto-upload shared data size:',encrypted.length,'chars for',people.length,'nodes');
         await db.collection('treeLinks').doc(link.id).update({
           [`sharedData.${currentUser.uid}`]:encrypted
         });
@@ -574,7 +574,7 @@ function adoptSharedNode(sharedId){
   // Find bridge node for positioning
   const link=activeLinks.find(l=>l.id===sn._linkId);
   const myBridgeId=link?(link.userA===currentUser.uid?link.bridgeNodeIdA:link.bridgeNodeIdB):null;
-  const bridge=myBridgeId?byId[myBridgeId]:null;
+  const bridge=myBridgeId?peopleById[myBridgeId]:null;
 
   // Build the adopted node
   const adopted={
@@ -593,15 +593,15 @@ function adoptSharedNode(sharedId){
 
   // Remap parents — keep references to local nodes
   (sn.parents||[]).forEach(pid=>{
-    if(byId[pid]) adopted.parents.push(pid);
+    if(peopleById[pid]) adopted.parents.push(pid);
   });
 
   // Remap spouse — keep if local node exists
-  if(sn.spouseOf&&byId[sn.spouseOf]) adopted.spouseOf=sn.spouseOf;
+  if(sn.spouseOf&&peopleById[sn.spouseOf]) adopted.spouseOf=sn.spouseOf;
 
   // Add to tree
-  P.push(adopted);
-  byId[newId]=adopted;
+  people.push(adopted);
+  peopleById[newId]=adopted;
 
   // Remap references: update remaining shared nodes AND local nodes
   // that pointed to the old shared ID → now point to new local ID
@@ -609,7 +609,7 @@ function adoptSharedNode(sharedId){
     n.parents=(n.parents||[]).map(pid=>pid===oldId?newId:pid);
     if(n.spouseOf===oldId) n.spouseOf=newId;
   });
-  P.forEach(n=>{
+  people.forEach(n=>{
     if(n.id===newId) return;
     n.parents=(n.parents||[]).map(pid=>pid===oldId?newId:pid);
     if(n.spouseOf===oldId) n.spouseOf=newId;
@@ -632,7 +632,7 @@ async function loadSharedNodes(){
   // Match on firstName+year, fullName+year, AND name-only (for missing years)
   const fpToLocalId={};
   const nameOnlyToLocalId={};
-  P.forEach(p=>{
+  people.forEach(p=>{
     const fn=(p.firstName||fullName(p).split(' ')[0]||'').toLowerCase().trim();
     const full=fullName(p).toLowerCase().trim();
     const by=p.dob?.year||p.birth||'';

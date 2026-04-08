@@ -3,8 +3,8 @@
 // ─── VIEW ────────────────────────────────────────────────────────────────────
 
 function resetView(){
-  if(!P.length) return;
-  const xs=P.map(p=>p.x), ys=P.map(p=>p.y);
+  if(!people.length) return;
+  const xs=people.map(p=>p.x), ys=people.map(p=>p.y);
   const x0=Math.min(...xs)-90, x1=Math.max(...xs)+90;
   const y0=Math.min(...ys)-70, y1=Math.max(...ys)+100;
   const W=window.innerWidth, H=window.innerHeight;
@@ -26,7 +26,7 @@ const wrap=document.getElementById('wrap');
 wrap.addEventListener('mousedown',e=>{
   if(e.target.closest('.nd')) return;
   drag=true; dsx=e.clientX-tx; dsy=e.clientY-ty;
-  wrap.style.cursor='grabbing'; hideTip();
+  wrap.style.cursor='grabbing'; hideTooltip();
 });
 
 wrap.addEventListener('wheel',e=>{
@@ -45,7 +45,7 @@ wrap.addEventListener('touchstart',e=>{
   else if(e.touches.length===2){ tpan=false; ltD=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY); }
 },{passive:true});
 wrap.addEventListener('touchmove',e=>{
-  if(nodeDrag) return;
+  if(nodeDragState) return;
   if(e.touches.length===1&&tpan){ tx=e.touches[0].clientX-tdsx; ty=e.touches[0].clientY-tdsy; applyT(); }
   else if(e.touches.length===2){
     const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
@@ -58,15 +58,15 @@ wrap.addEventListener('touchmove',e=>{
 },{passive:true});
 
 // ─── ADD MEMBER ───────────────────────────────────────────────────────────────
-let addFor=null;
-let modalPhoto=null;
+let addForNodeId=null;
+let modalPhotoData=null;
 function handleModalPhoto(event){
   const file=event.target.files[0]; if(!file) return;
   const reader=new FileReader();
   reader.onload=e=>{
-    modalPhoto=e.target.result;
+    modalPhotoData=e.target.result;
     const prev=document.getElementById('modal-photo-preview');
-    if(prev) prev.innerHTML=`<img src="${modalPhoto}" style="width:100%;height:100%;object-fit:cover"/>`;
+    if(prev) prev.innerHTML=`<img src="${modalPhotoData}" style="width:100%;height:100%;object-fit:cover"/>`;
   };
   reader.readAsDataURL(file);
 }
@@ -106,14 +106,14 @@ function refreshModalRelOptions(){
 }
 
 function openModal(forId){
-  addFor=forId;
-  const fp=forId?byId[forId]:null;
+  addForNodeId=forId;
+  const fp=forId?peopleById[forId]:null;
   document.getElementById('msub').textContent=fp?`Connected to ${fullName(fp)}`:'Add someone to your tree';
   document.getElementById('rel-to-label').textContent=fp?(fp.firstName||fullName(fp)):'the tree';
   ['fn-first','fn-last','fdob-day','fdob-year','fcity','fstory','fdod-day','fdod-year'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
   ['fdob-month','fgender','fr','fstate','fdod-month'].forEach(id=>{const e=document.getElementById(id);if(e)e.selectedIndex=0;});
   const dec=document.getElementById('f-deceased'); if(dec){dec.checked=false; toggleDeathDate();}
-  modalPhoto=null;
+  modalPhotoData=null;
   const prev=document.getElementById('modal-photo-preview'); if(prev) prev.innerHTML='<span>+</span>';
   const fi=document.getElementById('modal-photo-file'); if(fi) fi.value='';
   refreshModalRelOptions();
@@ -144,16 +144,16 @@ function submitMember(){
 
   // Infer base rel category
   if(!rel){ // No relationship — just add as standalone node
-    P.push({id:`u${nxt++}`,name,firstName:first,lastName:last,gender,dob,birth,dod,death,city,state,note,parents:[],customLinks:{},x:600+Math.random()*100-50,y:400+Math.random()*100-50});
-    if(modalPhoto){ P[P.length-1].photo=modalPhoto; }
+    people.push({id:`u${nextNodeId++}`,name,firstName:first,lastName:last,gender,dob,birth,dod,death,city,state,note,parents:[],customLinks:{},x:600+Math.random()*100-50,y:400+Math.random()*100-50});
+    if(modalPhotoData){ people[people.length-1].photo=modalPhotoData; }
     rebuild([]); closeModal(); render(); scheduleSave();
-    setTimeout(()=>selectNode(P[P.length-1].id),90); return;
+    setTimeout(()=>selectNode(people[people.length-1].id),90); return;
   }
   const baseRel=CHILD_RELS.includes(rel)?'Child':PARENT_RELS.includes(rel)?'Parent':SPOUSE_RELS.includes(rel)?'Spouse':SIBLING_RELS.includes(rel)?'Sibling':'Other';
 
-  const id=`u${nxt++}`;
+  const id=`u${nextNodeId++}`;
   const np={id,name,firstName:first,lastName:last,gender,dob,birth,dod,death,city,state,note,parents:[],relLabel:baseRel,x:600,y:400};
-  if(modalPhoto) np.photo=modalPhoto;
+  if(modalPhotoData) np.photo=modalPhotoData;
 
   // Infer gender from relationship label
   if(!np.gender){
@@ -161,19 +161,19 @@ function submitMember(){
     if(['Daughter','Granddaughter','Stepdaughter','Niece','Sister','Sister-in-law','Aunt','Mother','Grandmother','Stepmother','Mother-in-law','Wife'].includes(rel)) np.gender='female';
   }
 
-  if(addFor){
-    const target=byId[addFor];
+  if(addForNodeId){
+    const target=peopleById[addForNodeId];
     if(baseRel==='Child'){
       const directChildSet=new Set(['Son','Daughter','Stepson','Stepdaughter','Child']);
       if(directChildSet.has(rel)){
-        np.parents=[addFor];
+        np.parents=[addForNodeId];
       } else {
         // Grandchild, nephew, etc — customLink only
         np.parents=[];
         if(!np.customLinks) np.customLinks={};
         if(!target.customLinks) target.customLinks={};
         const ltype4=BLOOD_LABELS.has(rel)?'blood':'labeled';
-        np.customLinks[addFor]={label:rel,lineType:ltype4};
+        np.customLinks[addForNodeId]={label:rel,lineType:ltype4};
         target.customLinks[id]={label:rel,lineType:ltype4};
       }
     }
@@ -188,7 +188,7 @@ function submitMember(){
         if(!np.customLinks) np.customLinks={};
         if(!target.customLinks) target.customLinks={};
         const ltype=BLOOD_LABELS.has(rel)?'blood':'labeled';
-        np.customLinks[addFor]={label:rel,lineType:ltype};
+        np.customLinks[addForNodeId]={label:rel,lineType:ltype};
         target.customLinks[id]={label:rel,lineType:ltype};
       }
     }
@@ -200,7 +200,7 @@ function submitMember(){
         if(!np.customLinks) np.customLinks={};
         if(!target.customLinks) target.customLinks={};
         const sibLabel=np.gender==='male'?'Brother':np.gender==='female'?'Sister':'Sibling';
-        np.customLinks[addFor]={label:sibLabel,lineType:'sibling'};
+        np.customLinks[addForNodeId]={label:sibLabel,lineType:'sibling'};
         target.customLinks[id]={label:sibLabel,lineType:'sibling'};
       } else {
         // Cousins, in-laws, etc — customLink only (don't copy parents)
@@ -208,14 +208,14 @@ function submitMember(){
         if(!np.customLinks) np.customLinks={};
         if(!target.customLinks) target.customLinks={};
         const ltype=BLOOD_LABELS.has(rel)?'blood':'labeled';
-        np.customLinks[addFor]={label:rel,lineType:ltype};
+        np.customLinks[addForNodeId]={label:rel,lineType:ltype};
         target.customLinks[id]={label:inverseLabel(rel),lineType:ltype};
       }
     }
         else if(baseRel==='Spouse'){
-          np.spouseOf=addFor; if(target) target.spouseOf=id;
+          np.spouseOf=addForNodeId; if(target) target.spouseOf=id;
           // Structural: anchor's existing children become new spouse's children too
-          P.filter(x=>(x.parents||[]).includes(addFor)).forEach(child=>{
+          people.filter(x=>(x.parents||[]).includes(addForNodeId)).forEach(child=>{
             if(!(child.parents||[]).includes(id)){
               child.parents=[...(child.parents||[]),id];
             }
@@ -227,18 +227,18 @@ function submitMember(){
       np.parents=[];
       if(!np.customLinks) np.customLinks={};
       if(!target.customLinks) target.customLinks={};
-      np.customLinks[addFor]={label:customLabel,lineType:'labeled'};
+      np.customLinks[addForNodeId]={label:customLabel,lineType:'labeled'};
       target.customLinks[id]={label:customLabel,lineType:'labeled'};
       np.relLabel=customLabel;
     }
-    else np.parents=[addFor];
+    else np.parents=[addForNodeId];
   }
 
-  P.push(np);
-  // Lightweight byId sync before auto-assign (full rebuild happens next)
-  P.forEach(p=>{ if(!byId[p.id]) byId[p.id]=p; });
-  // Auto-assign relationship to isYou if addFor is set
-  if(addFor && rel){
+  people.push(np);
+  // Lightweight peopleById sync before auto-assign (full rebuild happens next)
+  people.forEach(p=>{ if(!peopleById[p.id]) peopleById[p.id]=p; });
+  // Auto-assign relationship to isYou if addForNodeId is set
+  if(addForNodeId && rel){
     if(baseRel==='Sibling' && np.parents.length>0){
       // For siblings: run auto-assign as child of each parent — triggers full
       // isDirChild cascade (grandparents, uncles, in-laws, etc.)
@@ -247,7 +247,7 @@ function submitMember(){
         autoAssignToYou(id, pid, childLabel);
       });
     } else {
-      autoAssignToYou(id, addFor, rel);
+      autoAssignToYou(id, addForNodeId, rel);
     }
   }
   rebuild([id]); closeModal(); render(); scheduleSave();
@@ -260,8 +260,8 @@ function submitMember(){
 
 // ─── WEDDING DATE PROMPT ────────────────────────────────────────────────────
 function promptWeddingDate(nodeId){
-  const p=byId[nodeId]; if(!p) return;
-  const spouseName=p.spouseOf?fullName(byId[p.spouseOf]):fullName(P.find(x=>x.spouseOf===nodeId)||{});
+  const p=peopleById[nodeId]; if(!p) return;
+  const spouseName=p.spouseOf?fullName(peopleById[p.spouseOf]):fullName(people.find(x=>x.spouseOf===nodeId)||{});
   const nodeName=fullName(p);
   const modal=document.getElementById('link-modal-content');
   modal.innerHTML=`
@@ -289,16 +289,16 @@ function promptWeddingDate(nodeId){
 }
 
 function saveWeddingDate(nodeId){
-  const p=byId[nodeId]; if(!p) return;
+  const p=peopleById[nodeId]; if(!p) return;
   const month=document.getElementById('wd-month').value;
   const day=document.getElementById('wd-day').value;
   const year=document.getElementById('wd-year').value;
   if(!month&&!day&&!year){closeLinkModal();return}
   p.weddingDate={month,day,year};
   // Also set on spouse for easy access
-  const spouse=p.spouseOf?byId[p.spouseOf]:P.find(x=>x.spouseOf===p.id);
+  const spouse=p.spouseOf?peopleById[p.spouseOf]:people.find(x=>x.spouseOf===p.id);
   if(spouse) spouse.weddingDate={month,day,year};
   closeLinkModal();
   scheduleSave();
-  if(selId) selectNode(selId); // refresh card
+  if(selectedNodeId) selectNode(selectedNodeId); // refresh card
 }

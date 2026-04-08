@@ -221,16 +221,16 @@ function openSettings(){
   setSettingsMode(settingsMode);
   // Count generations
   const genSet=new Set();
-  const youNode=P.find(p=>p.isYou);
+  const youNode=people.find(p=>p.isYou);
   if(youNode){
     const q=[{id:youNode.id,g:0}]; const vis=new Set();
     while(q.length){ const {id,g}=q.shift(); if(vis.has(id)) continue; vis.add(id); genSet.add(g);
-      const p=byId[id]; if(!p) continue;
+      const p=peopleById[id]; if(!p) continue;
       (p.parents||[]).forEach(pid=>{ if(!vis.has(pid)) q.push({id:pid,g:g-1}); });
-      P.filter(x=>(x.parents||[]).includes(id)).forEach(c=>{ if(!vis.has(c.id)) q.push({id:c.id,g:g+1}); });
+      people.filter(x=>(x.parents||[]).includes(id)).forEach(c=>{ if(!vis.has(c.id)) q.push({id:c.id,g:g+1}); });
     }
   }
-  document.getElementById('sp-member-count').textContent=P.length;
+  document.getElementById('sp-member-count').textContent=people.length;
   document.getElementById('sp-gen-count').textContent=genSet.size||1;
   syncColorPickers();
   syncNodeColorPickers();
@@ -247,7 +247,7 @@ function openSettings(){
 
 function closeSettings(){
   document.getElementById('settings-panel').classList.remove('open');
-  if(!selId&&!document.getElementById('members-panel').classList.contains('open'))
+  if(!selectedNodeId&&!document.getElementById('members-panel').classList.contains('open'))
     document.getElementById('scrim').classList.remove('on');
 }
 

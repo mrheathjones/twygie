@@ -13,11 +13,11 @@ function closeExportMenu(){ document.getElementById('export-menu').style.display
 
 async function exportTree(format){
   closeExportMenu();
-  if(!P.length){ appAlert('No Twygs to export.'); return; }
+  if(!people.length){ appAlert('No Twygs to export.'); return; }
 
   // 1. Calculate bounding box from node positions
   const pad=120;
-  const xs=P.map(p=>p.x), ys=P.map(p=>p.y);
+  const xs=people.map(p=>p.x), ys=people.map(p=>p.y);
   const x0=Math.min(...xs)-pad, y0=Math.min(...ys)-pad;
   const x1=Math.max(...xs)+pad, y1=Math.max(...ys)+pad;
   const w=x1-x0, h=y1-y0;
@@ -145,9 +145,9 @@ async function exportCanvasToPDF(canvas, w, h){
   };
 
   // ── Gather member data ──
-  const you=P.find(p=>p.isYou);
+  const you=people.find(p=>p.isYou);
   const userName=you?fullName(you):'My Family';
-  const members=P.map(p=>{
+  const members=people.map(p=>{
     const rel=p.isYou?'You':getRelToYou(p.id);
     const name=fullName(p);
     const dob=dobDisplay(p);
@@ -155,10 +155,10 @@ async function exportCanvasToPDF(canvas, w, h){
     const connections=[];
     // Parents
     (p.parents||[]).forEach(pid=>{
-      const par=byId[pid]; if(par) connections.push({name:fullName(par),rel:genderedRel('Parent',par.gender)});
+      const par=peopleById[pid]; if(par) connections.push({name:fullName(par),rel:genderedRel('Parent',par.gender)});
     });
     // Children
-    P.filter(x=>(x.parents||[]).includes(p.id)).forEach(c=>{
+    people.filter(x=>(x.parents||[]).includes(p.id)).forEach(c=>{
       connections.push({name:fullName(c),rel:genderedRel('Child',c.gender)});
     });
     // Spouse
@@ -166,7 +166,7 @@ async function exportCanvasToPDF(canvas, w, h){
     if(spouseNode) connections.push({name:fullName(spouseNode),rel:genderedRel('Spouse',spouseNode.gender)});
     // CustomLinks
     Object.keys(p.customLinks||{}).forEach(tid=>{
-      const other=byId[tid]; if(!other) return;
+      const other=peopleById[tid]; if(!other) return;
       const v=p.customLinks[tid];
       const label=typeof v==='string'?v:v.label;
       connections.push({name:fullName(other),rel:label});
@@ -201,8 +201,8 @@ async function exportCanvasToPDF(canvas, w, h){
   const genCount=(()=>{
     let maxUp=0, maxDown=0;
     if(!you) return 1;
-    const walkUp=(id,d)=>{ const n=byId[id]; if(!n) return; if(d>maxUp) maxUp=d; (n.parents||[]).forEach(pid=>walkUp(pid,d+1)); };
-    const walkDn=(id,d)=>{ if(d>maxDown) maxDown=d; P.filter(x=>(x.parents||[]).includes(id)).forEach(c=>walkDn(c.id,d+1)); };
+    const walkUp=(id,d)=>{ const n=peopleById[id]; if(!n) return; if(d>maxUp) maxUp=d; (n.parents||[]).forEach(pid=>walkUp(pid,d+1)); };
+    const walkDn=(id,d)=>{ if(d>maxDown) maxDown=d; people.filter(x=>(x.parents||[]).includes(id)).forEach(c=>walkDn(c.id,d+1)); };
     walkUp(you.id,0); walkDn(you.id,0);
     return maxUp+maxDown+1;
   })();
@@ -255,7 +255,7 @@ async function exportCanvasToPDF(canvas, w, h){
   // Stats
   setFont('normal',12);
   pdf.setTextColor(muted);
-  pdf.text(`${P.length} Members  ·  ${genCount} Generations`,pw/2,400,{align:'center'});
+  pdf.text(`${people.length} Members  ·  ${genCount} Generations`,pw/2,400,{align:'center'});
 
   // Date
   setFont('normal',11);

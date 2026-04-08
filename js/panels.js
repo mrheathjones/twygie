@@ -8,25 +8,25 @@ function openMembersPanel(){
 }
 function closeMembersPanel(){
   document.getElementById('members-panel').classList.remove('open');
-  if(!selId) document.getElementById('scrim').classList.remove('on');
+  if(!selectedNodeId) document.getElementById('scrim').classList.remove('on');
 }
 
 function renderMembersList(){
   const query=(document.getElementById('mp-search-input').value||'').toLowerCase();
-  const youNode=P.find(p=>p.isYou);
+  const youNode=people.find(p=>p.isYou);
   const gen={};
   if(youNode){
     const q=[{id:youNode.id,gv:0}]; const vis=new Set();
     while(q.length){ const {id,gv}=q.shift(); if(vis.has(id)) continue; vis.add(id); gen[id]=gv;
-      const p=byId[id]; if(!p) continue;
+      const p=peopleById[id]; if(!p) continue;
       (p.parents||[]).forEach(pid=>{ if(!vis.has(pid)) q.push({id:pid,gv:gv-1}); });
-      P.filter(x=>(x.parents||[]).includes(id)).forEach(c=>{ if(!vis.has(c.id)) q.push({id:c.id,gv:gv+1}); });
+      people.filter(x=>(x.parents||[]).includes(id)).forEach(c=>{ if(!vis.has(c.id)) q.push({id:c.id,gv:gv+1}); });
     }
   }
-  P.forEach(p=>{ if(gen[p.id]===undefined) gen[p.id]=0; });
+  people.forEach(p=>{ if(gen[p.id]===undefined) gen[p.id]=0; });
 
   const genLabels={'-4':'Great-Great-Grandparents','-3':'Great-Grandparents','-2':'Grandparents','-1':'Parents','0':'Your Generation','1':'Children','2':'Grandchildren','3':'Great-Grandchildren'};
-  const filtered=P.filter(p=>!query||fullName(p).toLowerCase().includes(query));
+  const filtered=people.filter(p=>!query||fullName(p).toLowerCase().includes(query));
   const byGen2={};
   filtered.forEach(p=>{ const gv=gen[p.id]||0; if(!byGen2[gv]) byGen2[gv]=[]; byGen2[gv].push(p); });
   const gens=Object.keys(byGen2).map(Number).sort((a,b)=>a-b);
@@ -36,7 +36,7 @@ function renderMembersList(){
     const label=genLabels[gv]||(gv<0?`${Math.abs(gv)} generations up`:`${gv} generations down`);
     html+=`<div class="mp-gen">${label}</div>`;
     byGen2[gv].sort((a,b)=>fullName(a).localeCompare(fullName(b))).forEach(p=>{
-      const c=col(p), rel=getRelToYou(p.id);
+      const c=getNodeColor(p), rel=getRelToYou(p.id);
       html+=`<div class="mp-item" onclick="closeMembersPanel();selectNode('${p.id}')">
         <div class="mp-photo" style="color:${c}">${p.photo?`<img src="${p.photo}"/>`:`<span>${initials(p)}</span>`}</div>
         <div class="mp-info">
@@ -60,7 +60,7 @@ function openTimeline(){
 }
 function closeTimeline(){
   document.getElementById('timeline-panel').classList.remove('open');
-  if(!selId&&!document.getElementById('members-panel').classList.contains('open'))
+  if(!selectedNodeId&&!document.getElementById('members-panel').classList.contains('open'))
     document.getElementById('scrim').classList.remove('on');
 }
 
@@ -69,12 +69,12 @@ function renderTimeline(){
   const currentYear=new Date().getFullYear();
 
   // Build sorted list of members with birth years
-  const entries=P.map(p=>{
+  const entries=people.map(p=>{
     const birthYear=parseInt(p.dob&&p.dob.year)||p.birth||0;
     const deathYear=parseInt(p.dod&&p.dod.year)||p.death||0;
     const age=calcAge(p);
     const rel=p.isYou?'You':getRelToYou(p.id);
-    const c=col(p);
+    const c=getNodeColor(p);
     return {p,birthYear,deathYear,age,rel,color:c,name:fullName(p)};
   }).filter(e=>e.birthYear>0) // Only show members with known birth years
    .sort((a,b)=>a.birthYear-b.birthYear);
@@ -149,8 +149,8 @@ function calcAge(p){
   return endYear-birthYear;
 }
 
-function showTip(e,p){
-  if(selId||nodeDrag) return;
+function showTooltip(e,p){
+  if(selectedNodeId||nodeDragState) return;
   const t=document.getElementById('tip');
   const photoHtml=p.photo?`<div class="tip-photo"><img src="${p.photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/></div>`:'';
   const rel=getRelToYou(p.id);
@@ -160,7 +160,7 @@ function showTip(e,p){
   t.style.left=(e.clientX+14)+'px'; t.style.top=(e.clientY-12)+'px';
   t.classList.add('show');
 }
-function hideTip(){ document.getElementById('tip').classList.remove('show'); }
+function hideTooltip(){ document.getElementById('tip').classList.remove('show'); }
 
 // ─── SCRIM CLICK ─────────────────────────────────────────────────────────────
 function handleScrimClick(e){

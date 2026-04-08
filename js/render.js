@@ -15,8 +15,8 @@ function genderedRel(baseRel, gender){
 }
 
 function getRelToYou(id){
-  const you=P.find(p=>p.isYou); if(!you||id===you.id) return '';
-  const p=byId[id]; if(!p) return '';
+  const you=people.find(p=>p.isYou); if(!you||id===you.id) return '';
+  const p=peopleById[id]; if(!p) return '';
   // Check structural relationships FIRST (these are always correct)
   if((p.parents||[]).includes(you.id)) return genderedRel('Child',p.gender);
   if((you.parents||[]).includes(id)) return genderedRel('Parent',p.gender);
@@ -40,25 +40,25 @@ function getRelToYou(id){
   const myP=new Set(you.parents||[]);
   if(myP.size&&(p.parents||[]).some(pp=>myP.has(pp))) return genderedRel('Sibling',p.gender);
   const grandIds=new Set();
-  (you.parents||[]).forEach(pid=>{ const par=byId[pid]; if(par)(par.parents||[]).forEach(gid=>grandIds.add(gid)); });
+  (you.parents||[]).forEach(pid=>{ const par=peopleById[pid]; if(par)(par.parents||[]).forEach(gid=>grandIds.add(gid)); });
   if(grandIds.has(id)) return genderedRel('Grandparent',p.gender);
-  const myChildren=P.filter(x=>(x.parents||[]).includes(you.id));
+  const myChildren=people.filter(x=>(x.parents||[]).includes(you.id));
   for(const c of myChildren){ if((p.parents||[]).includes(c.id)) return genderedRel('Grandchild',p.gender); }
   // Infer in-law: parent of spouse's parent
-  const spouseId=you.spouseOf||(P.find(x=>x.spouseOf===you.id)||{}).id;
+  const spouseId=you.spouseOf||(people.find(x=>x.spouseOf===you.id)||{}).id;
   if(spouseId){
-    const sp=byId[spouseId];
+    const sp=peopleById[spouseId];
     if(sp){
       if((sp.parents||[]).includes(id)) return genderedRel('Parent',p.gender)+'-in-law';
-      const spSibs=P.filter(x=>x.id!==spouseId&&(x.parents||[]).some(pp=>(sp.parents||[]).includes(pp)));
+      const spSibs=people.filter(x=>x.id!==spouseId&&(x.parents||[]).some(pp=>(sp.parents||[]).includes(pp)));
       if(spSibs.some(s=>s.id===id)) return genderedRel('Sibling',p.gender)+'-in-law';
     }
   }
   return '';
 }
 
-const NS='http://www.w3.org/2000/svg';
-function se(t){ return document.createElementNS(NS,t); }
+const SVG_NS='http://www.w3.org/2000/svg';
+function createSvgElement(t){ return document.createElementNS(SVG_NS,t); }
 
 // ─── RENDER ───────────────────────────────────────────────────────────────────
 function render(){
@@ -70,7 +70,7 @@ function render(){
   drawNodes();
 }
 
-function bstyle(dy){
+function getBranchStyle(dy){
   // Blood parent-child lines — solid, bold
   const a=Math.abs(dy);
   if(a>280) return {w:10,o:.65};
@@ -100,7 +100,7 @@ function relCategory(p){
   const birthYear=parseInt(p.dob&&p.dob.year)||p.birth||0;
   const currentYear=new Date().getFullYear();
   if(birthYear>0 && (currentYear-birthYear)<=youngAge) return 'young';
-  const you=byId&&Object.values(byId).find(x=>x.isYou);
+  const you=peopleById&&Object.values(peopleById).find(x=>x.isYou);
   if(!you) return 'default';
   if((p.parents||[]).includes(you.id)) return 'child';
   if((you.parents||[]).includes(p.id)) return 'parent';
@@ -112,7 +112,7 @@ function relCategory(p){
   const pcl=p.customLinks&&p.customLinks[you.id];
   if(pcl) return 'extended';
   const grandIds=new Set();
-  (you.parents||[]).forEach(pid=>{ const par=byId[pid]; if(par)(par.parents||[]).forEach(gid=>grandIds.add(gid)); });
+  (you.parents||[]).forEach(pid=>{ const par=peopleById[pid]; if(par)(par.parents||[]).forEach(gid=>grandIds.add(gid)); });
   if(grandIds.has(p.id)) return 'grandparent';
   return 'default';
 }
@@ -133,7 +133,7 @@ function hexToRgb(hex){
   const r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
   return [r,g,b];
 }
-function brRgba(key, o){
+function getBranchRgba(key, o){
   const [r,g,b]=hexToRgb(lineColors[key]||DEFAULT_LINE_COLORS[key]);
   return `rgba(${r},${g},${b},${o})`;
 }
@@ -179,17 +179,17 @@ function drawBranches(){
   const simple=treeMode==='simple';
 
   // ── Parent-child lines (BLOOD: solid, bold) ──
-  P.forEach(child=>{
+  people.forEach(child=>{
     (child.parents||[]).forEach(pid=>{
-      const par=byId[pid]; if(!par) return;
+      const par=peopleById[pid]; if(!par) return;
       const dy=par.y-child.y;
-      const {w,o}=bstyle(dy);
-      const ox=orb(pid,child.id);
+      const {w,o}=getBranchStyle(dy);
+      const ox=deterministicOffset(pid,child.id);
       const r=Math.abs(dy)*.3;
       const d=`M ${par.x} ${par.y} C ${par.x+ox*.3} ${par.y+r} ${child.x+ox*.2} ${child.y-r} ${child.x} ${child.y}`;
-      const path=se('path');
+      const path=createSvgElement('path');
       path.setAttribute('d',d);
-      path.setAttribute('stroke', brRgba('parentChild', o));
+      path.setAttribute('stroke', getBranchRgba('parentChild', o));
       path.setAttribute('stroke-width',String(w));
       path.setAttribute('fill','none');
       path.setAttribute('stroke-linecap','round');
@@ -201,15 +201,15 @@ function drawBranches(){
 
   // ── Spouse lines (NON-BLOOD: dashed) ──
   const spouseDrawn=new Set();
-  P.forEach(p=>{
+  people.forEach(p=>{
     if(!p.spouseOf) return;
     const key=[p.id,p.spouseOf].sort().join('|');
     if(spouseDrawn.has(key)) return;
     spouseDrawn.add(key);
-    const sp=byId[p.spouseOf]; if(!sp) return;
-    const path=se('path');
+    const sp=peopleById[p.spouseOf]; if(!sp) return;
+    const path=createSvgElement('path');
     path.setAttribute('d',`M ${p.x} ${p.y} L ${sp.x} ${sp.y}`);
-    path.setAttribute('stroke', brRgba('spouse', .55));
+    path.setAttribute('stroke', getBranchRgba('spouse', .55));
     path.setAttribute('stroke-width','2.5');
     path.setAttribute('stroke-dasharray','8,5');
     path.setAttribute('fill','none');
@@ -220,7 +220,7 @@ function drawBranches(){
 
   // ── Sibling customLinks (solid) — Tree View; Blood extended (solid) + labeled (dashed) — All Twygs ──
   const sibDrawn=new Set();
-  P.forEach(p=>{
+  people.forEach(p=>{
     Object.entries(p.customLinks||{}).forEach(([tid,v])=>{
       const label=typeof v==='string'?v:v.label||'';
       // ALWAYS derive lineType from current BLOOD_LABELS — never trust stored lineType
@@ -233,13 +233,13 @@ function drawBranches(){
       const key=[p.id,tid].sort().join('|');
       if(sibDrawn.has(key)) return;
       sibDrawn.add(key);
-      const other=byId[tid]; if(!other) return;
+      const other=peopleById[tid]; if(!other) return;
       const mx=(p.x+other.x)/2, my=(p.y+other.y)/2-22;
       const isSib=lineType==='sibling';
-      const path=se('path');
+      const path=createSvgElement('path');
       path.setAttribute('d',`M ${p.x} ${p.y} Q ${mx} ${my} ${other.x} ${other.y}`);
       // Siblings: sibling color. Other blood (grandparent, aunt, etc): labeled/extended color but SOLID
-      path.setAttribute('stroke', isSib ? brRgba('sibling',.72) : brRgba('labeled',.72));
+      path.setAttribute('stroke', isSib ? getBranchRgba('sibling',.72) : getBranchRgba('labeled',.72));
       path.setAttribute('stroke-width',isSib?'3.5':'3');
       path.setAttribute('fill','none'); // NO dash — solid for all blood
       path.setAttribute('stroke-linecap','round');
@@ -254,19 +254,19 @@ function drawBranches(){
 
   // ── Auto-detected sibling lines from shared parents (BLOOD: solid bold, All Twygs only) ──
   const autoSibDrawn=new Set();
-  P.forEach(p=>{
+  people.forEach(p=>{
     const pars=p.parents||[];
     if(!pars.length) return;
-    P.filter(x=>x.id!==p.id&&(x.parents||[]).some(pp=>pars.includes(pp))).forEach(sib=>{
+    people.filter(x=>x.id!==p.id&&(x.parents||[]).some(pp=>pars.includes(pp))).forEach(sib=>{
       const key=[p.id,sib.id].sort().join('|');
       if(autoSibDrawn.has(key)) return;
       autoSibDrawn.add(key);
       // Skip if already drawn as a customLink sibling
       if(sibDrawn.has(key)) return;
       const mx=(p.x+sib.x)/2, my=(p.y+sib.y)/2-20;
-      const path=se('path');
+      const path=createSvgElement('path');
       path.setAttribute('d',`M ${p.x} ${p.y} Q ${mx} ${my} ${sib.x} ${sib.y}`);
-      path.setAttribute('stroke', brRgba('sibling', .55));
+      path.setAttribute('stroke', getBranchRgba('sibling', .55));
       path.setAttribute('stroke-width','3');
       path.setAttribute('fill','none');
       path.setAttribute('stroke-linecap','round');
@@ -278,7 +278,7 @@ function drawBranches(){
 
   // ── In-law + non-blood labeled customLinks (dashed, All Twygs only) ──
   const extDrawn=new Set();
-  P.forEach(p=>{
+  people.forEach(p=>{
     Object.entries(p.customLinks||{}).forEach(([tid,v])=>{
       const label=typeof v==='string'?v:v.label||'';
       const isSibLabel=['Brother','Sister','Half-brother','Half-sister'].includes(label);
@@ -289,11 +289,11 @@ function drawBranches(){
       const key=[p.id,tid].sort().join('|');
       if(extDrawn.has(key)) return;
       extDrawn.add(key);
-      const other=byId[tid]; if(!other) return;
+      const other=peopleById[tid]; if(!other) return;
       const mx=(p.x+other.x)/2, my=(p.y+other.y)/2-30;
-      const path=se('path');
+      const path=createSvgElement('path');
       path.setAttribute('d',`M ${p.x} ${p.y} Q ${mx} ${my} ${other.x} ${other.y}`);
-      path.setAttribute('stroke', brRgba(isInLaw?'inlaw':'labeled', .68));
+      path.setAttribute('stroke', getBranchRgba(isInLaw?'inlaw':'labeled', .68));
       path.setAttribute('stroke-width',isInLaw?'2.5':'2');
       path.setAttribute('stroke-dasharray',isInLaw?'8,4':'7,5');
       path.setAttribute('fill','none');
@@ -306,53 +306,53 @@ function drawBranches(){
 function drawNodes(){
   const nG=document.getElementById('nG');
   const defs=document.getElementById('defs-clips');
-  P.forEach(p=>{
-    const R=nr(p), GR=gr(p), c=col(p);
+  people.forEach(p=>{
+    const R=getNodeRadius(p), GR=getGlowRadius(p), c=getNodeColor(p);
     const delay=((p.x*.04+p.y*.02)%3.5).toFixed(2);
 
     if(p.photo){
-      const cp=se('clipPath'); cp.setAttribute('id',`cp-${p.id}`);
-      const ci=se('circle'); ci.setAttribute('r',String(R)); cp.appendChild(ci);
+      const cp=createSvgElement('clipPath'); cp.setAttribute('id',`cp-${p.id}`);
+      const ci=createSvgElement('circle'); ci.setAttribute('r',String(R)); cp.appendChild(ci);
       defs.appendChild(cp);
     }
 
-    const G=se('g');
+    const G=createSvgElement('g');
     G.setAttribute('class','nd');
     G.setAttribute('transform',`translate(${p.x},${p.y})`);
     G.dataset.id=p.id;
 
     // Extra wide glow for isYou
     if(p.isYou){
-      const outerGlow=se('circle');
+      const outerGlow=createSvgElement('circle');
       outerGlow.setAttribute('r',String(GR+16));
       outerGlow.setAttribute('fill',c);
       outerGlow.setAttribute('fill-opacity','.06');
-      outerGlow.setAttribute('filter',`url(#${gfilt(p)})`);
+      outerGlow.setAttribute('filter',`url(#${getGlowFilter(p)})`);
       G.appendChild(outerGlow);
     }
 
     // Connection count → pulse intensity
-    const cc=connCount(p);
+    const cc=getConnectionCount(p);
     // Scale opacity with connections (more = brighter glow)
     const baseOp=Math.min(0.45, 0.18 + cc*0.04);
 
     // Pulsing halo — standard for all nodes
-    const halo=se('circle');
+    const halo=createSvgElement('circle');
     halo.setAttribute('r',String(GR));
     halo.setAttribute('fill',c);
     halo.setAttribute('fill-opacity',String(baseOp.toFixed(2)));
-    halo.setAttribute('filter',`url(#${gfilt(p)})`);
-    halo.setAttribute('class',`gp hi ${gclass(p)}`);
+    halo.setAttribute('filter',`url(#${getGlowFilter(p)})`);
+    halo.setAttribute('class',`gp hi ${getGlowClass(p)}`);
     halo.style.animationDelay=`-${delay}s`;
 
     // Soft inner ring — brighter for highly-connected nodes
-    const ring=se('circle');
+    const ring=createSvgElement('circle');
     ring.setAttribute('r',String(R+4));
     ring.setAttribute('fill',c);
     ring.setAttribute('fill-opacity',String(Math.min(0.5, 0.22+cc*0.04).toFixed(2)));
 
     // Core
-    const core=se('circle');
+    const core=createSvgElement('circle');
     core.setAttribute('r',String(R));
     core.setAttribute('fill',p.photo?'rgba(0,0,0,.35)':c);
     core.setAttribute('class','core');
@@ -361,7 +361,7 @@ function drawNodes(){
 
     // Photo
     if(p.photo){
-      const img=se('image');
+      const img=createSvgElement('image');
       img.setAttribute('href',p.photo);
       img.setAttribute('x',String(-R)); img.setAttribute('y',String(-R));
       img.setAttribute('width',String(R*2)); img.setAttribute('height',String(R*2));
@@ -372,7 +372,7 @@ function drawNodes(){
     }
 
     // Label
-    const lbl=se('text');
+    const lbl=createSvgElement('text');
     lbl.textContent=p.isYou?'You':(p.firstName||fullName(p).split(' ')[0]);
     lbl.setAttribute('class',`nlbl${p.isYou?' you':''}`);
     lbl.setAttribute('text-anchor','middle');
@@ -382,7 +382,7 @@ function drawNodes(){
     // Bridge node indicator — gold dashed ring
     const bridge=getBridgeInfo(p.id);
     if(bridge){
-      const bRing=se('circle');
+      const bRing=createSvgElement('circle');
       bRing.setAttribute('r',String(R+8));
       bRing.setAttribute('fill','none');
       bRing.setAttribute('stroke','rgba(200,168,75,0.5)');
@@ -394,7 +394,7 @@ function drawNodes(){
 
     // Adopted node indicator — double ring with spinning outer
     if(p._adopted){
-      const outerA=se('circle');
+      const outerA=createSvgElement('circle');
       outerA.setAttribute('r',String(R+10));
       outerA.setAttribute('fill','none');
       outerA.setAttribute('stroke','rgba(200,168,75,0.6)');
@@ -402,7 +402,7 @@ function drawNodes(){
       outerA.setAttribute('stroke-dasharray','6,4');
       outerA.setAttribute('class','adopted-ring');
       G.appendChild(outerA);
-      const innerA=se('circle');
+      const innerA=createSvgElement('circle');
       innerA.setAttribute('r',String(R+6));
       innerA.setAttribute('fill','none');
       innerA.setAttribute('stroke','rgba(200,168,75,0.35)');
@@ -413,8 +413,8 @@ function drawNodes(){
     // Events
     G.addEventListener('mousedown',e=>onNodeMouseDown(e,p.id));
     G.addEventListener('touchstart',e=>onNodeTouchStart(e,p.id),{passive:true});
-    G.addEventListener('mouseenter',e=>showTip(e,p));
-    G.addEventListener('mouseleave',hideTip);
+    G.addEventListener('mouseenter',e=>showTooltip(e,p));
+    G.addEventListener('mouseleave',hideTooltip);
     nG.appendChild(G);
   });
 
@@ -425,7 +425,7 @@ function drawNodes(){
       const link=activeLinks.find(l=>l.id===sn._linkId);
       if(!link) return;
       const myBridgeId=link.userA===currentUser.uid?link.bridgeNodeIdA:link.bridgeNodeIdB;
-      const myBridge=byId[myBridgeId];
+      const myBridge=peopleById[myBridgeId];
       if(!myBridge) return;
 
       // Position shared nodes offset from bridge
@@ -435,13 +435,13 @@ function drawNodes(){
       const R=18; // smaller than normal nodes
       const c='rgba(200,168,75,0.4)';
 
-      const G=se('g');
+      const G=createSvgElement('g');
       G.setAttribute('class','nd shared-node');
       G.setAttribute('transform',`translate(${ox},${oy})`);
       G.setAttribute('opacity','0.5');
 
       // Dashed circle
-      const ring=se('circle');
+      const ring=createSvgElement('circle');
       ring.setAttribute('r',String(R));
       ring.setAttribute('fill','rgba(200,168,75,0.06)');
       ring.setAttribute('stroke','rgba(200,168,75,0.25)');
@@ -452,10 +452,10 @@ function drawNodes(){
       // Photo or initials
       if(sn.photo){
         const clipId=`cp-shared-${sn.id}`;
-        const cp=se('clipPath');cp.setAttribute('id',clipId);
-        const ci=se('circle');ci.setAttribute('r',String(R));cp.appendChild(ci);
+        const cp=createSvgElement('clipPath');cp.setAttribute('id',clipId);
+        const ci=createSvgElement('circle');ci.setAttribute('r',String(R));cp.appendChild(ci);
         defs.appendChild(cp);
-        const img=se('image');
+        const img=createSvgElement('image');
         img.setAttribute('href',sn.photo);
         img.setAttribute('x',String(-R));img.setAttribute('y',String(-R));
         img.setAttribute('width',String(R*2));img.setAttribute('height',String(R*2));
@@ -464,7 +464,7 @@ function drawNodes(){
         img.setAttribute('opacity','0.6');
         G.appendChild(img);
       } else {
-        const txt=se('text');
+        const txt=createSvgElement('text');
         txt.textContent=(sn.firstName||sn.name||'?').charAt(0).toUpperCase();
         txt.setAttribute('text-anchor','middle');txt.setAttribute('dominant-baseline','central');
         txt.setAttribute('fill','rgba(200,168,75,0.5)');txt.setAttribute('font-size','11');
@@ -473,7 +473,7 @@ function drawNodes(){
       }
 
       // Label
-      const lbl=se('text');
+      const lbl=createSvgElement('text');
       lbl.textContent=sn.firstName||sn.name||'?';
       lbl.setAttribute('text-anchor','middle');lbl.setAttribute('y',String(R+12));
       lbl.setAttribute('fill','rgba(200,168,75,0.35)');lbl.setAttribute('font-size','9');
@@ -489,7 +489,7 @@ function drawNodes(){
           tip.style.opacity='1';
         }
       });
-      G.addEventListener('mouseleave',hideTip);
+      G.addEventListener('mouseleave',hideTooltip);
       // Click shared node — show styled popup card
       G.addEventListener('click',()=>{
         const nm=sn.name||sn.firstName||'Unknown';
@@ -522,7 +522,7 @@ function drawNodes(){
       // Draw connection lines from shared node to parents and spouse
       const bG=document.getElementById('bG');
       const drawSharedLine=(tx,ty,color)=>{
-        const path=se('path');
+        const path=createSvgElement('path');
         path.setAttribute('d',`M ${ox} ${oy} L ${tx} ${ty}`);
         path.setAttribute('stroke',color||'rgba(200,168,75,0.15)');
         path.setAttribute('stroke-width','1.5');
@@ -533,25 +533,25 @@ function drawNodes(){
 
       // Parent connections
       (sn.parents||[]).forEach(pid=>{
-        let parent=byId[pid];
+        let parent=peopleById[pid];
         if(parent){drawSharedLine(parent.x,parent.y,'rgba(100,180,100,0.2)');return}
         const sp=sharedNodes.find(s=>s.id===pid);
         if(!sp) return;
         const spLink=activeLinks.find(l=>l.id===sp._linkId);
-        const spBridge=spLink?byId[spLink.userA===currentUser.uid?spLink.bridgeNodeIdA:spLink.bridgeNodeIdB]:null;
+        const spBridge=spLink?peopleById[spLink.userA===currentUser.uid?spLink.bridgeNodeIdA:spLink.bridgeNodeIdB]:null;
         if(!spBridge) return;
         drawSharedLine(spBridge.x+(sp.x||0)*0.6-300, spBridge.y+(sp.y||0)*0.6-200);
       });
 
       // Spouse connection
       if(sn.spouseOf){
-        const spouse=byId[sn.spouseOf];
+        const spouse=peopleById[sn.spouseOf];
         if(spouse){drawSharedLine(spouse.x,spouse.y,'rgba(100,140,220,0.2)')}
         else{
           const sp=sharedNodes.find(s=>s.id===sn.spouseOf);
           if(sp){
             const spLink=activeLinks.find(l=>l.id===sp._linkId);
-            const spBridge=spLink?byId[spLink.userA===currentUser.uid?spLink.bridgeNodeIdA:spLink.bridgeNodeIdB]:null;
+            const spBridge=spLink?peopleById[spLink.userA===currentUser.uid?spLink.bridgeNodeIdA:spLink.bridgeNodeIdB]:null;
             if(spBridge) drawSharedLine(spBridge.x+(sp.x||0)*0.6-300, spBridge.y+(sp.y||0)*0.6-200,'rgba(100,140,220,0.2)');
           }
         }

@@ -173,7 +173,7 @@ async function loadTree(){
 
   if(demoMode){
     // Demo mode: fresh tree every reload, saves blocked (treeLoaded stays false)
-    P=makeDefaultTree(currentUser);
+    people=makeDefaultTree(currentUser);
     console.log('Demo Mode: fresh tree created. Saves are disabled.');
   } else {
     try{
@@ -183,28 +183,28 @@ async function loadTree(){
         if(d.encryptedData && encryptionKey){
           // ── Encrypted format (Phase 2) ──
           try{
-            P=await decryptPeople(encryptionKey, d.encryptedData);
+            people=await decryptPeople(encryptionKey, d.encryptedData);
             treeLoaded=true;
             console.log('Tree loaded and decrypted successfully.');
           }catch(decErr){
             console.error('Decryption failed:',decErr);
-            P=makeDefaultTree(currentUser||{displayName:''});
+            people=makeDefaultTree(currentUser||{displayName:''});
             setTimeout(()=>appAlert('Could not decrypt your tree data. If you recently changed accounts, the encryption key may not match.'),500);
           }
         } else if(d.people && d.people.length){
           // ── Legacy plaintext format — migrate to encrypted ──
-          P=d.people;
+          people=d.people;
           treeLoaded=true;
           console.log('Legacy plaintext tree loaded. Migrating to encrypted format...');
           // Auto-migrate: save in encrypted format immediately
           if(encryptionKey){
             try{
-              const encrypted=await encryptPeople(encryptionKey,P);
+              const encrypted=await encryptPeople(encryptionKey,people);
               await userDoc().set({
                 encryptedData:encrypted,
                 encryptionVersion:1,
                 ownerEmail:currentUser.email||'',
-                nodeCount:P.length,
+                nodeCount:people.length,
                 updatedAt:firebase.firestore.FieldValue.serverTimestamp()
               });
               console.log('Migration complete — tree data is now encrypted.');
@@ -212,18 +212,18 @@ async function loadTree(){
           }
         } else {
           // ── Empty/new user ──
-          P=makeDefaultTree(currentUser);
+          people=makeDefaultTree(currentUser);
           treeLoaded=true;
           await saveTree(false);
         }
       } else {
-        P=makeDefaultTree(currentUser);
+        people=makeDefaultTree(currentUser);
         treeLoaded=true;
         await saveTree(false);
       }
     }catch(e){
       console.error('Failed to load tree from Firestore:',e);
-      P=makeDefaultTree(currentUser||{displayName:''});
+      people=makeDefaultTree(currentUser||{displayName:''});
       setTimeout(()=>appAlert('Could not load your tree. You may be offline. Your saved data is safe. Please refresh to try again.'),500);
     }
   }
@@ -235,20 +235,20 @@ async function saveTree(ind=true){
   try{
     if(encryptionKey){
       // ── Encrypted save (Phase 2) ──
-      const encrypted=await encryptPeople(encryptionKey, P);
+      const encrypted=await encryptPeople(encryptionKey, people);
       await userDoc().set({
         encryptedData:encrypted,
         encryptionVersion:1,
         ownerEmail:currentUser.email||'',
-        nodeCount:P.length,
+        nodeCount:people.length,
         updatedAt:firebase.firestore.FieldValue.serverTimestamp()
       });
     } else {
       // ── Fallback: plaintext save (Web Crypto unavailable) ──
       await userDoc().set({
-        people:P,
+        people:people,
         ownerEmail:currentUser.email||'',
-        nodeCount:P.length,
+        nodeCount:people.length,
         updatedAt:firebase.firestore.FieldValue.serverTimestamp()
       });
     }
@@ -260,7 +260,7 @@ function flashSaved(){ const e=document.getElementById('save-ind'); e.classList.
 function hideLoading(){ const e=document.getElementById('loading'); e.classList.add('fade'); setTimeout(()=>e.classList.add('gone'),420); }
 
 // ─── DATA ─────────────────────────────────────────────────────────────────────
-let P=[], byId={};
+let people=[], peopleById={};
 function migrateCustomLinks(p){
   if(!p.customLinks) return;
   Object.keys(p.customLinks).forEach(tid=>{
@@ -268,9 +268,9 @@ function migrateCustomLinks(p){
     if(typeof v==='string') p.customLinks[tid]={label:v,lineType:'labeled'};
   });
 }
-function rebuild(newIds=[]){ byId={}; P.forEach(p=>{ if(!p.dob) p.dob={}; if(!p.customLinks) p.customLinks={}; migrateCustomLinks(p); byId[p.id]=p; }); autoLayoutNew(newIds); updateCount(); }
-function g(id){ return byId[id]; }
-let nxt=Date.now();
+function rebuild(newIds=[]){ peopleById={}; people.forEach(p=>{ if(!p.dob) p.dob={}; if(!p.customLinks) p.customLinks={}; migrateCustomLinks(p); peopleById[p.id]=p; }); autoLayoutNew(newIds); updateCount(); }
+// g(id) removed — use peopleById[id] directly
+let nextNodeId=Date.now();
 let treeMode='complex'; // 'simple' | 'complex'
 let youngAge=17; // 'young' if age <= this
 let demoMode=false; // when true, creates fresh tree on every reload
@@ -290,14 +290,14 @@ function setTreeMode(mode){
   render();
 }
 function toggleTreeMode(){ setTreeMode(treeMode==='simple'?'complex':'simple'); }
-function updateCount(){ document.getElementById('mcnum').textContent=P.length; }
+function updateCount(){ document.getElementById('mcnum').textContent=people.length; }
 function fullName(p){ return p.name||[(p.firstName||''),(p.lastName||'')].filter(Boolean).join(' ')||'Unknown'; }
 
 // ─── AUTO LAYOUT ──────────────────────────────────────────────────────────────
 // CONVENTION: parents ABOVE (smaller y), children BELOW (larger y)
 function autoLayoutNew(newIds=[]){
-  if(!P.length) return;
-  const youNode=P.find(p=>p.isYou)||P[0];
+  if(!people.length) return;
+  const youNode=people.find(p=>p.isYou)||people[0];
   const gen={};
   const visited=new Set();
   const queue=[{id:youNode.id, gv:0}];
@@ -305,20 +305,20 @@ function autoLayoutNew(newIds=[]){
     const {id,gv}=queue.shift();
     if(visited.has(id)) continue;
     visited.add(id); gen[id]=gv;
-    const p=byId[id]; if(!p) continue;
+    const p=peopleById[id]; if(!p) continue;
     // Parents are ABOVE = negative gen (smaller y)
     (p.parents||[]).forEach(pid=>{ if(!visited.has(pid)) queue.push({id:pid,gv:gv-1}); });
     // Children are BELOW = positive gen (larger y)
-    P.filter(x=>(x.parents||[]).includes(id)).forEach(c=>{ if(!visited.has(c.id)) queue.push({id:c.id,gv:gv+1}); });
+    people.filter(x=>(x.parents||[]).includes(id)).forEach(c=>{ if(!visited.has(c.id)) queue.push({id:c.id,gv:gv+1}); });
     // Spouse: same generation
-    if(p.spouseOf){ const sp=byId[p.spouseOf]; if(sp&&!visited.has(p.spouseOf)) queue.push({id:p.spouseOf,gv}); }
-    const spNode=P.find(x=>x.spouseOf===id);
+    if(p.spouseOf){ const sp=peopleById[p.spouseOf]; if(sp&&!visited.has(p.spouseOf)) queue.push({id:p.spouseOf,gv}); }
+    const spNode=people.find(x=>x.spouseOf===id);
     if(spNode&&!visited.has(spNode.id)) queue.push({id:spNode.id,gv});
   }
-  P.forEach(p=>{ if(gen[p.id]===undefined) gen[p.id]=0; });
+  people.forEach(p=>{ if(gen[p.id]===undefined) gen[p.id]=0; });
 
   const byGen={};
-  P.forEach(p=>{ const gv=gen[p.id]; if(!byGen[gv]) byGen[gv]=[]; byGen[gv].push(p); });
+  people.forEach(p=>{ const gv=gen[p.id]; if(!byGen[gv]) byGen[gv]=[]; byGen[gv].push(p); });
 
   const centerX=600, baseY=400, genH=170, spacing=165;
 
@@ -331,7 +331,7 @@ function autoLayoutNew(newIds=[]){
     // Put you first, then spouses next to you
     people.sort((a,b)=>{
       if(a.isYou) return -1; if(b.isYou) return 1;
-      const you=P.find(x=>x.isYou);
+      const you=people.find(x=>x.isYou);
       if(you){
         const aIsSpouse=a.spouseOf===you.id||you.spouseOf===a.id;
         const bIsSpouse=b.spouseOf===you.id||you.spouseOf===b.id;
@@ -352,30 +352,30 @@ function autoLayoutNew(newIds=[]){
 }
 
 // ─── VISUAL HELPERS ───────────────────────────────────────────────────────────
-function col(p){
+function getNodeColor(p){
   const cat=relCategory(p);
   return nodeColors[cat]||nodeColors.default||'#f0b845';
 }
-function gclass(p){ const cat=relCategory(p); const map={you:'you',deceased:'blue',young:'teal'}; return map[cat]||'amber'; }
-function gfilt(p){ return 'gf-a'; } // Single filter — color driven by fill (nodeColors)
-function connCount(p){
+function getGlowClass(p){ const cat=relCategory(p); const map={you:'you',deceased:'blue',young:'teal'}; return map[cat]||'amber'; }
+function getGlowFilter(p){ return 'gf-a'; } // Single filter — color driven by fill (nodeColors)
+function getConnectionCount(p){
   // Count all connections: parents, children, spouse, siblings, customLinks
   let n=(p.parents||[]).length;
-  n+=P.filter(x=>(x.parents||[]).includes(p.id)).length;
-  if(p.spouseOf||(P.find(x=>x.spouseOf===p.id))) n+=1;
+  n+=people.filter(x=>(x.parents||[]).includes(p.id)).length;
+  if(p.spouseOf||(people.find(x=>x.spouseOf===p.id))) n+=1;
   n+=Object.keys(p.customLinks||{}).length;
   return n;
 }
-function nr(p){ return p.isYou?13:9; }
-function gr(p){
+function getNodeRadius(p){ return p.isYou?13:9; }
+function getGlowRadius(p){
   if(p.isYou) return 40;
   // Scale glow radius by connection count: more connections = bigger, brighter glow
-  const cc=connCount(p);
+  const cc=getConnectionCount(p);
   return Math.min(48, 22 + cc*4); // base 22, +4 per connection, cap 48
 }
 function initials(p){ const n=fullName(p); return n.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase(); }
 
-function orb(a,b){
+function deterministicOffset(a,b){
   const h=a.charCodeAt(0)*127+b.charCodeAt(0)*31+a.length*17;
   const v=Math.sin(h*.4531)*43758.5;
   return (v-Math.floor(v)-.5)*28;

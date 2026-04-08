@@ -1,31 +1,31 @@
 /* ═══ ui.js ═══ Node drag, selection, card display, editing, connection management ═══ */
 
 // ─── NODE DRAG ────────────────────────────────────────────────────────────────
-let nodeDrag=null;
+let nodeDragState=null;
 
 function onNodeMouseDown(e,id){
   e.stopPropagation();
-  const p=byId[id]; if(!p) return;
-  nodeDrag={id,startX:e.clientX,startY:e.clientY,origX:p.x,origY:p.y,moved:false};
+  const p=peopleById[id]; if(!p) return;
+  nodeDragState={id,startX:e.clientX,startY:e.clientY,origX:p.x,origY:p.y,moved:false};
 }
 
 function onNodeTouchStart(e,id){
   if(e.touches.length!==1) return;
-  const p=byId[id]; if(!p) return;
-  nodeDrag={id,startX:e.touches[0].clientX,startY:e.touches[0].clientY,origX:p.x,origY:p.y,moved:false,touch:true};
+  const p=peopleById[id]; if(!p) return;
+  nodeDragState={id,startX:e.touches[0].clientX,startY:e.touches[0].clientY,origX:p.x,origY:p.y,moved:false,touch:true};
 }
 
 document.addEventListener('mousemove',e=>{
-  if(nodeDrag){
-    const dx=e.clientX-nodeDrag.startX, dy=e.clientY-nodeDrag.startY;
-    if(!nodeDrag.moved&&Math.hypot(dx,dy)>6) nodeDrag.moved=true;
-    if(nodeDrag.moved){
-      hideTip();
-      const p=byId[nodeDrag.id]; if(!p) return;
-      p.x=nodeDrag.origX+dx/scale; p.y=nodeDrag.origY+dy/scale;
+  if(nodeDragState){
+    const dx=e.clientX-nodeDragState.startX, dy=e.clientY-nodeDragState.startY;
+    if(!nodeDragState.moved&&Math.hypot(dx,dy)>6) nodeDragState.moved=true;
+    if(nodeDragState.moved){
+      hideTooltip();
+      const p=peopleById[nodeDragState.id]; if(!p) return;
+      p.x=nodeDragState.origX+dx/scale; p.y=nodeDragState.origY+dy/scale;
       render();
       // Update branch dims if card open
-      if(selId) highlightConnected(selId);
+      if(selectedNodeId) highlightConnected(selectedNodeId);
     }
     return;
   }
@@ -33,50 +33,50 @@ document.addEventListener('mousemove',e=>{
 });
 
 document.addEventListener('mouseup',e=>{
-  if(nodeDrag){
-    if(!nodeDrag.moved) selectNode(nodeDrag.id);
+  if(nodeDragState){
+    if(!nodeDragState.moved) selectNode(nodeDragState.id);
     else scheduleSave();
-    nodeDrag=null; return;
+    nodeDragState=null; return;
   }
   drag=false; document.getElementById('wrap').style.cursor='';
 });
 
 document.addEventListener('touchmove',e=>{
-  if(nodeDrag&&nodeDrag.touch&&e.touches.length===1){
-    const dx=e.touches[0].clientX-nodeDrag.startX, dy=e.touches[0].clientY-nodeDrag.startY;
-    if(!nodeDrag.moved&&Math.hypot(dx,dy)>8) nodeDrag.moved=true;
-    if(nodeDrag.moved){
-      const p=byId[nodeDrag.id]; if(!p) return;
-      p.x=nodeDrag.origX+dx/scale; p.y=nodeDrag.origY+dy/scale;
+  if(nodeDragState&&nodeDragState.touch&&e.touches.length===1){
+    const dx=e.touches[0].clientX-nodeDragState.startX, dy=e.touches[0].clientY-nodeDragState.startY;
+    if(!nodeDragState.moved&&Math.hypot(dx,dy)>8) nodeDragState.moved=true;
+    if(nodeDragState.moved){
+      const p=peopleById[nodeDragState.id]; if(!p) return;
+      p.x=nodeDragState.origX+dx/scale; p.y=nodeDragState.origY+dy/scale;
       render();
     }
   }
 },{passive:true});
 
 document.addEventListener('touchend',()=>{
-  if(nodeDrag){
-    if(!nodeDrag.moved) selectNode(nodeDrag.id);
+  if(nodeDragState){
+    if(!nodeDragState.moved) selectNode(nodeDragState.id);
     else scheduleSave();
-    nodeDrag=null;
+    nodeDragState=null;
   }
   tpan=false;
 });
 
 // ─── SELECTION ────────────────────────────────────────────────────────────────
-let selId=null;
+let selectedNodeId=null;
 
 function highlightConnected(id){
-  const p=byId[id]; if(!p) return;
+  const p=peopleById[id]; if(!p) return;
   const conn=new Set([id]);
   (p.parents||[]).forEach(pid=>conn.add(pid));
-  P.filter(x=>(x.parents||[]).includes(id)).forEach(x=>conn.add(x.id));
+  people.filter(x=>(x.parents||[]).includes(id)).forEach(x=>conn.add(x.id));
   const myP=new Set(p.parents||[]);
-  P.filter(x=>x.id!==id&&(x.parents||[]).some(pp=>myP.has(pp))).forEach(x=>conn.add(x.id));
+  people.filter(x=>x.id!==id&&(x.parents||[]).some(pp=>myP.has(pp))).forEach(x=>conn.add(x.id));
   if(p.spouseOf) conn.add(p.spouseOf);
-  const sp=P.find(x=>x.spouseOf===id); if(sp) conn.add(sp.id);
+  const sp=people.find(x=>x.spouseOf===id); if(sp) conn.add(sp.id);
   // Include labeled connections (customLinks)
   Object.keys(p.customLinks||{}).forEach(tid=>conn.add(tid));
-  P.filter(x=>x.customLinks&&x.customLinks[id]).forEach(x=>conn.add(x.id));
+  people.filter(x=>x.customLinks&&x.customLinks[id]).forEach(x=>conn.add(x.id));
 
   document.querySelectorAll('.nd').forEach(n=>{
     n.classList.toggle('dim',!conn.has(n.dataset.id));
@@ -89,10 +89,10 @@ function highlightConnected(id){
 }
 
 function selectNode(id){
-  selId=id; hideTip();
+  selectedNodeId=id; hideTooltip();
   highlightConnected(id);
-  zoomTo(byId[id]);
-  fillCard(byId[id]);
+  zoomTo(peopleById[id]);
+  fillCard(peopleById[id]);
   document.getElementById('card').classList.add('open');
   document.getElementById('scrim').classList.add('on');
 }
@@ -107,7 +107,7 @@ function zoomTo(p){
 
 function fillCard(p){
   if(!p) return;
-  const c=col(p);
+  const c=getNodeColor(p);
   document.getElementById('cbar').style.cssText=`background:${c};box-shadow:0 0 10px ${c}`;
   const av=document.getElementById('cavatar');
   av.style.borderColor=c;
@@ -118,7 +118,7 @@ function fillCard(p){
 
   // Anniversary display
   const annivEl=document.getElementById('canniv');
-  const spNode=p.spouseOf?byId[p.spouseOf]:P.find(x=>x.spouseOf===p.id);
+  const spNode=p.spouseOf?peopleById[p.spouseOf]:people.find(x=>x.spouseOf===p.id);
   const wd=p.weddingDate||(spNode&&spNode.weddingDate)||null;
   if(wd&&(wd.month||wd.day||wd.year)){
     const months=['','January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -151,25 +151,25 @@ function fillCard(p){
 
   // Connections
   const parentsArr=(p.parents||[]).map(pid=>{
-    const par=byId[pid]; if(!par) return null;
+    const par=peopleById[pid]; if(!par) return null;
     // Label is always from the PERSPECTIVE of person p (who is the child)
     const lbl=genderedRel('Parent',par.gender);
     return {p:par,rel:lbl,connType:'parent'};
   }).filter(Boolean);
 
-  const children=P.filter(x=>(x.parents||[]).includes(p.id)).map(x=>({
+  const children=people.filter(x=>(x.parents||[]).includes(p.id)).map(x=>({
     p:x, rel: x.relLabel?genderedRel(x.relLabel,x.gender):genderedRel('Child',x.gender)
   }));
 
   const myP2=new Set(p.parents||[]);
-  const sibs=P.filter(x=>x.id!==p.id&&(x.parents||[]).some(pp=>myP2.has(pp))).map(x=>({
+  const sibs=people.filter(x=>x.id!==p.id&&(x.parents||[]).some(pp=>myP2.has(pp))).map(x=>({
     p:x, rel:genderedRel('Sibling',x.gender), connType:'sibling'
   }));
 
-  const spouseNode=p.spouseOf?byId[p.spouseOf]:P.find(x=>x.spouseOf===p.id);
+  const spouseNode=p.spouseOf?peopleById[p.spouseOf]:people.find(x=>x.spouseOf===p.id);
   const spouses=spouseNode?[{p:spouseNode,rel:genderedRel('Spouse',spouseNode.gender),connType:'spouse'}]:[];
   // Include labeled connections (in-laws, etc.)
-  const labeled=Object.entries(p.customLinks||{}).map(([tid,v])=>({p:byId[tid],rel:typeof v==='string'?v:v.label,targetId:tid,connType:typeof v==='string'?'labeled':v.lineType||'labeled'})).filter(x=>x.p);
+  const labeled=Object.entries(p.customLinks||{}).map(([tid,v])=>({p:peopleById[tid],rel:typeof v==='string'?v:v.label,targetId:tid,connType:typeof v==='string'?'labeled':v.lineType||'labeled'})).filter(x=>x.p);
   const conns=[...spouses,...parentsArr,...children,...sibs,...labeled];
 
   let html='';
@@ -178,7 +178,7 @@ function fillCard(p){
     html+=`<div class="csec">Connections</div><div class="frow" id="conn-list-${p.id}">`;
     const MAX_SHOW=5;
     conns.forEach(({p:cp,rel,targetId,connType},idx)=>{
-      const cc=col(cp);
+      const cc=getNodeColor(cp);
       const chipPhoto=cp.photo
         ?`<div class="fchip-photo"><img src="${cp.photo}"/></div>`
         :`<div class="fdot" style="background:${cc};box-shadow:0 0 5px ${cc}"></div>`;
@@ -237,7 +237,7 @@ function stateSelectOpts(current){
 }
 
 function editCard(id){
-  const p=byId[id]; if(!p) return;
+  const p=peopleById[id]; if(!p) return;
   const months=['','January','February','March','April','May','June','July','August','September','October','November','December'];
   const mOpts=months.map((m,i)=>m?`<option value="${i}" ${p.dob&&p.dob.month==i?'selected':''}>${m}</option>`:'<option value="">Month</option>').join('');
   const photoPreview=p.photo?`<img src="${p.photo}"/>`:`<span style="font-size:.65rem;color:var(--muted)">None</span>`;
@@ -272,7 +272,7 @@ function editCard(id){
     </div>
     <div class="ef"><label class="el">Story</label>
       <textarea class="ei" id="ei-note" rows="3" style="resize:vertical" placeholder="A brief memory or note…">${p.note||''}</textarea></div>
-    ${(p.spouseOf||P.find(x=>x.spouseOf===p.id))?`
+    ${(p.spouseOf||people.find(x=>x.spouseOf===p.id))?`
     <div class="ef"><label class="el">💍 Wedding Date</label>
       <div class="ef-row c3">
         <select class="ei" id="ei-wd-month" style="appearance:none">
@@ -284,7 +284,7 @@ function editCard(id){
       </div>
     </div>`:''}
     <button class="savebtn" onclick="saveCard('${id}')">Save changes</button>
-    <button class="cancelbtn" onclick="fillCard(byId['${id}'])">Cancel</button>
+    <button class="cancelbtn" onclick="fillCard(peopleById['${id}'])">Cancel</button>
   </div>`;
   document.getElementById('ei-first').focus();
 }
@@ -293,7 +293,7 @@ function handlePhotoUpload(event,id){
   const file=event.target.files[0]; if(!file) return;
   const reader=new FileReader();
   reader.onload=e=>{
-    const p=byId[id]; if(!p) return;
+    const p=peopleById[id]; if(!p) return;
     p.photo=e.target.result;
     const prev=document.getElementById('edit-photo-preview');
     if(prev) prev.innerHTML=`<img src="${p.photo}"/>`;
@@ -301,10 +301,10 @@ function handlePhotoUpload(event,id){
   };
   reader.readAsDataURL(file);
 }
-function removePhoto(id){ const p=byId[id]; if(!p) return; delete p.photo; render(); scheduleSave(); editCard(id); }
+function removePhoto(id){ const p=peopleById[id]; if(!p) return; delete p.photo; render(); scheduleSave(); editCard(id); }
 
 function saveCard(id){
-  const p=byId[id]; if(!p) return;
+  const p=peopleById[id]; if(!p) return;
   const first=document.getElementById('ei-first').value.trim();
   const last=document.getElementById('ei-last').value.trim();
   p.firstName=first; p.lastName=last;
@@ -325,7 +325,7 @@ function saveCard(id){
     const wd={month:wdMonth.value,day:document.getElementById('ei-wd-day').value,year:document.getElementById('ei-wd-year').value};
     if(wd.month||wd.day||wd.year){
       p.weddingDate=wd;
-      const spouse=p.spouseOf?byId[p.spouseOf]:P.find(x=>x.spouseOf===p.id);
+      const spouse=p.spouseOf?peopleById[p.spouseOf]:people.find(x=>x.spouseOf===p.id);
       if(spouse) spouse.weddingDate=wd;
     }
   }
@@ -336,20 +336,20 @@ function closeCard(){
   document.getElementById('card').classList.remove('open');
   if(!document.getElementById('members-panel').classList.contains('open'))
     document.getElementById('scrim').classList.remove('on');
-  selId=null;
+  selectedNodeId=null;
   document.querySelectorAll('.nd').forEach(n=>n.classList.remove('dim','sel'));
   document.querySelectorAll('.br').forEach(b=>b.classList.remove('dim','lit'));
   resetView();
 }
 
 async function removePerson(id){
-  const p=byId[id]; if(!p) return;
-  const children=P.filter(x=>(x.parents||[]).includes(id));
+  const p=peopleById[id]; if(!p) return;
+  const children=people.filter(x=>(x.parents||[]).includes(id));
   
   let cascade=false;
   if(children.length){
     const descendants=[];
-    function countDesc(pid){ P.filter(x=>(x.parents||[]).includes(pid)).forEach(x=>{descendants.push(x.id);countDesc(x.id);}); }
+    function countDesc(pid){ people.filter(x=>(x.parents||[]).includes(pid)).forEach(x=>{descendants.push(x.id);countDesc(x.id);}); }
     countDesc(id);
 
     if(descendants.length){
@@ -368,17 +368,17 @@ async function removePerson(id){
 
   const rm=new Set([id]);
   if(cascade){
-    function collect(pid){ P.filter(x=>(x.parents||[]).includes(pid)).forEach(x=>{rm.add(x.id);collect(x.id);}); }
+    function collect(pid){ people.filter(x=>(x.parents||[]).includes(pid)).forEach(x=>{rm.add(x.id);collect(x.id);}); }
     collect(id);
   } else {
     // Just unlink children from this parent
-    P.forEach(x=>{
+    people.forEach(x=>{
       if((x.parents||[]).includes(id)) x.parents=x.parents.filter(pid=>pid!==id);
     });
   }
-  P=P.filter(p=>!rm.has(p.id));
+  people=people.filter(p=>!rm.has(p.id));
   // Clean up spouse and customLink references
-  P.forEach(p=>{
+  people.forEach(p=>{
     if(p.spouseOf&&rm.has(p.spouseOf)) delete p.spouseOf;
     if(p.customLinks) Object.keys(p.customLinks).forEach(k=>{ if(rm.has(k)) delete p.customLinks[k]; });
   });
@@ -389,7 +389,7 @@ function editConnRel(fromId, toId, connType){
   const chip=document.getElementById(`chip-${fromId}-${toId}`);
   if(!chip) return;
   // Build select with all relationship options
-  const from=P.find(p=>p.id===fromId);
+  const from=people.find(p=>p.id===fromId);
   const fname=from?(from.firstName||fullName(from).split(' ')[0]):'them';
   const sel=document.createElement('select');
   sel.className='fchip-edit-select';
@@ -410,7 +410,7 @@ function editConnRel(fromId, toId, connType){
   ];
 
   // Get current rel label to pre-select
-  const to=P.find(p=>p.id===toId);
+  const to=people.find(p=>p.id===toId);
   const currentLabel=to?.relLabel||(to?.customLinks?.[fromId]?.label)||'';
 
   groups.forEach(([grpLabel,opts])=>{
@@ -436,8 +436,8 @@ function editConnRel(fromId, toId, connType){
 }
 
 function saveEditedConnRel(fromId, toId, connType, newLabel){
-  const from=P.find(p=>p.id===fromId);
-  const to=P.find(p=>p.id===toId); if(!from||!to) return;
+  const from=people.find(p=>p.id===fromId);
+  const to=people.find(p=>p.id===toId); if(!from||!to) return;
 
   const ltype=BLOOD_LABELS.has(newLabel)?'blood':'labeled';
 
@@ -481,9 +481,9 @@ function saveEditedConnRel(fromId, toId, connType, newLabel){
 
 async function removeConnFromCard(fromId, toId, connType){
   if(!await appConfirm('Remove this connection?','Remove','Keep')) return;
-  // Always get fresh references from P (byId may be stale)
-  const from=P.find(p=>p.id===fromId);
-  const to=P.find(p=>p.id===toId);
+  // Always get fresh references from people (peopleById may be stale)
+  const from=people.find(p=>p.id===fromId);
+  const to=people.find(p=>p.id===toId);
   if(!from||!to){ console.warn('removeConn: node not found',fromId,toId); return; }
 
   switch(connType){
@@ -515,7 +515,7 @@ async function removeConnFromCard(fromId, toId, connType){
       if(to.customLinks) delete to.customLinks[fromId];
       delete from.relLabel; delete to.relLabel;
       // Clean up any YOU → node customLink too
-      const you=P.find(p=>p.isYou);
+      const you=people.find(p=>p.isYou);
       if(you&&you.id!==fromId&&you.id!==toId){
         if(you.customLinks) { delete you.customLinks[toId]; delete you.customLinks[fromId]; }
       }
@@ -526,7 +526,7 @@ async function removeConnFromCard(fromId, toId, connType){
 }
 
 function deleteConnection(fromId, toId){
-  const from=byId[fromId]; const to=byId[toId]; if(!from||!to) return;
+  const from=peopleById[fromId]; const to=peopleById[toId]; if(!from||!to) return;
   if(from.customLinks) delete from.customLinks[toId];
   if(to.customLinks) delete to.customLinks[fromId];
   if(to.relLabel) delete to.relLabel;
@@ -535,7 +535,7 @@ function deleteConnection(fromId, toId){
 }
 
 // ─── ADD CONNECTION MODAL ────────────────────────────────────────────────────
-let connForId=null, connSelectedId=null;
+let connectionForNodeId=null, connectionSelectedNodeId=null;
 
 function buildConnRelOptions(name){
   const n=name||'them';
@@ -607,8 +607,8 @@ function buildConnRelOptions(name){
 }
 
 function openConnModal(id){
-  connForId=id; connSelectedId=null;
-  const p=byId[id];
+  connectionForNodeId=id; connectionSelectedNodeId=null;
+  const p=peopleById[id];
   const firstName=p.firstName||fullName(p).split(' ')[0];
   document.getElementById('conn-sub').textContent=`Link another member's relationship to ${fullName(p)}`;
   document.getElementById('conn-rel').innerHTML=buildConnRelOptions(firstName);
@@ -616,16 +616,16 @@ function openConnModal(id){
   renderConnList('');
   document.getElementById('conn-bg').classList.add('open');
 }
-function closeConnModal(){ document.getElementById('conn-bg').classList.remove('open'); connForId=null; connSelectedId=null; }
+function closeConnModal(){ document.getElementById('conn-bg').classList.remove('open'); connectionForNodeId=null; connectionSelectedNodeId=null; }
 
 function filterConnList(){ renderConnList(document.getElementById('conn-search').value||''); }
 
 function renderConnList(query){
   const q=query.toLowerCase();
-  const list=P.filter(p=>p.id!==connForId&&(!q||fullName(p).toLowerCase().includes(q)));
+  const list=people.filter(p=>p.id!==connectionForNodeId&&(!q||fullName(p).toLowerCase().includes(q)));
   document.getElementById('conn-list').innerHTML=list.map(p=>`
-    <div class="conn-item${connSelectedId===p.id?' selected':''}" onclick="selectConnNode('${p.id}')">
-      <div class="conn-item-dot" style="background:${col(p)}"></div>
+    <div class="conn-item${connectionSelectedNodeId===p.id?' selected':''}" onclick="selectConnNode('${p.id}')">
+      <div class="conn-item-dot" style="background:${getNodeColor(p)}"></div>
       <div>
         <div class="conn-item-name">${fullName(p)}${p.isYou?' <span style="font-size:.72rem;color:var(--gold);font-weight:500">(You)</span>':''}</div>
         <div class="conn-item-sub">${getRelToYou(p.id)||dobDisplay(p)}</div>
@@ -634,17 +634,17 @@ function renderConnList(query){
 }
 
 function selectConnNode(id){
-  connSelectedId=id;
+  connectionSelectedNodeId=id;
   document.querySelectorAll('.conn-item').forEach(el=>el.classList.remove('selected'));
   document.querySelectorAll('.conn-item').forEach(el=>{
-    if(el.querySelector('.conn-item-name').textContent===fullName(byId[id])) el.classList.add('selected');
+    if(el.querySelector('.conn-item-name').textContent===fullName(peopleById[id])) el.classList.add('selected');
   });
 }
 
 function saveConnection(){
-  if(!connForId||!connSelectedId){ appAlert('Please select a member.'); return; }
-  const target=byId[connForId];   // the node the card is about
-  const other=byId[connSelectedId]; // the node we're connecting to it
+  if(!connectionForNodeId||!connectionSelectedNodeId){ appAlert('Please select a member.'); return; }
+  const target=peopleById[connectionForNodeId];   // the node the card is about
+  const other=peopleById[connectionSelectedNodeId]; // the node we're connecting to it
   const rel=document.getElementById('conn-rel').value;
 
   const dashIdx=rel.indexOf('-');
@@ -710,10 +710,10 @@ function saveConnection(){
   }
 
   // Auto-assign inferred relationship to isYou
-  autoAssignToYou(connSelectedId, connForId, label);
-  autoAssignToYou(connForId, connSelectedId, label);
+  autoAssignToYou(connectionSelectedNodeId, connectionForNodeId, label);
+  autoAssignToYou(connectionForNodeId, connectionSelectedNodeId, label);
   rebuild([]); render(); scheduleSave();
   closeConnModal();
-  selectNode(connForId);
+  selectNode(connectionForNodeId);
 }
 
