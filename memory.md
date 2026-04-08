@@ -386,3 +386,17 @@ treeLinks/{linkId}
 - All browser confirm()/alert() replaced — dark glass aesthetic matching app
 
 **Known gotcha**: Function scoping — never define functions inside other functions via str_replace. Always ensure closing `}` before starting new function.
+
+### UI Polish (Session 10 — Late)
+- Connections section: limited to 5, "See all N connections" button expands
+- dobDisplay: full month names + comma ("January 1, 1980")
+- Young node animation: removed (all nodes use standard pulse now)
+- BLOOD_LABELS expanded: added in-law labels (Brother/Sister/Father/Mother-in-law, Son/Daughter-in-law, Godfather/Godmother)
+- drawBranches: BOTH blood and non-blood sections re-check BLOOD_LABELS at draw time using label text, ignoring stale stored lineType
+- recalcAllRelationships(force): force param bypasses autoConnections toggle check — used by adoptBatch
+- Linked legend: inline SVG circle with stroke-dasharray (CSS border too small)
+
+### Known Issues to Revisit
+- In-law connection lines may not draw for adopted nodes that had lineType:'labeled' stored before BLOOD_LABELS update — re-check in next session
+- Selective sharing tier (Phase 3c intermediate) not yet implemented — only Bridge Only and Share All
+- Photos in shared data stripped (Firestore 1MB limit) — future: Firebase Storage with URLs

@@ -404,3 +404,13 @@ Built as a separate HTML page (timeline.html) with:
 - appConfirm(msg, okText, cancelText): two buttons with custom labels
 - appChoice(msg, btnA, btnB, cancelText): three buttons, returns 'a'/'b'/false
 - All browser confirm()/alert() calls replaced throughout the app
+
+### UI Polish & Bug Fixes (Session 10 — Late)
+- Connections limited to top 5 with "See all N connections" button
+- Young node pulse animation removed (matches all other nodes now)
+- Birthdate format: "Jan 1 1980" → "January 1, 1980" (full month, comma)
+- Linked legend icon: replaced CSS border with inline SVG dashed circle
+- In-law labels (Brother/Sister/Father/Mother-in-law etc.) added to BLOOD_LABELS
+- Both drawBranches sections re-check BLOOD_LABELS at draw time (fixes stale lineType)
+- recalcAllRelationships(force) parameter added — adoptBatch forces recalc for in-law links
+- Godfather/Godmother added to BLOOD_LABELS
