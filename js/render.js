@@ -227,9 +227,16 @@ function drawBranches(){
     });
   }
   function crossesMarriage(idA, idB){
-    // If both are blood family or both are NOT blood family, it's same-side
-    // If one is blood and the other isn't, the connection crosses a marriage boundary
-    return bloodFamily.has(idA) !== bloodFamily.has(idB);
+    // Primary check: bloodFamily BFS
+    if(bloodFamily.has(idA) !== bloodFamily.has(idB)) return true;
+    // Secondary check: a node is "married-in" if it has spouseOf AND is NOT in bloodFamily
+    // (blood relatives who are married still have spouseOf but ARE in bloodFamily)
+    const a=peopleById[idA], b=peopleById[idB];
+    if(!a||!b) return false;
+    const aMarriedIn=!!a.spouseOf && !bloodFamily.has(idA);
+    const bMarriedIn=!!b.spouseOf && !bloodFamily.has(idB);
+    if(aMarriedIn!==bMarriedIn) return true;
+    return false;
   }
 
   // ── Parent-child lines (BLOOD: solid, bold) ──
