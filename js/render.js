@@ -455,6 +455,15 @@ function drawBranches(){
       for(let j=i+1;j<kids.length;j++){
         const a=peopleById[kids[i]], b=peopleById[kids[j]];
         if(!a||!b) continue;
+        // Skip if one is married to someone in this same parent group (in-law, not sibling)
+        // e.g. Sara (spouse) shares parents with Maddy because Sara was added as co-parent
+        if(a.spouseOf&&childSet.has(a.spouseOf)) continue;
+        if(b.spouseOf&&childSet.has(b.spouseOf)) continue;
+        // Also check reverse spouseOf
+        const aSpouse=people.find(x=>x.spouseOf===kids[i]);
+        const bSpouse=people.find(x=>x.spouseOf===kids[j]);
+        if(aSpouse&&childSet.has(aSpouse.id)) continue;
+        if(bSpouse&&childSet.has(bSpouse.id)) continue;
         const key=[kids[i],kids[j]].sort().join('|');
         if(autoSibDrawn.has(key)||sibDrawn.has(key)) continue;
         autoSibDrawn.add(key);
