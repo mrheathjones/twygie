@@ -144,6 +144,7 @@ async function burnTwygs(){
     you.parents=[];
     you.spouseOf=null;
     you.customLinks={};
+    you.relationships=[];
     delete you.weddingDate;
   }
   people.length=0;
@@ -314,13 +315,24 @@ function hideLoading(){ const e=document.getElementById('loading'); e.classList.
 // ─── DATA ─────────────────────────────────────────────────────────────────────
 let people=[], peopleById={};
 function migrateCustomLinks(p){
-  if(!p.customLinks) return;
+  if(!p.customLinks) p.customLinks={};
+  // Legacy: string values → object
   Object.keys(p.customLinks).forEach(tid=>{
     const v=p.customLinks[tid];
     if(typeof v==='string') p.customLinks[tid]={label:v,lineType:'labeled'};
   });
+  // v2 migration: customLinks → relationships[]
+  if(!p.relationships) p.relationships=[];
+  Object.entries(p.customLinks).forEach(([tid,v])=>{
+    const label=typeof v==='string'?v:v.label||'';
+    if(!label) return;
+    // Skip if already in relationships[]
+    if(p.relationships.some(r=>r.targetId===tid)) return;
+    const category=getRelCategory(label);
+    p.relationships.push({targetId:tid, label, category, structural:false});
+  });
 }
-function rebuild(newIds=[]){ peopleById={}; people.forEach(p=>{ if(!p.dob) p.dob={}; if(!p.customLinks) p.customLinks={}; migrateCustomLinks(p); peopleById[p.id]=p; }); autoLayoutNew(newIds); updateCount(); }
+function rebuild(newIds=[]){ peopleById={}; people.forEach(p=>{ if(!p.dob) p.dob={}; if(!p.customLinks) p.customLinks={}; if(!p.relationships) p.relationships=[]; migrateCustomLinks(p); peopleById[p.id]=p; }); autoLayoutNew(newIds); updateCount(); }
 // g(id) removed — use peopleById[id] directly
 let nextNodeId=Date.now();
 let treeMode='complex'; // 'simple' | 'complex'

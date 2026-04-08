@@ -305,39 +305,56 @@ function drawBranches(){
     });
   }
 
-  // ── Sibling + blood customLinks (solid) ──
-  const sibDrawn=new Set();
-  if(showBlood) people.forEach(p=>{
-    Object.entries(p.customLinks||{}).forEach(([tid,v])=>{
-      const label=typeof v==='string'?v:v.label||'';
-      // ALWAYS derive lineType from current BLOOD_LABELS — never trust stored lineType
-      const isSibLabel=['Brother','Sister','Half-brother','Half-sister','Stepbrother','Stepsister','Sibling'].includes(label);
-      const isInLaw=label.includes('-in-law');
-      let lineType=isSibLabel?'sibling':isInLaw?'inlaw':BLOOD_LABELS.has(label)?'blood':'labeled';
-      // Reclassify: blood label that crosses a marriage boundary → render as in-law
-      if(lineType==='blood'&&crossesMarriage(p.id,tid)) lineType='inlaw';
-      if(lineType==='sibling'&&crossesMarriage(p.id,tid)) lineType='inlaw';
-      // Siblings + blood extended only in this section
-      if(lineType!=='sibling'&&lineType!=='blood') return;
-      if(lineType==='blood'&&!showExtended) return;
-      const key=[p.id,tid].sort().join('|');
-      if(sibDrawn.has(key)) return;
-      sibDrawn.add(key);
-      const other=peopleById[tid]; if(!other) return;
-      const mx=(p.x+other.x)/2, my=(p.y+other.y)/2-22;
-      const isSib=lineType==='sibling';
+  // ── Relationship lines from relationships[] (v2 engine) ──
+  const relDrawn=new Set();
+  people.forEach(p=>{
+    (p.relationships||[]).forEach(rel=>{
+      const key=[p.id,rel.targetId].sort().join('|');
+      if(relDrawn.has(key)) return;
+      relDrawn.add(key);
+      const other=peopleById[rel.targetId]; if(!other) return;
+      const cat=rel.category||getRelCategory(rel.label);
+      const isSib=SIBLING_LABELS.has(rel.label);
+
+      // View mode filtering
+      if(isSib && !showBlood) return;                    // siblings are blood
+      if(cat==='blood' && !showBlood) return;            // blood connections
+      if(cat==='bond' && !showNonBlood) return;          // bonds/in-laws
+      if(cat==='custom' && !showNonBlood) return;        // custom connections
+      if(!isSib && cat==='blood' && !showExtended) return; // extended blood only in extended views
+      if(cat!=='blood' && !showExtended) return;          // bonds/custom only in extended views
+
+      const mx=(p.x+other.x)/2, my=(p.y+other.y)/2-(isSib?22:cat==='blood'?22:30);
       const path=createSvgElement('path');
       path.setAttribute('d',`M ${p.x} ${p.y} Q ${mx} ${my} ${other.x} ${other.y}`);
-      // Siblings: sibling color. Other blood (grandparent, aunt, etc): labeled/extended color but SOLID
-      path.setAttribute('stroke', isSib ? getBranchRgba('sibling',.72) : getBranchRgba('labeled',.72));
-      path.setAttribute('stroke-width',isSib?'3.5':'3');
-      path.setAttribute('fill','none'); // NO dash — solid for all blood
+
+      if(isSib){
+        // Sibling: solid orange
+        path.setAttribute('stroke', getBranchRgba('sibling',.72));
+        path.setAttribute('stroke-width','3.5');
+      } else if(cat==='blood'){
+        // Extended Roots: solid purple
+        path.setAttribute('stroke', getBranchRgba('labeled',.72));
+        path.setAttribute('stroke-width','3');
+      } else if(cat==='bond'){
+        // Extended Bonds: dashed pink
+        path.setAttribute('stroke', getBranchRgba('inlaw',.68));
+        path.setAttribute('stroke-width','2.5');
+        path.setAttribute('stroke-dasharray','8,4');
+      } else {
+        // Custom/Bonds: dashed purple
+        path.setAttribute('stroke', getBranchRgba('labeled',.68));
+        path.setAttribute('stroke-width','2');
+        path.setAttribute('stroke-dasharray','7,5');
+      }
+      path.setAttribute('fill','none');
       path.setAttribute('stroke-linecap','round');
       path.setAttribute('class','br');
-      path.dataset.src=p.id; path.dataset.dst=tid;
+      path.dataset.src=p.id; path.dataset.dst=rel.targetId;
       bG.appendChild(path);
     });
   });
+  const sibDrawn=relDrawn; // alias so auto-detected siblings can check for duplicates
 
   // ── Auto-detected sibling lines (BLOOD: solid bold) ──
   // Two passes: (1) shared parents[] entries, (2) parent-centric — find all children
@@ -471,38 +488,10 @@ function drawBranches(){
   });
   } // end if(showBlood) — auto-detected siblings
 
-  // ── Extended sections: only for All Twygs, Bloodline, Bonds ──
-  if(!showExtended) return;
-
-  // ── In-law + non-blood labeled customLinks (dashed) ──
-  const extDrawn=new Set();
-  if(showNonBlood) people.forEach(p=>{
-    Object.entries(p.customLinks||{}).forEach(([tid,v])=>{
-      const label=typeof v==='string'?v:v.label||'';
-      const isSibLabel=['Brother','Sister','Half-brother','Half-sister','Stepbrother','Stepsister','Sibling'].includes(label);
-      const isInLaw=label.includes('-in-law');
-      let lineType=isSibLabel?'sibling':isInLaw?'inlaw':BLOOD_LABELS.has(label)?'blood':'labeled';
-      // Reclassify: blood/sibling label that crosses a marriage boundary → render as in-law
-      if((lineType==='blood'||lineType==='sibling')&&crossesMarriage(p.id,tid)) lineType='inlaw';
-      // Skip blood types and siblings (drawn above)
-      if(lineType==='sibling'||lineType==='blood') return;
-      const key=[p.id,tid].sort().join('|');
-      if(extDrawn.has(key)) return;
-      extDrawn.add(key);
-      const other=peopleById[tid]; if(!other) return;
-      const mx=(p.x+other.x)/2, my=(p.y+other.y)/2-30;
-      const path=createSvgElement('path');
-      path.setAttribute('d',`M ${p.x} ${p.y} Q ${mx} ${my} ${other.x} ${other.y}`);
-      const isInLawLine=lineType==='inlaw';
-      path.setAttribute('stroke', getBranchRgba(isInLawLine?'inlaw':'labeled', .68));
-      path.setAttribute('stroke-width',isInLawLine?'2.5':'2');
-      path.setAttribute('stroke-dasharray',isInLawLine?'8,4':'7,5');
-      path.setAttribute('fill','none');
-      path.setAttribute('class','br');
-      path.dataset.src=p.id; path.dataset.dst=tid;
-      bG.appendChild(path);
-    });
-  });
+  // ── Extended sections: only for All Twygs, Roots, Bonds ──
+  // (Already handled by relationships[] reader above — the view mode filtering
+  // in the reader handles showExtended. This return only gates auto-detected siblings.)
+  // Note: auto-detected siblings always draw (showBlood handles their gating)
 }
 function drawNodes(){
   const nG=document.getElementById('nG');

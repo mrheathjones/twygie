@@ -107,6 +107,55 @@ const INVERSE_REL = {
 
 function inverseLabel(lbl) { return INVERSE_REL[lbl] || lbl; }
 
+// ─── RELATIONSHIP CATEGORIES (v2 engine) ────────────────────────────────────
+// Determines line rendering: blood=solid, bond=dashed pink, custom=dashed purple
+const SIBLING_LABELS=new Set(['Brother','Sister','Sibling','Half-brother','Half-sister','Stepbrother','Stepsister']);
+
+function getRelCategory(label){
+  if(!label) return 'custom';
+  if(label.includes('-in-law')) return 'bond';
+  if(BLOOD_LABELS.has(label)) return 'blood';
+  if(SIBLING_LABELS.has(label)) return 'blood';
+  return 'custom';
+}
+
+// ─── RELATIONSHIP HELPERS (v2 engine) ───────────────────────────────────────
+// Single source of truth for adding/removing/querying relationships
+
+function addRel(nodeA, nodeB, label, category){
+  if(!nodeA||!nodeB||nodeA.id===nodeB.id) return;
+  if(!category) category=getRelCategory(label);
+  if(!nodeA.relationships) nodeA.relationships=[];
+  if(!nodeB.relationships) nodeB.relationships=[];
+  // Remove existing relationship between this pair (if any) before adding
+  nodeA.relationships=nodeA.relationships.filter(r=>r.targetId!==nodeB.id);
+  nodeB.relationships=nodeB.relationships.filter(r=>r.targetId!==nodeA.id);
+  // Add from A's perspective
+  nodeA.relationships.push({targetId:nodeB.id, label:label, category:category, structural:false});
+  // Add inverse from B's perspective
+  const inv=inverseLabel(label);
+  nodeB.relationships.push({targetId:nodeA.id, label:inv, category:category, structural:false});
+}
+
+function removeRel(nodeA, nodeB){
+  if(!nodeA||!nodeB) return;
+  if(nodeA.relationships) nodeA.relationships=nodeA.relationships.filter(r=>r.targetId!==nodeB.id);
+  if(nodeB.relationships) nodeB.relationships=nodeB.relationships.filter(r=>r.targetId!==nodeA.id);
+  // Also remove legacy customLinks
+  if(nodeA.customLinks) delete nodeA.customLinks[nodeB.id];
+  if(nodeB.customLinks) delete nodeB.customLinks[nodeA.id];
+}
+
+function getRel(nodeA, nodeB){
+  // Returns A's relationship to B (from A's perspective), or null
+  if(!nodeA||!nodeA.relationships) return null;
+  return nodeA.relationships.find(r=>r.targetId===nodeB.id)||null;
+}
+
+function getAllRels(node){
+  return (node&&node.relationships)||[];
+}
+
 // ─── DEBUG LOGGING ───────────────────────────────────────────────────────────
 // Set window.TWYGIE_DEBUG = true in browser console to enable verbose logging
 // console.warn and console.error always fire regardless of this flag

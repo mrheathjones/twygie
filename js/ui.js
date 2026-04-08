@@ -88,8 +88,10 @@ function highlightConnected(id){
   people.filter(x=>x.id!==id&&(x.parents||[]).some(pp=>myP.has(pp))).forEach(x=>conn.add(x.id));
   if(p.spouseOf) conn.add(p.spouseOf);
   const sp=people.find(x=>x.spouseOf===id); if(sp) conn.add(sp.id);
-  // Include labeled connections (customLinks)
+  // Include connections from relationships[] and legacy customLinks
+  (p.relationships||[]).forEach(r=>conn.add(r.targetId));
   Object.keys(p.customLinks||{}).forEach(tid=>conn.add(tid));
+  people.filter(x=>(x.relationships||[]).some(r=>r.targetId===id)).forEach(x=>conn.add(x.id));
   people.filter(x=>x.customLinks&&x.customLinks[id]).forEach(x=>conn.add(x.id));
 
   document.querySelectorAll('.nd').forEach(n=>{
@@ -194,8 +196,20 @@ function fillCard(p){
 
   const spouseNode=p.spouseOf?peopleById[p.spouseOf]:people.find(x=>x.spouseOf===p.id);
   const spouses=spouseNode?[{p:spouseNode,rel:genderedRel('Spouse',spouseNode.gender),connType:'spouse'}]:[];
-  // Include labeled connections (in-laws, etc.)
-  const labeled=Object.entries(p.customLinks||{}).map(([tid,v])=>({p:peopleById[tid],rel:typeof v==='string'?v:v.label,targetId:tid,connType:typeof v==='string'?'labeled':v.lineType||'labeled'})).filter(x=>x.p);
+  // Include labeled connections from relationships[] (v2) with customLinks fallback
+  const labeledSet=new Set(); // track to avoid duplicates
+  const labeled=[];
+  (p.relationships||[]).forEach(r=>{
+    const cp=peopleById[r.targetId]; if(!cp) return;
+    labeledSet.add(r.targetId);
+    labeled.push({p:cp, rel:r.label, targetId:r.targetId, connType:r.category||'custom'});
+  });
+  // Fallback: legacy customLinks not yet migrated
+  Object.entries(p.customLinks||{}).forEach(([tid,v])=>{
+    if(labeledSet.has(tid)) return;
+    const cp=peopleById[tid]; if(!cp) return;
+    labeled.push({p:cp, rel:typeof v==='string'?v:v.label, targetId:tid, connType:typeof v==='string'?'labeled':v.lineType||'labeled'});
+  });
   const conns=[...spouses,...parentsArr,...children,...sibs,...labeled];
 
   let html='';
@@ -519,6 +533,7 @@ function saveEditedConnRel(fromId, toId, connType, newLabel){
   const newIsSibling=['Brother','Sister','Half-brother','Half-sister'].includes(newLabel);
 
   // Remove old connection first
+  removeRel(from, to);
   if(connType==='parent') from.parents=(from.parents||[]).filter(pid=>pid!==toId);
   else if(connType==='child') to.parents=(to.parents||[]).filter(pid=>pid!==fromId);
   else if(connType==='spouse'){ if(from.spouseOf===toId) delete from.spouseOf; if(to.spouseOf===fromId) delete to.spouseOf; }
@@ -537,6 +552,8 @@ function saveEditedConnRel(fromId, toId, connType, newLabel){
     const sibLtype=newIsSibling?'sibling':ltype;
     from.customLinks[toId]={label:newLabel,lineType:sibLtype};
     to.customLinks[fromId]={label:newLabel,lineType:sibLtype};
+    // Write to v2 relationships[]
+    addRel(from, to, newLabel);
   }
 
   // Update gender hint
@@ -592,6 +609,8 @@ async function removeConnFromCard(fromId, toId, connType){
       }
       break;
   }
+  // Also remove from v2 relationships[]
+  removeRel(from, to);
   rebuild(); render(); scheduleSave();
   selectNode(fromId);
 }
@@ -776,6 +795,11 @@ function saveConnection(){
     target.customLinks[other.id]={label,lineType:ltype3};
     other.customLinks[target.id]={label,lineType:ltype3};
     other.relLabel=label;
+  }
+
+  // Write to v2 relationships[] (unless spouse — handled by spouseOf)
+  if(type!=='spouse'){
+    addRel(target, other, label);
   }
 
   // Auto-assign inferred relationship to isYou

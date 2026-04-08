@@ -218,9 +218,11 @@ function applyInferredRel(fromNode, toNode, inferred){
   const ltype=isSib?'sibling':BLOOD_LABELS.has(inferred)?'blood':'labeled';
   if(!fromNode.customLinks) fromNode.customLinks={};
   if(!toNode.customLinks) toNode.customLinks={};
-  // Store label from each node's OWN perspective using inverse lookup
+  // Store in legacy customLinks (backward compat)
   fromNode.customLinks[toNode.id]={label:inferred,lineType:ltype};
   toNode.customLinks[fromNode.id]={label:inverseLabel(inferred),lineType:ltype};
+  // Store in v2 relationships[]
+  addRel(fromNode, toNode, inferred);
   toNode.relLabel=inverseLabel(inferred);
 }
 
@@ -229,10 +231,14 @@ function linkNodes(nodeA, nodeB, labelAtoB, labelBtoA){
   if(!nodeA||!nodeB||nodeA.id===nodeB.id) return;
   const alreadyLinked=
     (nodeA.parents||[]).includes(nodeB.id)||(nodeB.parents||[]).includes(nodeA.id)||
-    nodeA.spouseOf===nodeB.id||nodeB.spouseOf===nodeA.id||
-    (nodeA.customLinks&&nodeA.customLinks[nodeB.id])||
-    (nodeB.customLinks&&nodeB.customLinks[nodeA.id]);
+    nodeA.spouseOf===nodeB.id||nodeB.spouseOf===nodeA.id;
   if(alreadyLinked) return;
+  // Check relationships[] for existing link
+  const existingRel=getRel(nodeA, nodeB);
+  if(existingRel) return;
+  // Write to v2 relationships[]
+  addRel(nodeA, nodeB, labelAtoB);
+  // Write to legacy customLinks (backward compat)
   const ltypeAB=BLOOD_LABELS.has(labelAtoB)?'blood':'labeled';
   const ltypeBA=BLOOD_LABELS.has(labelBtoA)?'blood':'labeled';
   if(!nodeA.customLinks) nodeA.customLinks={};

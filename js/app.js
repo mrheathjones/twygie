@@ -155,7 +155,7 @@ function submitMember(){
 
   // Infer base rel category
   if(!rel){ // No relationship — just add as standalone node
-    people.push({id:`u${nextNodeId++}`,name,firstName:first,lastName:last,gender,dob,birth,dod,death,city,state,note,parents:[],customLinks:{},x:600+Math.random()*100-50,y:400+Math.random()*100-50});
+    people.push({id:`u${nextNodeId++}`,name,firstName:first,lastName:last,gender,dob,birth,dod,death,city,state,note,parents:[],customLinks:{},relationships:[],x:600+Math.random()*100-50,y:400+Math.random()*100-50});
     if(modalPhotoData){ people[people.length-1].photo=modalPhotoData; }
     rebuild([]); closeModal(); render(); scheduleSave();
     setTimeout(()=>selectNode(people[people.length-1].id),90); return;
@@ -163,7 +163,7 @@ function submitMember(){
   const baseRel=CHILD_RELS.includes(rel)?'Child':PARENT_RELS.includes(rel)?'Parent':SPOUSE_RELS.includes(rel)?'Spouse':SIBLING_RELS.includes(rel)?'Sibling':'Other';
 
   const id=`u${nextNodeId++}`;
-  const np={id,name,firstName:first,lastName:last,gender,dob,birth,dod,death,city,state,note,parents:[],relLabel:baseRel,x:600,y:400};
+  const np={id,name,firstName:first,lastName:last,gender,dob,birth,dod,death,city,state,note,parents:[],relationships:[],relLabel:baseRel,x:600,y:400};
   if(modalPhotoData) np.photo=modalPhotoData;
 
   // Infer gender from relationship label
@@ -248,6 +248,24 @@ function submitMember(){
   people.push(np);
   // Lightweight peopleById sync before auto-assign (full rebuild happens next)
   people.forEach(p=>{ if(!peopleById[p.id]) peopleById[p.id]=p; });
+  // Sync customLinks → relationships[] for new node and target
+  if(addForNodeId){
+    const target=peopleById[addForNodeId];
+    if(np.customLinks) Object.entries(np.customLinks).forEach(([tid,v])=>{
+      const lbl=typeof v==='string'?v:v.label||'';
+      if(lbl && !np.relationships.some(r=>r.targetId===tid)){
+        np.relationships.push({targetId:tid, label:lbl, category:getRelCategory(lbl), structural:false});
+      }
+    });
+    if(target && target.customLinks && target.customLinks[id]){
+      if(!target.relationships) target.relationships=[];
+      const tv=target.customLinks[id];
+      const tlbl=typeof tv==='string'?tv:tv.label||'';
+      if(tlbl && !target.relationships.some(r=>r.targetId===id)){
+        target.relationships.push({targetId:id, label:tlbl, category:getRelCategory(tlbl), structural:false});
+      }
+    }
+  }
   // Auto-assign relationship to isYou if addForNodeId is set
   if(addForNodeId && rel){
     if(baseRel==='Sibling' && np.parents.length>0){
