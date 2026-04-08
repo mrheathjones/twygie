@@ -21,7 +21,7 @@
  */
 function inferRelToYou(anchorRelToYou, newRelToAnchor, gender) {
   const m=gender==='male', f=gender==='female';
-  const g=(male,female,neutral)=>m?male:f?female:neutral;
+  const gendered=(male,female,neutral)=>m?male:f?female:neutral;
   const a=anchorRelToYou.toLowerCase();
   const r=newRelToAnchor.toLowerCase();
 
