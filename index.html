@@ -1265,17 +1265,25 @@ function autoAssignToYou(newNodeId, anchorId, relToAnchor){
       const gcLabel=gn('Grandson','Granddaughter','Grandchild');
       linkNodes(gp, newNode, gcLabel, gpLabel);
     });
-    // → anchor's spouse's parents = new node's grandparents (other side)
-    if(anchorSpouse){
-      (anchorSpouse.parents||[]).forEach(gpId=>{
-        const gp=P.find(p=>p.id===gpId); if(!gp) return;
-        const gpLabel=genderedRel('Grandparent',gp.gender);
-        const gcLabel=gn('Grandson','Granddaughter','Grandchild');
-        linkNodes(gp, newNode, gcLabel, gpLabel);
-      });
-      // → anchor's spouse is also new node's parent
-      if(!((newNode.parents||[]).includes(anchorSpouseId))){
-        newNode.parents=[...(newNode.parents||[]),anchorSpouseId];
+    // → anchor's spouse is also new node's parent (co-parent)
+    // Only use DIRECT spouseOf — don't traverse through children
+    const directSpouseId=anchor.spouseOf||null;
+    const reverseSpouse=directSpouseId?null:(P.find(p=>p.spouseOf===anchor.id));
+    const coParentId=directSpouseId||(reverseSpouse?reverseSpouse.id:null);
+    if(coParentId){
+      const coParent=P.find(p=>p.id===coParentId);
+      if(coParent){
+        // Co-parent's parents = new node's grandparents (other side)
+        (coParent.parents||[]).forEach(gpId=>{
+          const gp=P.find(p=>p.id===gpId); if(!gp) return;
+          const gpLabel=genderedRel('Grandparent',gp.gender);
+          const gcLabel=gn('Grandson','Granddaughter','Grandchild');
+          linkNodes(gp, newNode, gcLabel, gpLabel);
+        });
+        // Co-parent is also new node's parent
+        if(!((newNode.parents||[]).includes(coParentId))){
+          newNode.parents=[...(newNode.parents||[]),coParentId];
+        }
       }
     }
     // → anchor's siblings = new node's uncles/aunts
@@ -3047,6 +3055,7 @@ const BLOOD_LABELS=new Set([
   'Father-in-law','Mother-in-law','Parent-in-law',
   'Son-in-law','Daughter-in-law','Child-in-law',
   'Brother-in-law','Sister-in-law','Sibling-in-law',
+  'Cousin-in-law',
   // Godparents
   'Godfather','Godmother',
   // Cousins (all degrees and removes — blood by consanguinity)
