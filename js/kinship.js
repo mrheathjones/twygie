@@ -563,17 +563,78 @@ function getRelToYou_for(targetId, fromId, _depth){
   // This is the core genealogical algorithm: trace parent chains from both nodes
   // upward to find a shared ancestor, then use generation distances to classify.
   {
-    // Build expanded parents for any node (parents[] + parent-type customLinks)
     const PARENT_CL=new Set(['Father','Mother','Parent','Stepfather','Stepmother']);
     const CHILD_CL=new Set(['Son','Daughter','Child','Stepson','Stepdaughter','Stepchild']);
-    function getExpandedParents(nid){
+    const GRANDPARENT_CL=new Set(['Grandfather','Grandmother','Grandparent']);
+    const GRANDCHILD_CL=new Set(['Grandson','Granddaughter','Grandchild']);
+    const GREAT_GP_CL=new Set(['Great-grandfather','Great-grandmother','Great-grandparent']);
+    const GREAT_GC_CL=new Set(['Great-grandson','Great-granddaughter','Great-grandchild']);
+    const SIBLING_CL=new Set(['Brother','Sister','Sibling','Half-brother','Half-sister','Stepbrother','Stepsister']);
+
+    // ── PRE-PROCESS: infer missing parent chains from grandparent/sibling links ──
+    // Problem: parents[] is often incomplete (grandpa added as Grandfather to isYou,
+    // not as Father of Hank). This infers the missing structural links.
+    const inferredParents={}; // nodeId → Set of parentIds
+    // Step 1: If node has Grandfather customLink to G, and node has parent P → G is P's parent
+    people.forEach(node=>{
+      Object.entries(node.customLinks||{}).forEach(([tid,v])=>{
+        const lbl=typeof v==='string'?v:v.label||'';
+        if(GRANDPARENT_CL.has(lbl)){
+          (node.parents||[]).forEach(pid=>{
+            if(!inferredParents[pid]) inferredParents[pid]=new Set();
+            inferredParents[pid].add(tid);
+          });
+        }
+        if(GREAT_GP_CL.has(lbl)){
+          (node.parents||[]).forEach(pid=>{
+            if(!inferredParents[pid]) inferredParents[pid]=new Set();
+            inferredParents[pid].add(tid);
+          });
+        }
+      });
+      // Reverse grandchild labels
+      people.forEach(p=>{
+        const cl=p.customLinks&&p.customLinks[node.id];
+        if(cl){
+          const lbl=typeof cl==='string'?cl:cl.label||'';
+          if(GRANDCHILD_CL.has(lbl)||GREAT_GC_CL.has(lbl)){
+            (node.parents||[]).forEach(pid=>{
+              if(!inferredParents[pid]) inferredParents[pid]=new Set();
+              inferredParents[pid].add(p.id);
+            });
+          }
+        }
+      });
+    });
+    // Step 2: Propagate inferred parents to siblings
+    // If Hank has inferred parent grandpa, and Henry is Hank's sibling → Henry also has parent grandpa
+    let ipChanged=true;
+    while(ipChanged){
+      ipChanged=false;
+      people.forEach(node=>{
+        Object.entries(node.customLinks||{}).forEach(([tid,v])=>{
+          const lbl=typeof v==='string'?v:v.label||'';
+          if(!SIBLING_CL.has(lbl)) return;
+          const nodeP=inferredParents[node.id]||new Set();
+          const tidP=inferredParents[tid]||new Set();
+          for(const pid of nodeP){
+            if(!tidP.has(pid)){ if(!inferredParents[tid]) inferredParents[tid]=new Set(); inferredParents[tid].add(pid); ipChanged=true; }
+          }
+          for(const pid of tidP){
+            if(!nodeP.has(pid)){ if(!inferredParents[node.id]) inferredParents[node.id]=new Set(); inferredParents[node.id].add(pid); ipChanged=true; }
+          }
+        });
+      });
+    }
+
+    // Get all parents of a node: parents[] + parent customLinks + inferred
+    function getAllParents(nid){
       const node=peopleById[nid]; if(!node) return [];
       const pset=new Set(node.parents||[]);
       Object.entries(node.customLinks||{}).forEach(([tid,v])=>{
         const lbl=typeof v==='string'?v:v.label||'';
         if(PARENT_CL.has(lbl)) pset.add(tid);
       });
-      // Reverse: anyone with a child-type link pointing to this node
       people.forEach(p=>{
         const cl=p.customLinks&&p.customLinks[nid];
         if(cl){
@@ -581,35 +642,35 @@ function getRelToYou_for(targetId, fromId, _depth){
           if(CHILD_CL.has(lbl)) pset.add(p.id);
         }
       });
+      if(inferredParents[nid]) inferredParents[nid].forEach(pid=>pset.add(pid));
       return [...pset];
     }
 
-    // BFS upward from both nodes to find common ancestor
-    const ancFrom={}, ancTarget={}; // id → generation distance
+    // BFS upward from both nodes through parents only (no sibling hops — 
+    // siblings are handled by inferredParents propagation above)
+    const ancFrom={}, ancTarget={};
     let qF=[{id:fromId,gen:0}], qT=[{id:targetId,gen:0}];
     let found=null;
     const MAX_GEN=8;
     for(let step=0;step<MAX_GEN*2&&!found;step++){
-      // Expand from's ancestors
       if(qF.length){
         const next=[];
         for(const {id,gen} of qF){
-          if(id in ancFrom) continue;
+          if(id in ancFrom){ if(ancFrom[id]<=gen) continue; }
           ancFrom[id]=gen;
           if(id in ancTarget){ found={id,genA:gen,genB:ancTarget[id]}; break; }
-          if(gen<MAX_GEN) getExpandedParents(id).forEach(pid=>next.push({id:pid,gen:gen+1}));
+          if(gen<MAX_GEN) getAllParents(id).forEach(pid=>next.push({id:pid,gen:gen+1}));
         }
         qF=next;
         if(found) break;
       }
-      // Expand target's ancestors
       if(qT.length){
         const next=[];
         for(const {id,gen} of qT){
-          if(id in ancTarget) continue;
+          if(id in ancTarget){ if(ancTarget[id]<=gen) continue; }
           ancTarget[id]=gen;
           if(id in ancFrom){ found={id,genA:ancFrom[id],genB:gen}; break; }
-          if(gen<MAX_GEN) getExpandedParents(id).forEach(pid=>next.push({id:pid,gen:gen+1}));
+          if(gen<MAX_GEN) getAllParents(id).forEach(pid=>next.push({id:pid,gen:gen+1}));
         }
         qT=next;
       }
