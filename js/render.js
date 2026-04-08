@@ -162,6 +162,31 @@ function drawBranches(){
   const showNonBlood=treeMode!=='bloodline'; // spouse, in-law, non-blood labeled
   const showExtended=treeMode==='complex'||treeMode==='bloodline'||treeMode==='bonds'; // extended connections
 
+  // Build blood-family set: all nodes reachable from isYou via parents[] chains (up + down)
+  // Used to detect marriage-boundary connections (blood label but crosses spouse line)
+  const youNode=people.find(p=>p.isYou);
+  const bloodFamily=new Set();
+  if(youNode){
+    const queue=[youNode.id];
+    while(queue.length){
+      const nid=queue.shift();
+      if(bloodFamily.has(nid)) continue;
+      bloodFamily.add(nid);
+      const n=peopleById[nid]; if(!n) continue;
+      (n.parents||[]).forEach(pid=>queue.push(pid)); // ancestors
+      people.filter(c=>(c.parents||[]).includes(nid)).forEach(c=>queue.push(c.id)); // descendants
+      // siblings (shared parents)
+      (n.parents||[]).forEach(pid=>{
+        people.filter(s=>s.id!==nid&&(s.parents||[]).includes(pid)).forEach(s=>queue.push(s.id));
+      });
+    }
+  }
+  function crossesMarriage(idA, idB){
+    // If both are blood family or both are NOT blood family, it's same-side
+    // If one is blood and the other isn't, the connection crosses a marriage boundary
+    return bloodFamily.has(idA) !== bloodFamily.has(idB);
+  }
+
   // ── Parent-child lines (BLOOD: solid, bold) ──
   if(showBlood) people.forEach(child=>{
     (child.parents||[]).forEach(pid=>{
@@ -210,7 +235,10 @@ function drawBranches(){
       // ALWAYS derive lineType from current BLOOD_LABELS — never trust stored lineType
       const isSibLabel=['Brother','Sister','Half-brother','Half-sister','Stepbrother','Stepsister','Sibling'].includes(label);
       const isInLaw=label.includes('-in-law');
-      const lineType=isSibLabel?'sibling':isInLaw?'inlaw':BLOOD_LABELS.has(label)?'blood':'labeled';
+      let lineType=isSibLabel?'sibling':isInLaw?'inlaw':BLOOD_LABELS.has(label)?'blood':'labeled';
+      // Reclassify: blood label that crosses a marriage boundary → render as in-law
+      if(lineType==='blood'&&crossesMarriage(p.id,tid)) lineType='inlaw';
+      if(lineType==='sibling'&&crossesMarriage(p.id,tid)) lineType='inlaw';
       // Siblings + blood extended only in this section
       if(lineType!=='sibling'&&lineType!=='blood') return;
       if(lineType==='blood'&&!showExtended) return;
@@ -303,8 +331,10 @@ function drawBranches(){
       const label=typeof v==='string'?v:v.label||'';
       const isSibLabel=['Brother','Sister','Half-brother','Half-sister','Stepbrother','Stepsister','Sibling'].includes(label);
       const isInLaw=label.includes('-in-law');
-      const lineType=isSibLabel?'sibling':isInLaw?'inlaw':BLOOD_LABELS.has(label)?'blood':'labeled';
-      // Skip blood types (drawn above) and siblings
+      let lineType=isSibLabel?'sibling':isInLaw?'inlaw':BLOOD_LABELS.has(label)?'blood':'labeled';
+      // Reclassify: blood/sibling label that crosses a marriage boundary → render as in-law
+      if((lineType==='blood'||lineType==='sibling')&&crossesMarriage(p.id,tid)) lineType='inlaw';
+      // Skip blood types and siblings (drawn above)
       if(lineType==='sibling'||lineType==='blood') return;
       const key=[p.id,tid].sort().join('|');
       if(extDrawn.has(key)) return;
@@ -313,9 +343,10 @@ function drawBranches(){
       const mx=(p.x+other.x)/2, my=(p.y+other.y)/2-30;
       const path=createSvgElement('path');
       path.setAttribute('d',`M ${p.x} ${p.y} Q ${mx} ${my} ${other.x} ${other.y}`);
-      path.setAttribute('stroke', getBranchRgba(isInLaw?'inlaw':'labeled', .68));
-      path.setAttribute('stroke-width',isInLaw?'2.5':'2');
-      path.setAttribute('stroke-dasharray',isInLaw?'8,4':'7,5');
+      const isInLawLine=lineType==='inlaw';
+      path.setAttribute('stroke', getBranchRgba(isInLawLine?'inlaw':'labeled', .68));
+      path.setAttribute('stroke-width',isInLawLine?'2.5':'2');
+      path.setAttribute('stroke-dasharray',isInLawLine?'8,4':'7,5');
       path.setAttribute('fill','none');
       path.setAttribute('class','br');
       path.dataset.src=p.id; path.dataset.dst=tid;
