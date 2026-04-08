@@ -204,7 +204,7 @@ function drawBranches(){
     Object.entries(p.customLinks||{}).forEach(([tid,v])=>{
       const label=typeof v==='string'?v:v.label||'';
       // ALWAYS derive lineType from current BLOOD_LABELS — never trust stored lineType
-      const isSibLabel=['Brother','Sister','Half-brother','Half-sister'].includes(label);
+      const isSibLabel=['Brother','Sister','Half-brother','Half-sister','Stepbrother','Stepsister','Sibling'].includes(label);
       const isInLaw=label.includes('-in-law');
       const lineType=isSibLabel?'sibling':isInLaw?'inlaw':BLOOD_LABELS.has(label)?'blood':'labeled';
       // Siblings: show in both modes. Blood extended: All Twygs only. In-law/labeled: drawn below
@@ -229,10 +229,7 @@ function drawBranches(){
     });
   });
 
-  // ── Auto-detected sibling lines (All Twygs only) ──
-  if(simple) return; // Tree View ends here — All Twygs continues below
-
-  // ── Auto-detected sibling lines from shared parents (BLOOD: solid bold, All Twygs only) ──
+  // ── Auto-detected sibling lines from shared parents (BLOOD: solid bold, BOTH modes) ──
   const autoSibDrawn=new Set();
   people.forEach(p=>{
     const pars=p.parents||[];
@@ -256,12 +253,13 @@ function drawBranches(){
     });
   });
 
-  // ── In-law + non-blood labeled customLinks (dashed, All Twygs only) ──
+  // ── Tree View ends here — All Twygs continues below ──
+  if(simple) return;
   const extDrawn=new Set();
   people.forEach(p=>{
     Object.entries(p.customLinks||{}).forEach(([tid,v])=>{
       const label=typeof v==='string'?v:v.label||'';
-      const isSibLabel=['Brother','Sister','Half-brother','Half-sister'].includes(label);
+      const isSibLabel=['Brother','Sister','Half-brother','Half-sister','Stepbrother','Stepsister','Sibling'].includes(label);
       const isInLaw=label.includes('-in-law');
       const lineType=isSibLabel?'sibling':isInLaw?'inlaw':BLOOD_LABELS.has(label)?'blood':'labeled';
       // Skip blood types (drawn above) and siblings
