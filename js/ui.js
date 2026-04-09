@@ -38,7 +38,7 @@ function getLeafPosition(l){
   const idx=sibs.indexOf(l);
   const count=sibs.length||1;
   const angle=((idx/count)*Math.PI*2)+(hash%60)*0.01;
-  const dist=70+(hash%20);
+  const dist=45+(hash%15);
   return {x:primary.x+Math.cos(angle)*dist, y:primary.y+Math.sin(angle)*dist};
 }
 

@@ -569,11 +569,11 @@ let leafSvgElements=new Map(); // leafId → {group, lines:[]}
 function initLeafEngine(){
   if(leafEngine){ leafEngine.stop(); }
   leafEngine=new OrbEngine({
-    repulsionRadius: 80,
-    minimumSeparation: 40,
+    repulsionRadius: 35,      // influence starts close (was 80)
+    minimumSeparation: 12,    // can nearly touch before hard push (was 40)
     springStrength: 0.05,
     damping: 0.78,
-    pushStrength: 1.0,
+    pushStrength: 0.6,        // softer push (was 1.0)
     maxVelocity: 10,
     returnBias: 0.04,
     dragInfluenceFalloff: 1.8,
@@ -582,11 +582,30 @@ function initLeafEngine(){
   return leafEngine;
 }
 
+// Snap position away from twyg nodes (called on drop only, not during drag)
+function snapLeafFromNodes(x,y){
+  var NODE_SNAP=45;
+  for(var pass=0;pass<8;pass++){
+    var moved=false;
+    people.forEach(function(p){
+      var dx=x-p.x, dy=y-p.y;
+      var dist=Math.sqrt(dx*dx+dy*dy)||0.1;
+      if(dist<NODE_SNAP){
+        var push=NODE_SNAP-dist;
+        x+=dx/dist*push; y+=dy/dist*push;
+        moved=true;
+      }
+    });
+    if(!moved) break;
+  }
+  return {x:x,y:y};
+}
+
 function drawLeafs(){
   if(!leafs||!leafs.length) return;
   const lG=document.getElementById('lG');
   const LEAF_R=8;
-  const NODE_MIN_DIST=70;
+  const NODE_MIN_DIST=45;
 
   const engine=initLeafEngine();
   leafSvgElements.clear();
@@ -612,7 +631,7 @@ function drawLeafs(){
     }
 
     // Register orb in engine
-    engine.addOrb({id:l.id, x:hx, y:hy, radius:LEAF_R+12});
+    engine.addOrb({id:l.id, x:hx, y:hy, radius:LEAF_R+4});
 
     // Create SVG group
     const G=createSvgElement('g');
@@ -730,8 +749,10 @@ document.addEventListener('mouseup',function(){
       var orb=leafEngine.getOrb(leafDragActive);
       var el=leafSvgElements.get(leafDragActive);
       if(orb&&el){
-        el.leafRef.x=orb.x; el.leafRef.y=orb.y;
-        leafEngine.updateHome(leafDragActive, orb.x, orb.y);
+        var snapped=snapLeafFromNodes(orb.x, orb.y);
+        el.leafRef.x=snapped.x; el.leafRef.y=snapped.y;
+        orb.x=snapped.x; orb.y=snapped.y;
+        leafEngine.updateHome(leafDragActive, snapped.x, snapped.y);
         saveLeafs();
       }
     }
@@ -757,8 +778,10 @@ document.addEventListener('touchend',function(){
       var orb=leafEngine.getOrb(leafDragActive);
       var el=leafSvgElements.get(leafDragActive);
       if(orb&&el){
-        el.leafRef.x=orb.x; el.leafRef.y=orb.y;
-        leafEngine.updateHome(leafDragActive, orb.x, orb.y);
+        var snapped=snapLeafFromNodes(orb.x, orb.y);
+        el.leafRef.x=snapped.x; el.leafRef.y=snapped.y;
+        orb.x=snapped.x; orb.y=snapped.y;
+        leafEngine.updateHome(leafDragActive, snapped.x, snapped.y);
         saveLeafs();
       }
     }
