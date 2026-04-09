@@ -40,6 +40,7 @@ function formatDate(d){
 let activeType='all';
 let activeTwyg=null;
 let searchQuery='';
+let sortMode='created-desc';
 
 // ─── RENDER ───
 function renderLeafs(){
@@ -62,8 +63,11 @@ function renderLeafs(){
     filtered=filtered.filter(l=>(l.title||'').toLowerCase().includes(q)||(l.content||'').toLowerCase().includes(q));
   }
 
-  // Sort: newest first
-  filtered.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  // Sort
+  if(sortMode==='created-desc') filtered.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  else if(sortMode==='created-asc') filtered.sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
+  else if(sortMode==='modified-desc') filtered.sort((a,b)=>(b.modifiedAt||b.createdAt||0)-(a.modifiedAt||a.createdAt||0));
+  else if(sortMode==='modified-asc') filtered.sort((a,b)=>(a.modifiedAt||a.createdAt||0)-(b.modifiedAt||b.createdAt||0));
 
   if(!filtered.length){
     grid.innerHTML='<div style="text-align:center;color:var(--muted);padding:40px;font-size:.88rem;grid-column:1/-1">No leafs match your filters.</div>';
@@ -76,16 +80,20 @@ function renderLeafs(){
     const taggedNames=(l.twygs||[]).map(tid=>{const p=peopleById[tid];return p?(p.isYou?'You':fullName(p)):null}).filter(Boolean);
     const content=(l.content||'');
     const isLong=content.length>200;
+    const created=l.createdAt?new Date(l.createdAt).toLocaleDateString():'';
+    const createdBy=l.createdByName||'';
+    const modified=l.modifiedAt?new Date(l.modifiedAt).toLocaleDateString():'';
+    const modifiedBy=l.modifiedByName||'';
 
     return `<div class="lf-card" onclick="openDetail('${l.id}')">
       <div class="lf-header">
-        
         <span class="lf-title">${l.title||t.label}</span>
         ${l.emoji?`<span class="lf-emoji">${l.emoji}</span>`:''}
       </div>
       ${dateStr?`<div class="lf-date">${dateStr}</div>`:''}
       <div class="lf-content ${isLong?'short':'full'}">${content}</div>
       ${taggedNames.length?`<div class="lf-tags">${taggedNames.map(n=>'<span class="lf-tag">'+n+'</span>').join('')}</div>`:''}
+      <div class="lf-meta">${created?'Created '+created+(createdBy?' by '+createdBy:''):''}${modified?' \u00b7 Modified '+modified+(modifiedBy?' by '+modifiedBy:''):''}</div>
     </div>`;
   }).join('');
 }
@@ -127,7 +135,10 @@ function openDetail(leafId){
     ${taggedNames.length?`<div style="display:flex;flex-wrap:wrap;gap:4px;justify-content:center;margin-bottom:12px">
       ${taggedNames.map(n=>`<span style="padding:3px 10px;border-radius:100px;background:rgba(100,180,100,.08);border:1px solid rgba(100,180,100,.2);font-size:.72rem;color:rgba(100,180,100,.7)">${n}</span>`).join('')}
     </div>`:''}
-    ${created?`<div style="text-align:center;font-size:.66rem;color:var(--muted)">Added ${created}</div>`:''}
+    <div style="text-align:center;font-size:.66rem;color:var(--muted);line-height:1.8">
+      ${created?'Created '+created+(l.createdByName?' by '+l.createdByName:''):''}
+      ${l.modifiedAt?'<br>Modified '+new Date(l.modifiedAt).toLocaleDateString()+(l.modifiedByName?' by '+l.modifiedByName:''):''}
+    </div>
   `;
   document.getElementById('detail-bg').classList.add('open');
 }
@@ -178,6 +189,11 @@ document.getElementById('type-filters')?.addEventListener('click',e=>{
 
 document.getElementById('twyg-filter')?.addEventListener('change',e=>{
   activeTwyg=e.target.value||null;
+  renderLeafs();
+});
+
+document.getElementById('sort-filter')?.addEventListener('change',e=>{
+  sortMode=e.target.value;
   renderLeafs();
 });
 
@@ -276,7 +292,11 @@ async function submitNewLeaf(){
     twygs,
     media:[],
     createdBy:currentUser.uid,
-    createdAt:Date.now()
+    createdByName:currentUser.displayName||currentUser.email||'',
+    createdAt:Date.now(),
+    modifiedBy:null,
+    modifiedByName:null,
+    modifiedAt:null
   };
 
   leafs.push(leaf);

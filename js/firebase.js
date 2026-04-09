@@ -346,7 +346,11 @@ async function saveLeafs(){
 async function addLeaf(leaf){
   leaf.id='leaf_'+Date.now();
   leaf.createdBy=currentUser.uid;
+  leaf.createdByName=currentUser.displayName||currentUser.email||'';
   leaf.createdAt=Date.now();
+  leaf.modifiedBy=null;
+  leaf.modifiedByName=null;
+  leaf.modifiedAt=null;
   leafs.push(leaf);
   await saveLeafs();
   return leaf;
@@ -356,6 +360,9 @@ async function editLeaf(leafId, updates){
   const l=leafs.find(x=>x.id===leafId);
   if(!l) return null;
   Object.assign(l, updates);
+  l.modifiedBy=currentUser.uid;
+  l.modifiedByName=currentUser.displayName||currentUser.email||'';
+  l.modifiedAt=Date.now();
   await saveLeafs();
   return l;
 }
