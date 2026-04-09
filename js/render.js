@@ -53,6 +53,7 @@ function createSvgElement(t){ return document.createElementNS(SVG_NS,t); }
 
 // ─── RENDER ───────────────────────────────────────────────────────────────────
 function render(){
+  document.getElementById('lG').innerHTML='';
   document.getElementById('bG').innerHTML='';
   setTimeout(()=>{ syncLegend(); syncNodeLegend(); },0);
   document.getElementById('nG').innerHTML='';
@@ -564,26 +565,48 @@ function drawNodes(){
 // ─── DRAW LEAFS ON TREE ─────────────────────────────────────────────────────
 function drawLeafs(){
   if(!leafs||!leafs.length) return;
-  const nG=document.getElementById('nG');
-  const bG=document.getElementById('bG');
+  const lG=document.getElementById('lG');
   const LEAF_R=8;
+  const MIN_DIST=LEAF_R*5; // minimum distance between leaf centers
 
-  leafs.forEach((l,idx)=>{
+  // Calculate all positions first
+  const positions=leafs.map(l=>{
     const twygs=(l.twygs||[]).map(tid=>peopleById[tid]).filter(Boolean);
-    if(!twygs.length) return;
-
+    if(!twygs.length) return null;
     const pos=getLeafPosition(l);
-    const lx=pos.x, ly=pos.y;
+    return {leaf:l, x:pos.x, y:pos.y, twygs};
+  }).filter(Boolean);
 
-    // Draw connection lines from leaf to each tagged twyg
+  // Collision avoidance — push overlapping leaves apart (3 passes)
+  for(let pass=0;pass<3;pass++){
+    for(let i=0;i<positions.length;i++){
+      for(let j=i+1;j<positions.length;j++){
+        // Skip leaves that have been manually positioned
+        const a=positions[i], b=positions[j];
+        if(a.leaf.x!=null&&a.leaf.y!=null&&b.leaf.x!=null&&b.leaf.y!=null) continue;
+        const dx=b.x-a.x, dy=b.y-a.y;
+        const dist=Math.sqrt(dx*dx+dy*dy);
+        if(dist<MIN_DIST&&dist>0){
+          const push=(MIN_DIST-dist)/2;
+          const nx=dx/dist, ny=dy/dist;
+          if(a.leaf.x==null) { a.x-=nx*push; a.y-=ny*push; }
+          if(b.leaf.x==null) { b.x+=nx*push; b.y+=ny*push; }
+        }
+      }
+    }
+  }
+
+  // Draw everything into lG (behind branches and nodes)
+  positions.forEach(({leaf:l, x:lx, y:ly, twygs})=>{
+    // Connection lines to tagged twygs
     twygs.forEach(t=>{
       const line=createSvgElement('path');
       line.setAttribute('d',`M ${lx} ${ly} L ${t.x} ${t.y}`);
-      line.setAttribute('stroke','rgba(100,180,100,0.2)');
-      line.setAttribute('stroke-width','1.5');
-      line.setAttribute('stroke-dasharray','4,4');
+      line.setAttribute('stroke','rgba(100,180,100,0.15)');
+      line.setAttribute('stroke-width','1');
+      line.setAttribute('stroke-dasharray','3,4');
       line.setAttribute('fill','none');
-      bG.appendChild(line);
+      lG.appendChild(line);
     });
 
     // Leaf node group
@@ -600,15 +623,15 @@ function drawLeafs(){
     // Soft glow
     const glow=createSvgElement('circle');
     glow.setAttribute('r',String(LEAF_R*2.5));
-    glow.setAttribute('fill','rgba(100,180,100,0.06)');
+    glow.setAttribute('fill','rgba(100,180,100,0.04)');
     G.appendChild(glow);
 
     // Main dot
     const dot=createSvgElement('circle');
     dot.setAttribute('r',String(LEAF_R));
-    dot.setAttribute('fill','rgba(100,180,100,0.25)');
-    dot.setAttribute('stroke','rgba(100,180,100,0.5)');
-    dot.setAttribute('stroke-width','1.5');
+    dot.setAttribute('fill','rgba(100,180,100,0.15)');
+    dot.setAttribute('stroke','rgba(100,180,100,0.3)');
+    dot.setAttribute('stroke-width','1');
     G.appendChild(dot);
 
     // Emoji via foreignObject
@@ -628,11 +651,11 @@ function drawLeafs(){
       label.setAttribute('text-anchor','middle');
       label.setAttribute('font-family','Outfit, sans-serif');
       label.setAttribute('font-size','8');
-      label.setAttribute('fill','rgba(100,180,100,0.6)');
+      label.setAttribute('fill','rgba(100,180,100,0.45)');
       label.textContent=title;
       G.appendChild(label);
     }
 
-    nG.appendChild(G);
+    lG.appendChild(G);
   });
 }
