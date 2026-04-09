@@ -568,18 +568,22 @@ function drawLeafs(){
   const lG=document.getElementById('lG');
   const LEAF_R=8;
   const LEAF_MIN_DIST=LEAF_R*6;  // min distance between leaf centers
-  const NODE_MIN_DIST=50;         // min distance from any twyg node center
+  const NODE_MIN_DIST=65;         // min distance from any twyg node center
 
-  // Calculate all positions first
+  // Calculate positions — use physics position if available (bubble effect)
   const positions=leafs.map(l=>{
     const twygs=(l.twygs||[]).map(tid=>peopleById[tid]).filter(Boolean);
     if(!twygs.length) return null;
-    const pos=getLeafPosition(l);
-    return {leaf:l, x:pos.x, y:pos.y, twygs, pinned:l.x!=null&&l.y!=null};
+    // Priority: dragged position → physics position → calculated
+    let x,y;
+    if(l.x!=null&&l.y!=null){ x=l.x; y=l.y; }
+    else if(l._px!=null&&l._py!=null){ x=l._px; y=l._py; }
+    else { const pos=getLeafPosition(l); x=pos.x; y=pos.y; }
+    return {leaf:l, x, y, twygs, pinned:l.x!=null&&l.y!=null};
   }).filter(Boolean);
 
-  // Collision avoidance — 8 passes for convergence
-  for(let pass=0;pass<8;pass++){
+  // Collision avoidance — 10 passes for smooth convergence
+  for(let pass=0;pass<10;pass++){
     // Push leaves apart from each other
     for(let i=0;i<positions.length;i++){
       for(let j=i+1;j<positions.length;j++){
@@ -588,7 +592,7 @@ function drawLeafs(){
         const dx=b.x-a.x, dy=b.y-a.y;
         const dist=Math.sqrt(dx*dx+dy*dy)||0.1;
         if(dist<LEAF_MIN_DIST){
-          const push=(LEAF_MIN_DIST-dist)/2*0.6;
+          const push=(LEAF_MIN_DIST-dist)/2*0.7;
           const nx=dx/dist, ny=dy/dist;
           if(!a.pinned){ a.x-=nx*push; a.y-=ny*push; }
           if(!b.pinned){ b.x+=nx*push; b.y+=ny*push; }
@@ -602,13 +606,18 @@ function drawLeafs(){
         const dx=a.x-p.x, dy=a.y-p.y;
         const dist=Math.sqrt(dx*dx+dy*dy)||0.1;
         if(dist<NODE_MIN_DIST){
-          const push=(NODE_MIN_DIST-dist)*0.5;
+          const push=(NODE_MIN_DIST-dist)*0.6;
           const nx=dx/dist, ny=dy/dist;
           a.x+=nx*push; a.y+=ny*push;
         }
       });
     });
   }
+
+  // Store physics positions for next frame (bubble memory)
+  positions.forEach(({leaf:l, x, y, pinned})=>{
+    if(!pinned){ l._px=x; l._py=y; }
+  });
 
   // Draw everything into lG (behind branches and nodes)
   positions.forEach(({leaf:l, x:lx, y:ly, twygs})=>{

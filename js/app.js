@@ -423,6 +423,7 @@ function initEventListeners() {
   on('btn-bonds',    'click', () => setTreeMode('bonds'));
   on('btn-leafs',    'click', () => {
     showLeafs=!showLeafs;
+    if(!showLeafs) leafs.forEach(l=>{delete l._px;delete l._py;});
     document.getElementById('btn-leafs').classList.toggle('active',showLeafs);
     render();
   });

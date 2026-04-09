@@ -53,7 +53,7 @@ function getLeafPosition(l){
   const idx=sibs.indexOf(l);
   const count=sibs.length||1;
   const angle=((idx/count)*Math.PI*2)+(hash%60)*0.01; // even spread + slight jitter
-  const dist=55+(hash%15); // orbit: 55-70px from node (clears glow)
+  const dist=70+(hash%20); // orbit: 70-90px from node (clears glow + node min)
   return {x:primary.x+Math.cos(angle)*dist, y:primary.y+Math.sin(angle)*dist};
 }
 
@@ -80,7 +80,7 @@ document.addEventListener('mousemove',e=>{
 
 function snapLeafAwayFromNodes(l){
   if(l.x==null||l.y==null) return;
-  const NODE_MIN=50, LEAF_MIN=48;
+  const NODE_MIN=65, LEAF_MIN=48;
   let moved=true, passes=0;
   while(moved&&passes<10){
     moved=false; passes++;
