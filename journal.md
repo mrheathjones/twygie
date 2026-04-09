@@ -626,3 +626,39 @@ Built as a separate HTML page (timeline.html) with:
 - Added: Connection lines assessment (edge cases found)
 - Added: Traditional layout polish, customLinks cleanup to near-term
 - Priority order: Leafs Phase 3 (timeline) → Phase 4 (tree view) → mobile → GEDCOM
+
+### Leafs Phase 3+4 — Timeline + Tree View (Session 14 continued)
+
+**Phase 3 — Timeline Integration:**
+- Dated leafs appear above timeline line in organic stagger zone (bottom 52-67%)
+- Hash-based positioning: pseudo-random height + ±15px horizontal jitter
+- Hover popup above dot (title, content preview, tagged names)
+- Click opens detail modal (centered, glassmorphism)
+- 🍃 leaf emoji on dot and in legend
+- "You" shown instead of user name in tagged lists
+
+**Phase 4 — Tree View Integration:**
+- 🍃 Leafs toggle button in view bar (separated by divider)
+- Leaf nodes rendered in lG SVG group (behind bG branches and nG nodes)
+- Draggable with position persistence to Firestore
+
+**Orb Collision Engine (js/orb-engine.js):**
+- OrbEngine class with requestAnimationFrame loop
+- Soft repulsion from dragged orb (inverse-power falloff)
+- Orb-to-orb separation (minimumSeparation 28px, force 0.35)
+- Static obstacles: twyg nodes registered as immovable (50px radius, force 0.5)
+- Spring return to home position after displacement
+- Velocity damping (0.75) for smooth deceleration
+- Configurable: repulsionRadius, minimumSeparation, springStrength, etc.
+- SVG elements created once, engine updates transform attributes (no full re-render)
+
+**Snap-on-drop (2-phase):**
+- Phase 1: iterative push from nodes (60px) and leafs (30px)
+- Phase 2: if still blocked, orbit primary twyg testing 24 angles for clearest spot
+- 150px max drift cap prevents flying
+
+**Key bug fixes:**
+- Drag origin: use orb's current position, not stale home position
+- Node avoidance: continuous in engine (not just on drop)
+- Encrypt: for-loop btoa (spread operator crashes on large arrays)
+- Firestore: leafs stored in familyTrees/{uid} (not separate collection)

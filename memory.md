@@ -515,3 +515,14 @@ treeLinks/{linkId}
 - Toggle pill buttons with `.leaf-tag-btn[data-tid]` + `.active` class
 - Replaces checkbox approach (was invisible against dark bg)
 - Multi-node: primary node always tagged, others optional
+
+### Orb Collision Engine (js/orb-engine.js — Session 14)
+- Loaded before render.js in script order
+- OrbEngine class: orbs Map, obstacles array, rAF loop
+- Config: repulsionRadius:60, minimumSeparation:28, pushStrength:1.2, damping:0.75
+- Static obstacles: `engine.addObstacle(x, y, radius)` — twyg nodes at 50px radius
+- Physics: repulsion → orb separation → obstacle avoidance → spring return → damping → clamp → integrate
+- `updateLeafPositions(orbs)`: callback updates SVG transform + connection line paths
+- Drag: `leafDragActive` (var in render.js, checked in ui.js mousemove)
+- Drag origin reads `orb.x/orb.y` at mousedown (not stale home position)
+- `snapLeafFromNodes(x, y, leafId)`: 2-phase drop resolution
