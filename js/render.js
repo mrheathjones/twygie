@@ -667,19 +667,21 @@ function drawLeafs(){
     // Drag handlers → engine
     G.addEventListener('mousedown',function(e){
       e.stopPropagation();
+      var orb=engine.getOrb(l.id);
       engine.dragStart(l.id);
       leafDragActive=l.id;
       leafDragStartX=e.clientX; leafDragStartY=e.clientY;
-      leafDragOrigX=hx; leafDragOrigY=hy;
+      leafDragOrigX=orb?orb.x:hx; leafDragOrigY=orb?orb.y:hy;
       leafDragMoved=false;
     });
     G.addEventListener('touchstart',function(e){
       if(e.touches.length!==1) return;
       e.stopPropagation();
+      var orb=engine.getOrb(l.id);
       engine.dragStart(l.id);
       leafDragActive=l.id;
       leafDragStartX=e.touches[0].clientX; leafDragStartY=e.touches[0].clientY;
-      leafDragOrigX=hx; leafDragOrigY=hy;
+      leafDragOrigX=orb?orb.x:hx; leafDragOrigY=orb?orb.y:hy;
       leafDragMoved=false;
     },{passive:true});
 
