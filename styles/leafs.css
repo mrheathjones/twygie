@@ -62,3 +62,24 @@ html,body{width:100%;height:100%;overflow-y:auto;overflow-x:hidden;background:va
 #detail-card{width:520px;max-height:80vh;overflow-y:auto;background:rgba(8,14,26,.97);border:1px solid var(--border);border-radius:16px;padding:28px;backdrop-filter:blur(16px);box-shadow:0 16px 48px rgba(0,0,0,.5)}
 .dc-close{position:absolute;top:16px;right:16px;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:var(--muted);cursor:pointer;font-size:.8rem;transition:all .15s}
 .dc-close:hover{color:var(--text);background:rgba(255,255,255,.1)}
+
+/* New Leaf button */
+.new-leaf-btn{background:rgba(100,180,100,.12)!important;border-color:rgba(100,180,100,.3)!important;color:var(--green)!important}
+.new-leaf-btn:hover{background:rgba(100,180,100,.2)!important}
+
+/* Add Leaf modal */
+#add-bg{position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.75);backdrop-filter:blur(8px);opacity:0;pointer-events:none;transition:opacity .2s;display:flex;align-items:center;justify-content:center}
+#add-bg.open{opacity:1;pointer-events:all}
+#add-card{width:480px;max-height:85vh;overflow-y:auto;background:rgba(8,14,26,.97);border:1px solid var(--border);border-radius:16px;padding:24px;backdrop-filter:blur(16px);box-shadow:0 16px 48px rgba(0,0,0,.5);transform:scale(.95);transition:transform .2s}
+#add-bg.open #add-card{transform:scale(1)}
+.add-type-btn{flex:1;padding:8px 4px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,.03);cursor:pointer;text-align:center;transition:all .15s;font-family:'Outfit',sans-serif}
+.add-type-btn:hover{background:rgba(255,255,255,.06)}
+.add-type-btn.active{background:rgba(100,180,100,.12);border-color:rgba(100,180,100,.35)}
+.add-type-btn .at-icon{font-size:1.2rem;display:block;margin-bottom:1px}
+.add-type-btn .at-label{font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
+.add-type-btn.active .at-label{color:rgba(140,210,140,.9)}
+.add-twyg-btn{padding:4px 10px;border-radius:100px;border:1px solid var(--border);background:rgba(255,255,255,.04);font-size:.72rem;color:var(--muted);cursor:pointer;font-family:'Outfit',sans-serif;transition:all .15s;display:flex;align-items:center;gap:4px}
+.add-twyg-btn.active{background:rgba(100,180,100,.15);border-color:rgba(100,180,100,.35);color:rgba(140,210,140,.9)}
+.add-emoji{font-size:1.3rem;cursor:pointer;padding:3px 5px;border-radius:8px;border:1px solid transparent;transition:all .15s}
+.add-emoji:hover{background:rgba(255,255,255,.06)}
+.add-emoji.active{background:rgba(100,180,100,.15);border-color:rgba(100,180,100,.3)}

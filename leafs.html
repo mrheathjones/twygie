@@ -14,6 +14,7 @@
 <div id="hdr">
   <div class="logo"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 22V10"/><path d="M12 10C12 6 8 3.5 4 4.5"/><path d="M12 10C12 6 16 3.5 20 4.5"/><path d="M12 16C12 13 9 11 5 12"/><path d="M12 16C12 13 15 11 19 12"/></svg> Leafs</div>
   <div class="hdr-btns">
+    <button class="hbtn new-leaf-btn" id="btn-new-leaf">+ New Leaf</button>
     <a class="hbtn" href="/app">← Back to Tree</a>
   </div>
 </div>
@@ -41,6 +42,30 @@
   <div>No Leafs yet.</div>
   <div style="font-size:.78rem;color:var(--muted);margin-top:4px">Add stories, moments, and quotes from the tree view.</div>
   <a class="hbtn" href="/app" style="margin-top:12px">← Back to Tree</a>
+</div>
+
+<!-- ADD LEAF MODAL -->
+<div id="add-bg">
+  <div id="add-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div style="font-family:'Cormorant Garamond',serif;font-size:1.2rem;font-weight:600;color:var(--text)">New Leaf</div>
+      <button onclick="closeAddLeaf()" style="background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer;padding:4px">✕</button>
+    </div>
+    <div id="add-type-picker" style="display:flex;gap:4px;margin-bottom:14px"></div>
+    <input id="add-title" placeholder="Title (optional)" style="width:100%;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--text);font-family:'Outfit',sans-serif;font-size:.86rem;margin-bottom:10px;box-sizing:border-box;outline:none"/>
+    <textarea id="add-content" placeholder="Write something…" style="width:100%;min-height:100px;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--text);font-family:'Outfit',sans-serif;font-size:.86rem;margin-bottom:10px;box-sizing:border-box;outline:none;resize:vertical"></textarea>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <input type="number" id="add-year" placeholder="Year" min="1800" max="2030" style="flex:1;padding:8px;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--text);font-family:'Outfit',sans-serif;font-size:.84rem;outline:none"/>
+      <select id="add-month" style="flex:1;padding:8px;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--text);font-family:'Outfit',sans-serif;font-size:.84rem;outline:none">
+        <option value="">Month</option><option value="1">Jan</option><option value="2">Feb</option><option value="3">Mar</option><option value="4">Apr</option><option value="5">May</option><option value="6">Jun</option><option value="7">Jul</option><option value="8">Aug</option><option value="9">Sep</option><option value="10">Oct</option><option value="11">Nov</option><option value="12">Dec</option>
+      </select>
+      <input type="number" id="add-day" placeholder="Day" min="1" max="31" style="flex:1;padding:8px;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--text);font-family:'Outfit',sans-serif;font-size:.84rem;outline:none"/>
+    </div>
+    <div style="font-size:.7rem;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em">Tag Twygs</div>
+    <div id="add-twyg-tags" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px"></div>
+    <div style="display:flex;gap:6px;margin-bottom:16px" id="add-emoji-row"></div>
+    <button id="btn-submit-new-leaf" style="width:100%;padding:12px;border-radius:10px;background:rgba(100,180,100,.18);border:1px solid rgba(100,180,100,.35);color:rgba(140,210,140,.95);font-family:'Outfit',sans-serif;font-size:.88rem;font-weight:600;cursor:pointer">Save Leaf</button>
+  </div>
 </div>
 
 <!-- DETAIL MODAL -->

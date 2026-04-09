@@ -16,6 +16,7 @@ const MONTHS=['','January','February','March','April','May','June','July','Augus
 // ─── ENCRYPTION ───
 async function deriveKey(uid){const e=new TextEncoder();const km=await crypto.subtle.importKey('raw',e.encode(uid),'PBKDF2',false,['deriveKey']);return crypto.subtle.deriveKey({name:'PBKDF2',salt:e.encode('twygie-encryption-v1'),iterations:100000,hash:'SHA-256'},km,{name:'AES-GCM',length:256},false,['encrypt','decrypt'])}
 async function decrypt(key,b64){const bin=atob(b64);const raw=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)raw[i]=bin.charCodeAt(i);const dec=await crypto.subtle.decrypt({name:'AES-GCM',iv:raw.slice(0,12)},key,raw.slice(12));return JSON.parse(new TextDecoder().decode(dec))}
+async function encrypt(key,data){const iv=crypto.getRandomValues(new Uint8Array(12));const enc=await crypto.subtle.encrypt({name:'AES-GCM',iv},key,new TextEncoder().encode(JSON.stringify(data)));const buf=new Uint8Array(iv.length+enc.byteLength);buf.set(iv);buf.set(new Uint8Array(enc),iv.length);let b='';for(let i=0;i<buf.length;i++)b+=String.fromCharCode(buf[i]);return btoa(b)}
 
 // ─── HELPERS ───
 function fullName(p){return p.name||[(p.firstName||''),(p.lastName||'')].filter(Boolean).join(' ')||'Unknown'}
@@ -182,4 +183,122 @@ document.getElementById('twyg-filters')?.addEventListener('click',e=>{
   if(activeTwyg===tid){activeTwyg=null;} else {activeTwyg=tid;}
   document.querySelectorAll('.twyg-btn').forEach(b=>b.classList.toggle('active',b.dataset.tid===activeTwyg));
   renderLeafs();
+});
+
+// ─── ADD LEAF MODAL ──────────────────────────────────────────────────────────
+let addLeafType='moment';
+let addLeafEmoji='';
+
+function openAddLeaf(){
+  const bg=document.getElementById('add-bg');
+  if(!bg) return;
+
+  // Type picker
+  const picker=document.getElementById('add-type-picker');
+  picker.innerHTML=Object.entries(LEAF_TYPES).map(([k,v])=>
+    `<button type="button" class="add-type-btn${k==='moment'?' active':''}" data-type="${k}"><span class="at-icon">${v.icon}</span><span class="at-label">${v.label}</span></button>`
+  ).join('');
+  addLeafType='moment';
+  picker.querySelectorAll('.add-type-btn').forEach(btn=>{
+    btn.onclick=()=>{
+      picker.querySelectorAll('.add-type-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      addLeafType=btn.dataset.type;
+    };
+  });
+
+  // Twyg tags
+  const tags=document.getElementById('add-twyg-tags');
+  tags.innerHTML=people.map(p=>{
+    const nm=p.isYou?'You':fullName(p).split(' ')[0];
+    const c=getNodeColor(p);
+    return `<button type="button" class="add-twyg-btn" data-tid="${p.id}"><span class="twyg-dot" style="background:${c}"></span>${nm}</button>`;
+  }).join('');
+  tags.querySelectorAll('.add-twyg-btn').forEach(btn=>{
+    btn.onclick=()=>btn.classList.toggle('active');
+  });
+
+  // Emoji picker
+  const emRow=document.getElementById('add-emoji-row');
+  addLeafEmoji='';
+  emRow.innerHTML=['😂','❤️','😢','🎉','🙏','😮'].map(em=>
+    `<span class="add-emoji" data-em="${em}">${em}</span>`
+  ).join('');
+  emRow.querySelectorAll('.add-emoji').forEach(em=>{
+    em.onclick=()=>{
+      const was=em.classList.contains('active');
+      emRow.querySelectorAll('.add-emoji').forEach(e=>e.classList.remove('active'));
+      if(!was){em.classList.add('active');addLeafEmoji=em.dataset.em;}
+      else{addLeafEmoji='';}
+    };
+  });
+
+  // Clear inputs
+  document.getElementById('add-title').value='';
+  document.getElementById('add-content').value='';
+  document.getElementById('add-year').value='';
+  document.getElementById('add-month').value='';
+  document.getElementById('add-day').value='';
+
+  bg.classList.add('open');
+}
+
+function closeAddLeaf(){
+  document.getElementById('add-bg').classList.remove('open');
+}
+
+async function submitNewLeaf(){
+  const title=document.getElementById('add-title').value.trim();
+  const content=document.getElementById('add-content').value.trim();
+  if(!content&&!title){
+    document.getElementById('add-content').style.borderColor='rgba(200,80,80,.6)';
+    setTimeout(()=>{document.getElementById('add-content').style.borderColor='';},2000);
+    return;
+  }
+
+  const year=parseInt(document.getElementById('add-year').value)||0;
+  const month=parseInt(document.getElementById('add-month').value)||0;
+  const day=parseInt(document.getElementById('add-day').value)||0;
+  const date=year?{year,month,day}:null;
+
+  const twygs=[];
+  document.querySelectorAll('.add-twyg-btn.active').forEach(btn=>twygs.push(btn.dataset.tid));
+  if(!twygs.length){
+    // Must tag at least one twyg
+    document.getElementById('add-twyg-tags').style.outline='1px solid rgba(200,80,80,.4)';
+    setTimeout(()=>{document.getElementById('add-twyg-tags').style.outline='';},2000);
+    return;
+  }
+
+  const leaf={
+    id:'leaf_'+Date.now(),
+    type:addLeafType,
+    title,
+    content,
+    date,
+    emoji:addLeafEmoji||null,
+    twygs,
+    media:[],
+    createdBy:currentUser.uid,
+    createdAt:Date.now()
+  };
+
+  leafs.push(leaf);
+
+  // Save to Firestore
+  try{
+    const key=await deriveKey(currentUser.uid);
+    const encrypted=await encrypt(key, leafs);
+    await db.collection('familyTrees').doc(currentUser.uid).update({encryptedLeafs:encrypted, leafCount:leafs.length});
+  }catch(e){console.error('Save leaf failed:',e);}
+
+  closeAddLeaf();
+  renderTwygFilters();
+  renderLeafs();
+}
+
+document.getElementById('btn-new-leaf')?.addEventListener('click', openAddLeaf);
+document.getElementById('btn-submit-new-leaf')?.addEventListener('click', submitNewLeaf);
+document.getElementById('add-bg')?.addEventListener('click',e=>{
+  if(e.target===e.currentTarget) closeAddLeaf();
 });
