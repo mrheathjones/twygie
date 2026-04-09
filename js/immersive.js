@@ -6,7 +6,7 @@
  */
 
 let immScene, immCamera, immRenderer, immAnimId;
-let immNodes=[], immLines=[];
+let immNodes=[], immLines=[], immLeafNodes=[];
 let immDragging=false, immDragStart={x:0,y:0}, immDragMoved=false;
 let immTheta=0, immPhi=Math.PI/4, immRadius=350;
 let immTargetTheta=0, immTargetPhi=Math.PI/4, immTargetRadius=350;
@@ -53,7 +53,7 @@ function enterImmersive(){
   sg.setAttribute('position',new THREE.Float32BufferAttribute(sv,3));
   immScene.add(new THREE.Points(sg,new THREE.PointsMaterial({color:0x665544,size:0.8,transparent:true,opacity:0.5})));
 
-  buildImmNodes(); buildImmLines();
+  buildImmNodes(); buildImmLines(); buildImmLeafs();
   immExpandProgress=0; immExpanding=true;
   immSelectedId=null; immZooming=false;
   immTheta=0; immPhi=Math.PI/4; immRadius=350;
@@ -85,7 +85,8 @@ function exitImmersive(){
   removeEventListener('resize',immRZ);
   immNodes.forEach(n=>{immScene.remove(n.mesh);immScene.remove(n.glow);immScene.remove(n.label);});
   immLines.forEach(l=>{immScene.remove(l.line);});
-  immNodes=[]; immLines=[];
+  immLeafNodes.forEach(n=>{immScene.remove(n.mesh);immScene.remove(n.glow);if(n.label)immScene.remove(n.label);});
+  immNodes=[]; immLines=[]; immLeafNodes=[];
   if(immRenderer) immRenderer.dispose();
   immScene=immCamera=immRenderer=null;
 }
@@ -159,7 +160,66 @@ function mkLine(idA,idB,color,dashed){
   const line=new THREE.Line(geo,mat); if(dashed)line.computeLineDistances();
   line.userData={idA,idB}; immScene.add(line); immLines.push({line,idA,idB});
 }
-function immRefreshLines(){if(immScene)buildImmLines();}
+function immRefreshLines(){if(immScene){buildImmLines();buildImmLeafs();}}
+
+// ─── LEAFS IN 3D ────────────────────────────────────────────────────────────
+function buildImmLeafs(){
+  immLeafNodes.forEach(n=>{immScene.remove(n.mesh);immScene.remove(n.glow);if(n.line)immScene.remove(n.line);});
+  immLeafNodes=[];
+  if(!leafs||!leafs.length||!showLeafs) return;
+
+  const LEAF_SZ=1.8;
+  const LEAF_COL=new THREE.Color(0x64b464);
+
+  leafs.forEach((l,idx)=>{
+    const twygs=(l.twygs||[]).map(tid=>immNodes.find(n=>n.personId===tid)).filter(Boolean);
+    if(!twygs.length) return;
+
+    // Tag-based brightness
+    const tagCount=(l.twygs||[]).length;
+    const t=tagCount/(tagCount+5);
+    const emIntensity=0.3+t*0.7;
+    const glowOp=0.05+t*0.2;
+
+    // Position: orbit primary twyg in 3D
+    const primary=twygs[0];
+    const tgt=primary.mesh.userData.targetPos;
+    if(!tgt) return;
+    const hash=(l.id||'').split('').reduce((a,c)=>a+c.charCodeAt(0),0);
+    const angle=((hash%360)*Math.PI)/180;
+    const elev=((hash*7%180)-90)*Math.PI/180;
+    const dist=15+(hash%10);
+    const leafPos=new THREE.Vector3(
+      tgt.x+Math.cos(angle)*Math.cos(elev)*dist,
+      tgt.y+Math.sin(elev)*dist,
+      tgt.z+Math.sin(angle)*Math.cos(elev)*dist
+    );
+
+    // Leaf sphere
+    const mesh=new THREE.Mesh(
+      new THREE.SphereGeometry(LEAF_SZ,12,12),
+      new THREE.MeshPhongMaterial({color:LEAF_COL,emissive:LEAF_COL,emissiveIntensity:emIntensity,transparent:true,opacity:.8,shininess:60})
+    );
+    mesh.userData={targetPos:leafPos,leafId:l.id};
+    immScene.add(mesh);
+
+    // Glow
+    const glow=new THREE.Mesh(
+      new THREE.SphereGeometry(LEAF_SZ*(2+t*2),8,8),
+      new THREE.MeshBasicMaterial({color:LEAF_COL,transparent:true,opacity:glowOp,side:THREE.BackSide})
+    );
+    immScene.add(glow);
+
+    // Connection line to primary twyg
+    const lineGeo=new THREE.BufferGeometry().setFromPoints([leafPos.clone(),tgt.clone()]);
+    const lineMat=new THREE.LineDashedMaterial({color:0x64b464,dashSize:3,gapSize:2,transparent:true,opacity:.2});
+    const line=new THREE.Line(lineGeo,lineMat);
+    line.computeLineDistances();
+    immScene.add(line);
+
+    immLeafNodes.push({mesh,glow,line,primaryId:primary.personId});
+  });
+}
 
 // ─── CAMERA ──────────────────────────────────────────────────────────────────
 function updateImmCam(){
@@ -235,6 +295,33 @@ function immAnimate(){
     n.label.position.copy(n.mesh.position); n.label.position.y+=n.label.userData.offsetY||0;
     n.mesh.material.emissiveIntensity=(n.isYou?1.0:.6)+Math.sin(t*1.5+i*.7)*.25;
     n.glow.material.opacity=immSelectedId===n.personId?(.35+Math.sin(t*3)*.12):(n.isYou?.22:.12);
+  });
+
+  // Leaf nodes follow their primary twyg + gentle float
+  immLeafNodes.forEach((ln,i)=>{
+    const tgt=ln.mesh.userData.targetPos;
+    if(!tgt) return;
+    if(immExpanding){
+      const e=1-Math.pow(1-immExpandProgress,3);
+      ln.mesh.position.lerpVectors(new THREE.Vector3(0,0,0),tgt,e);
+    } else {
+      ln.mesh.position.lerp(tgt,.05);
+      // Gentle float
+      ln.mesh.position.y+=Math.sin(t*0.8+i*1.3)*0.15;
+    }
+    ln.glow.position.copy(ln.mesh.position);
+    ln.mesh.material.emissiveIntensity=0.4+Math.sin(t*1.2+i*0.9)*0.2;
+    // Update connection line
+    if(ln.line){
+      const primary=immNodes.find(n=>n.personId===ln.primaryId);
+      if(primary){
+        const pos=ln.line.geometry.attributes.position;
+        pos.setXYZ(0,ln.mesh.position.x,ln.mesh.position.y,ln.mesh.position.z);
+        pos.setXYZ(1,primary.mesh.position.x,primary.mesh.position.y,primary.mesh.position.z);
+        pos.needsUpdate=true;
+        ln.line.computeLineDistances();
+      }
+    }
   });
 
   immLines.forEach((l,i)=>{

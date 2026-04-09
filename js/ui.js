@@ -17,6 +17,42 @@
 // ─── NODE DRAG ────────────────────────────────────────────────────────────────
 let nodeDragState=null;
 
+// Node collision avoidance during drag (skip Traditional + Immersive)
+function pushNodesFromDragged(draggedId){
+  if(layoutMode==='traditional'||layoutMode==='immersive') return;
+  const dragged=peopleById[draggedId]; if(!dragged) return;
+  const NODE_R=28, PUSH_DIST=NODE_R*3, PASSES=4;
+  for(let pass=0;pass<PASSES;pass++){
+    people.forEach(p=>{
+      if(p.id===draggedId) return;
+      const dx=p.x-dragged.x, dy=p.y-dragged.y;
+      const dist=Math.sqrt(dx*dx+dy*dy)||0.1;
+      if(dist<PUSH_DIST){
+        const push=(PUSH_DIST-dist)*0.35;
+        const nx=dx/dist, ny=dy/dist;
+        p.x+=nx*push; p.y+=ny*push;
+      }
+    });
+    // Also push non-dragged nodes apart from each other
+    for(let i=0;i<people.length;i++){
+      if(people[i].id===draggedId) continue;
+      for(let j=i+1;j<people.length;j++){
+        if(people[j].id===draggedId) continue;
+        const a=people[i], b=people[j];
+        const dx=b.x-a.x, dy=b.y-a.y;
+        const dist=Math.sqrt(dx*dx+dy*dy)||0.1;
+        const minDist=NODE_R*2.5;
+        if(dist<minDist){
+          const push=(minDist-dist)/2*0.2;
+          const nx=dx/dist, ny=dy/dist;
+          a.x-=nx*push; a.y-=ny*push;
+          b.x+=nx*push; b.y+=ny*push;
+        }
+      }
+    }
+  }
+}
+
 function onNodeMouseDown(e,id){
   e.stopPropagation();
   const p=peopleById[id]; if(!p) return;
@@ -51,6 +87,7 @@ document.addEventListener('mousemove',e=>{
       hideTooltip();
       const p=peopleById[nodeDragState.id]; if(!p) return;
       p.x=nodeDragState.origX+dx/scale; p.y=nodeDragState.origY+dy/scale;
+      pushNodesFromDragged(nodeDragState.id);
       render();
       if(selectedNodeId) highlightConnected(selectedNodeId);
     }
@@ -76,6 +113,7 @@ document.addEventListener('touchmove',e=>{
     if(nodeDragState.moved){
       const p=peopleById[nodeDragState.id]; if(!p) return;
       p.x=nodeDragState.origX+dx/scale; p.y=nodeDragState.origY+dy/scale;
+      pushNodesFromDragged(nodeDragState.id);
       render();
     }
   }
