@@ -381,19 +381,25 @@ function openEditLeaf(leafId){
 }
 
 function confirmDeleteLeaf(leafId){
-  if(!confirm('Delete this Leaf? This can\'t be undone.')) return;
-  const idx=leafs.findIndex(x=>x.id===leafId);
-  if(idx<0) return;
-  leafs.splice(idx,1);
+  const bg=document.getElementById('confirm-bg');
+  document.getElementById('confirm-msg').textContent="Delete this Leaf? This can't be undone.";
+  bg.style.opacity='1'; bg.style.pointerEvents='all';
 
-  // Save to Firestore
-  deriveKey(currentUser.uid).then(key=>{
-    encrypt(key,leafs).then(encrypted=>{
-      db.collection('familyTrees').doc(currentUser.uid).update({encryptedLeafs:encrypted,leafCount:leafs.length});
+  document.getElementById('confirm-ok').onclick=function(){
+    bg.style.opacity='0'; bg.style.pointerEvents='none';
+    const idx=leafs.findIndex(x=>x.id===leafId);
+    if(idx<0) return;
+    leafs.splice(idx,1);
+    deriveKey(currentUser.uid).then(key=>{
+      encrypt(key,leafs).then(encrypted=>{
+        db.collection('familyTrees').doc(currentUser.uid).update({encryptedLeafs:encrypted,leafCount:leafs.length});
+      });
     });
-  });
-
-  closeDetail();
-  renderTwygFilters();
-  renderLeafs();
+    closeDetail();
+    renderTwygFilters();
+    renderLeafs();
+  };
+  document.getElementById('confirm-cancel').onclick=function(){
+    bg.style.opacity='0'; bg.style.pointerEvents='none';
+  };
 }

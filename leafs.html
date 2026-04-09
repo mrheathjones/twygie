@@ -78,6 +78,17 @@
   </div>
 </div>
 
+<!-- CONFIRM MODAL -->
+<div id="confirm-bg" style="position:fixed;inset:0;z-index:700;background:rgba(0,0,0,.75);backdrop-filter:blur(8px);opacity:0;pointer-events:none;transition:opacity .2s;display:flex;align-items:center;justify-content:center">
+  <div style="width:360px;background:rgba(8,14,26,.97);border:1px solid var(--border);border-radius:16px;padding:24px;text-align:center;box-shadow:0 16px 48px rgba(0,0,0,.5)">
+    <div id="confirm-msg" style="font-size:.92rem;color:var(--text);margin-bottom:20px;line-height:1.5"></div>
+    <div style="display:flex;gap:8px;justify-content:center">
+      <button id="confirm-cancel" style="padding:8px 20px;border-radius:100px;background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--muted);font-family:'Outfit',sans-serif;font-size:.82rem;cursor:pointer">Cancel</button>
+      <button id="confirm-ok" style="padding:8px 20px;border-radius:100px;background:rgba(200,80,80,.15);border:1px solid rgba(200,80,80,.3);color:rgba(220,100,100,.9);font-family:'Outfit',sans-serif;font-size:.82rem;font-weight:600;cursor:pointer">Delete</button>
+    </div>
+  </div>
+</div>
+
 <!-- DETAIL MODAL -->
 <div id="detail-bg">
   <div id="detail-card"></div>
