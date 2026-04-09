@@ -38,8 +38,8 @@ html,body{width:100%;height:100%;overflow-y:auto;overflow-x:hidden;background:va
 @media(max-width:560px){#leaf-grid{columns:1}}
 
 /* Leaf Card */
-.lf-card{break-inside:avoid;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:16px;cursor:pointer;transition:all .2s}
-.lf-card:hover{background:rgba(100,180,100,.05);border-color:rgba(100,180,100,.2);transform:translateY(-2px)}
+.lf-card{break-inside:avoid;background:rgba(100,180,100,.03);border:1px solid rgba(100,180,100,.1);border-radius:14px;padding:18px;margin-bottom:16px;cursor:pointer;transition:all .2s}
+.lf-card:hover{background:rgba(100,180,100,.07);border-color:rgba(100,180,100,.25);transform:translateY(-2px)}
 .lf-header{display:flex;align-items:center;gap:8px;margin-bottom:10px}
 .lf-type-icon{font-size:1.2rem}
 .lf-emoji{font-size:1rem;margin-left:auto}
@@ -59,7 +59,7 @@ html,body{width:100%;height:100%;overflow-y:auto;overflow-x:hidden;background:va
 /* Detail modal */
 #detail-bg{position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.75);backdrop-filter:blur(8px);opacity:0;pointer-events:none;transition:opacity .2s;display:flex;align-items:center;justify-content:center}
 #detail-bg.open{opacity:1;pointer-events:all}
-#detail-card{width:520px;max-height:80vh;overflow-y:auto;background:rgba(8,14,26,.97);border:1px solid var(--border);border-radius:16px;padding:28px;backdrop-filter:blur(16px);box-shadow:0 16px 48px rgba(0,0,0,.5)}
+#detail-card{width:520px;max-height:80vh;overflow-y:auto;background:rgba(8,14,26,.97);border:1px solid rgba(100,180,100,.12);border-radius:16px;padding:28px;backdrop-filter:blur(16px);box-shadow:0 16px 48px rgba(0,0,0,.5)}
 .dc-close{position:absolute;top:16px;right:16px;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:var(--muted);cursor:pointer;font-size:.8rem;transition:all .15s}
 .dc-close:hover{color:var(--text);background:rgba(255,255,255,.1)}
 
