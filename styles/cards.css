@@ -46,6 +46,7 @@
 #app-modal-bg{position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);opacity:0;pointer-events:none;transition:opacity .2s;display:flex;align-items:center;justify-content:center}
 #app-modal-bg.open{opacity:1;pointer-events:all}
 #app-modal{background:#080f1d;border:1px solid rgba(200,168,75,.2);border-radius:14px;width:340px;max-width:90vw;padding:24px;box-shadow:0 20px 50px rgba(0,0,0,.6);text-align:center}
+#app-modal.leaf-modal{background:rgba(10,20,14,.97);border-color:rgba(100,180,100,.25)}
 #app-modal-msg{font-size:.88rem;color:var(--text);line-height:1.6;margin-bottom:20px}
 #app-modal-btns{display:flex;gap:8px;justify-content:center}
 .link-code{font-family:'Cormorant Garamond',serif;font-size:1.8rem;font-weight:700;color:var(--gold);letter-spacing:.15em;margin:18px 0;user-select:all}

@@ -1142,7 +1142,11 @@ function openLeafDetail(leafId){
     </div>
   `;
 
+  // Green tint for leaf modals
+  document.getElementById('app-modal').classList.add('leaf-modal');
+
   appChoice(msg, '✏️ Edit', '🗑 Delete', 'Close').then(choice=>{
+    document.getElementById('app-modal').classList.remove('leaf-modal');
     if(choice==='a'){
       // Edit
       const firstTwyg=l.twygs&&l.twygs[0]?l.twygs[0]:null;
