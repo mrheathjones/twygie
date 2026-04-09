@@ -698,3 +698,21 @@ Built as a separate HTML page (timeline.html) with:
 - "🍃 Leafs" header link navigates to page
 - Green tinted modals (dark green bg + green border)
 - Type icons removed from card/detail titles
+
+### Session Wrap-up — Node Physics + Immersive Leafs
+
+**Node Collision Avoidance:**
+- pushNodesFromDragged(): 4-pass collision during drag
+- Dragged node pushes others (84px radius, 0.35 force)
+- Non-dragged nodes separate from each other (70px min, 0.2 force)
+- Skipped for Traditional + Immersive modes
+- Nodes stay where pushed (no spring return)
+
+**Immersive Leafs:**
+- Green 3D spheres orbiting their primary twyg node
+- Tag-based brightness (emissive + glow scaling)
+- Dashed green connection lines to primary twyg
+- Gentle Y-axis float animation
+- Expand animation synced with nodes
+- Respects showLeafs toggle
+- Rebuilt on view mode changes
