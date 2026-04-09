@@ -53,7 +53,7 @@ function getLeafPosition(l){
   const idx=sibs.indexOf(l);
   const count=sibs.length||1;
   const angle=((idx/count)*Math.PI*2)+(hash%60)*0.01; // even spread + slight jitter
-  const dist=35+(hash%15); // tight orbit: 35-50px from node
+  const dist=55+(hash%15); // orbit: 55-70px from node (clears glow)
   return {x:primary.x+Math.cos(angle)*dist, y:primary.y+Math.sin(angle)*dist};
 }
 
@@ -78,13 +78,48 @@ document.addEventListener('mousemove',e=>{
   if(isDragging){ panX=e.clientX-dragStartX; panY=e.clientY-dragStartY; applyTransform(); }
 });
 
+function snapLeafAwayFromNodes(l){
+  if(l.x==null||l.y==null) return;
+  const NODE_MIN=50, LEAF_MIN=48;
+  let moved=true, passes=0;
+  while(moved&&passes<10){
+    moved=false; passes++;
+    // Push away from twyg nodes
+    people.forEach(p=>{
+      const dx=l.x-p.x, dy=l.y-p.y;
+      const dist=Math.sqrt(dx*dx+dy*dy)||0.1;
+      if(dist<NODE_MIN){
+        const push=NODE_MIN-dist;
+        l.x+=dx/dist*push; l.y+=dy/dist*push;
+        moved=true;
+      }
+    });
+    // Push away from other leafs
+    leafs.forEach(other=>{
+      if(other.id===l.id||other.x==null) return;
+      const dx=l.x-other.x, dy=l.y-other.y;
+      const dist=Math.sqrt(dx*dx+dy*dy)||0.1;
+      if(dist<LEAF_MIN){
+        const push=LEAF_MIN-dist;
+        l.x+=dx/dist*push; l.y+=dy/dist*push;
+        moved=true;
+      }
+    });
+  }
+}
+
 document.addEventListener('mouseup',e=>{
   if(nodeDragState){
     if(!nodeDragState.moved){
       if(nodeDragState.isLeaf) openLeafDetail(nodeDragState.id);
       else selectNode(nodeDragState.id);
     } else {
-      if(nodeDragState.isLeaf) saveLeafs();
+      if(nodeDragState.isLeaf){
+        const l=leafs.find(x=>x.id===nodeDragState.id);
+        if(l) snapLeafAwayFromNodes(l);
+        saveLeafs();
+        render();
+      }
       else scheduleSave();
     }
     nodeDragState=null; return;
@@ -115,7 +150,12 @@ document.addEventListener('touchend',()=>{
       if(nodeDragState.isLeaf) openLeafDetail(nodeDragState.id);
       else selectNode(nodeDragState.id);
     } else {
-      if(nodeDragState.isLeaf) saveLeafs();
+      if(nodeDragState.isLeaf){
+        const l=leafs.find(x=>x.id===nodeDragState.id);
+        if(l) snapLeafAwayFromNodes(l);
+        saveLeafs();
+        render();
+      }
       else scheduleSave();
     }
     nodeDragState=null;

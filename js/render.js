@@ -567,33 +567,47 @@ function drawLeafs(){
   if(!leafs||!leafs.length) return;
   const lG=document.getElementById('lG');
   const LEAF_R=8;
-  const MIN_DIST=LEAF_R*5; // minimum distance between leaf centers
+  const LEAF_MIN_DIST=LEAF_R*6;  // min distance between leaf centers
+  const NODE_MIN_DIST=50;         // min distance from any twyg node center
 
   // Calculate all positions first
   const positions=leafs.map(l=>{
     const twygs=(l.twygs||[]).map(tid=>peopleById[tid]).filter(Boolean);
     if(!twygs.length) return null;
     const pos=getLeafPosition(l);
-    return {leaf:l, x:pos.x, y:pos.y, twygs};
+    return {leaf:l, x:pos.x, y:pos.y, twygs, pinned:l.x!=null&&l.y!=null};
   }).filter(Boolean);
 
-  // Collision avoidance — push overlapping leaves apart (3 passes)
-  for(let pass=0;pass<3;pass++){
+  // Collision avoidance — 8 passes for convergence
+  for(let pass=0;pass<8;pass++){
+    // Push leaves apart from each other
     for(let i=0;i<positions.length;i++){
       for(let j=i+1;j<positions.length;j++){
-        // Skip leaves that have been manually positioned
         const a=positions[i], b=positions[j];
-        if(a.leaf.x!=null&&a.leaf.y!=null&&b.leaf.x!=null&&b.leaf.y!=null) continue;
+        if(a.pinned&&b.pinned) continue;
         const dx=b.x-a.x, dy=b.y-a.y;
-        const dist=Math.sqrt(dx*dx+dy*dy);
-        if(dist<MIN_DIST&&dist>0){
-          const push=(MIN_DIST-dist)/2;
+        const dist=Math.sqrt(dx*dx+dy*dy)||0.1;
+        if(dist<LEAF_MIN_DIST){
+          const push=(LEAF_MIN_DIST-dist)/2*0.6;
           const nx=dx/dist, ny=dy/dist;
-          if(a.leaf.x==null) { a.x-=nx*push; a.y-=ny*push; }
-          if(b.leaf.x==null) { b.x+=nx*push; b.y+=ny*push; }
+          if(!a.pinned){ a.x-=nx*push; a.y-=ny*push; }
+          if(!b.pinned){ b.x+=nx*push; b.y+=ny*push; }
         }
       }
     }
+    // Push leaves away from twyg nodes
+    positions.forEach(a=>{
+      if(a.pinned) return;
+      people.forEach(p=>{
+        const dx=a.x-p.x, dy=a.y-p.y;
+        const dist=Math.sqrt(dx*dx+dy*dy)||0.1;
+        if(dist<NODE_MIN_DIST){
+          const push=(NODE_MIN_DIST-dist)*0.5;
+          const nx=dx/dist, ny=dy/dist;
+          a.x+=nx*push; a.y+=ny*push;
+        }
+      });
+    });
   }
 
   // Draw everything into lG (behind branches and nodes)
@@ -602,7 +616,7 @@ function drawLeafs(){
     twygs.forEach(t=>{
       const line=createSvgElement('path');
       line.setAttribute('d',`M ${lx} ${ly} L ${t.x} ${t.y}`);
-      line.setAttribute('stroke','rgba(100,180,100,0.15)');
+      line.setAttribute('stroke','rgba(100,180,100,0.12)');
       line.setAttribute('stroke-width','1');
       line.setAttribute('stroke-dasharray','3,4');
       line.setAttribute('fill','none');
@@ -622,15 +636,15 @@ function drawLeafs(){
 
     // Soft glow
     const glow=createSvgElement('circle');
-    glow.setAttribute('r',String(LEAF_R*2.5));
+    glow.setAttribute('r',String(LEAF_R*2));
     glow.setAttribute('fill','rgba(100,180,100,0.04)');
     G.appendChild(glow);
 
     // Main dot
     const dot=createSvgElement('circle');
     dot.setAttribute('r',String(LEAF_R));
-    dot.setAttribute('fill','rgba(100,180,100,0.15)');
-    dot.setAttribute('stroke','rgba(100,180,100,0.3)');
+    dot.setAttribute('fill','rgba(100,180,100,0.12)');
+    dot.setAttribute('stroke','rgba(100,180,100,0.25)');
     dot.setAttribute('stroke-width','1');
     G.appendChild(dot);
 
@@ -640,7 +654,8 @@ function drawLeafs(){
     fo.setAttribute('y',String(-LEAF_R));
     fo.setAttribute('width',String(LEAF_R*2));
     fo.setAttribute('height',String(LEAF_R*2));
-    fo.innerHTML=`<div xmlns="http://www.w3.org/1999/xhtml" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:10px;line-height:1">🍃</div>`;
+    fo.setAttribute('style','pointer-events:none');
+    fo.innerHTML=`<div xmlns="http://www.w3.org/1999/xhtml" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:10px;line-height:1;pointer-events:none">🍃</div>`;
     G.appendChild(fo);
 
     // Title label below
@@ -651,7 +666,8 @@ function drawLeafs(){
       label.setAttribute('text-anchor','middle');
       label.setAttribute('font-family','Outfit, sans-serif');
       label.setAttribute('font-size','8');
-      label.setAttribute('fill','rgba(100,180,100,0.45)');
+      label.setAttribute('fill','rgba(100,180,100,0.4)');
+      label.setAttribute('style','pointer-events:none');
       label.textContent=title;
       G.appendChild(label);
     }
