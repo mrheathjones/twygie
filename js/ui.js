@@ -43,12 +43,18 @@ function onLeafTouchStart(e,leafId){
 
 function getLeafPosition(l){
   if(l.x!=null&&l.y!=null) return {x:l.x,y:l.y};
-  const twygs=(l.twygs||[]).map(tid=>peopleById[tid]).filter(Boolean);
-  if(!twygs.length) return {x:0,y:0};
-  let cx=0,cy=0; twygs.forEach(t=>{cx+=t.x;cy+=t.y}); cx/=twygs.length; cy/=twygs.length;
+  // Orbit around the primary (first) tagged twyg
+  const primary=peopleById[(l.twygs||[])[0]];
+  if(!primary) return {x:0,y:0};
+  // Spread leafs around the node in a circle
   const hash=(l.id||'').split('').reduce((a,c)=>a+c.charCodeAt(0),0);
-  const angle=((hash%360)*Math.PI)/180, dist=45+((hash*3)%30);
-  return {x:cx+Math.cos(angle)*dist, y:cy+Math.sin(angle)*dist};
+  // Count how many leafs share this primary twyg (for even distribution)
+  const sibs=leafs.filter(x=>(x.twygs||[])[0]===(l.twygs||[])[0]);
+  const idx=sibs.indexOf(l);
+  const count=sibs.length||1;
+  const angle=((idx/count)*Math.PI*2)+(hash%60)*0.01; // even spread + slight jitter
+  const dist=35+(hash%15); // tight orbit: 35-50px from node
+  return {x:primary.x+Math.cos(angle)*dist, y:primary.y+Math.sin(angle)*dist};
 }
 
 document.addEventListener('mousemove',e=>{
