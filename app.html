@@ -588,21 +588,6 @@
   <button id="btn-exit-immersive" style="position:fixed;top:16px;right:16px;z-index:60;padding:8px 16px;border-radius:100px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;font-family:'Outfit',sans-serif;font-size:.8rem;cursor:pointer;backdrop-filter:blur(8px)">✕ Exit Immersive</button>
 </div>
 
-<!-- Layout warning modal -->
-<div id="layout-warn-scrim" class="scrim" style="display:none">
-  <div class="branded-modal" style="max-width:380px">
-    <div style="font-size:1.1rem;font-weight:600;margin-bottom:8px">Change Layout?</div>
-    <div style="font-size:.85rem;color:var(--muted);margin-bottom:16px">This will reposition all nodes to fit the new layout. Any manual positioning will be reset.</div>
-    <label style="display:flex;align-items:center;gap:8px;font-size:.78rem;color:var(--muted);margin-bottom:16px;cursor:pointer">
-      <input type="checkbox" id="layout-warn-dismiss"/> Don't warn me again
-    </label>
-    <div style="display:flex;gap:8px">
-      <button id="layout-warn-cancel" class="modal-btn" style="flex:1;background:rgba(255,255,255,.06)">Cancel</button>
-      <button id="layout-warn-confirm" class="modal-btn modal-btn-primary" style="flex:1">Change Layout</button>
-    </div>
-  </div>
-</div>
-
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>

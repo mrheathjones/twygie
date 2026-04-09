@@ -405,20 +405,19 @@ function initEventListeners() {
   on('btn-bonds',    'click', () => setTreeMode('bonds'));
 
   // --- Layout mode toggle ---
-  function requestLayoutChange(mode){
+  async function requestLayoutChange(mode){
     if(mode===layoutMode) return;
-    if(layoutWarnDismissed){
-      setLayoutMode(mode);
-      persistLayoutMode();
-      return;
+    if(!layoutWarnDismissed){
+      const confirmed=await appConfirm(
+        'This will reposition all nodes to fit the new layout. Any manual positioning will be reset.<br><br><label style="display:flex;align-items:center;gap:8px;font-size:.78rem;color:var(--muted);cursor:pointer"><input type="checkbox" id="layout-warn-dismiss-cb"/> Don\'t warn me again</label>',
+        'Change Layout','Cancel'
+      );
+      if(!confirmed) return;
+      const cb=document.getElementById('layout-warn-dismiss-cb');
+      if(cb&&cb.checked) layoutWarnDismissed=true;
     }
-    // Show warning modal
-    const scrim=document.getElementById('layout-warn-scrim');
-    const cb=document.getElementById('layout-warn-dismiss');
-    if(cb) cb.checked=false;
-    scrim.style.display='flex';
-    // Store pending mode
-    scrim.dataset.pendingMode=mode;
+    setLayoutMode(mode);
+    persistLayoutMode();
   }
   on('btn-compact',     'click', () => requestLayoutChange('compact'));
   on('btn-relaxed',     'click', () => requestLayoutChange('relaxed'));
@@ -426,20 +425,6 @@ function initEventListeners() {
   on('btn-traditional', 'click', () => requestLayoutChange('traditional'));
   on('btn-immersive',   'click', () => requestLayoutChange('immersive'));
 
-  on('layout-warn-cancel', 'click', () => {
-    document.getElementById('layout-warn-scrim').style.display='none';
-  });
-  on('layout-warn-confirm', 'click', () => {
-    const scrim=document.getElementById('layout-warn-scrim');
-    const mode=scrim.dataset.pendingMode;
-    const cb=document.getElementById('layout-warn-dismiss');
-    if(cb&&cb.checked) layoutWarnDismissed=true;
-    scrim.style.display='none';
-    if(mode){
-      setLayoutMode(mode);
-      persistLayoutMode();
-    }
-  });
   on('btn-exit-immersive', 'click', () => {
     setLayoutMode('relaxed');
     persistLayoutMode();
