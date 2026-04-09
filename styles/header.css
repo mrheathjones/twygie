@@ -49,3 +49,4 @@
 /* Exit Immersive button hover */
 #btn-exit-immersive:hover{background:#e0c060;transform:scale(1.03)}
 #btn-exit-immersive{transition:all .15s}
+a.hbtn,a.hbtn:visited,a.hbtn:hover,a.hbtn:active{text-decoration:none}
