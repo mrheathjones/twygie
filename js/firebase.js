@@ -478,77 +478,153 @@ function autoLayoutNew(newIds=[]){
 }
 
 function layoutTraditional(byGen, gen, newIds, params){
-  const {genH, spacing, centerX, baseY}=params;
+  const {genH, centerX, baseY}=params;
+  const SPOUSE_GAP=70;   // tight gap between couples
+  const SIBLING_GAP=130; // gap between siblings
+  const BRANCH_GAP=200;  // gap between separate family branches
 
-  // Build family units: group children under their parents
-  const parentChildren={}; // parentKey → [childIds]
-  people.forEach(p=>{
-    const pids=(p.parents||[]).sort().join(',');
-    if(!pids) return;
-    if(!parentChildren[pids]) parentChildren[pids]=[];
-    parentChildren[pids].push(p.id);
-  });
+  const placed=new Set();
+  const pos={}; // id → {x, y}
 
-  // Assign x positions generation by generation, top to bottom
-  const genNums=Object.keys(byGen).map(Number).sort((a,b)=>a-b);
-  const xPos={}; // nodeId → x
+  function setPos(id, x, y){
+    pos[id]={x,y};
+    placed.add(id);
+    const p=peopleById[id];
+    if(p&&(newIds.includes(id)||p.x===undefined||p.x===null)){
+      p.x=x; p.y=y;
+    }
+  }
 
-  // First pass: position each generation
-  genNums.forEach(gNum=>{
-    const genPeople=byGen[gNum];
-    const y=baseY+gNum*genH;
+  function getSpouseId(id){
+    const p=peopleById[id]; if(!p) return null;
+    return p.spouseOf||(people.find(x=>x.spouseOf===id)||{}).id||null;
+  }
 
-    // Group by parent set for alignment
-    const units=[];
-    const placed=new Set();
+  function getChildrenIds(id){
+    return people.filter(c=>(c.parents||[]).includes(id)).map(c=>c.id);
+  }
 
-    // Find family units in this generation
-    genPeople.forEach(p=>{
-      if(placed.has(p.id)) return;
-      // Find spouse
-      const spouseId=p.spouseOf||(people.find(x=>x.spouseOf===p.id)||{}).id;
-      const unit=[p.id];
-      placed.add(p.id);
-      if(spouseId&&genPeople.find(x=>x.id===spouseId)&&!placed.has(spouseId)){
-        unit.push(spouseId);
-        placed.add(spouseId);
+  function getSiblingIds(id){
+    const p=peopleById[id]; if(!p) return [];
+    const sibs=new Set();
+    (p.parents||[]).forEach(pid=>{
+      people.filter(s=>s.id!==id&&(s.parents||[]).includes(pid)).forEach(s=>sibs.add(s.id));
+    });
+    return [...sibs];
+  }
+
+  // ── Place a family unit recursively (bottom-up) ──
+  // Returns the x-range [minX, maxX] used by this subtree
+  function placeAncestors(personId, cx, y){
+    if(placed.has(personId)) return [cx,cx];
+    const spouseId=getSpouseId(personId);
+    let minX=cx, maxX=cx;
+
+    // Place person + spouse side by side
+    if(spouseId&&!placed.has(spouseId)){
+      setPos(personId, cx-SPOUSE_GAP/2, y);
+      setPos(spouseId, cx+SPOUSE_GAP/2, y);
+      minX=cx-SPOUSE_GAP/2; maxX=cx+SPOUSE_GAP/2;
+    } else {
+      setPos(personId, cx, y);
+    }
+
+    // Place person's siblings beside them
+    const sibs=getSiblingIds(personId).filter(s=>!placed.has(s));
+    let sibX=maxX+SIBLING_GAP;
+    sibs.forEach(sibId=>{
+      setPos(sibId, sibX, y);
+      // Place sibling's spouse
+      const sibSp=getSpouseId(sibId);
+      if(sibSp&&!placed.has(sibSp)){
+        sibX+=SPOUSE_GAP;
+        setPos(sibSp, sibX, y);
       }
-      units.push(unit);
+      maxX=sibX;
+      sibX+=SIBLING_GAP;
     });
 
-    // Position units centered
-    let totalWidth=0;
-    units.forEach(u=>{ totalWidth+=u.length*spacing; });
-    totalWidth-=spacing; // no trailing gap
-
-    let x=centerX-totalWidth/2;
-    units.forEach(unit=>{
-      unit.forEach(id=>{
-        const p=peopleById[id];
-        if(p&&(newIds.includes(id)||p.x===undefined||p.x===null)){
-          p.x=x; p.y=y;
+    // Place spouse's siblings on the other side
+    if(spouseId){
+      const spSibs=getSiblingIds(spouseId).filter(s=>!placed.has(s));
+      let spSibX=minX-SIBLING_GAP;
+      spSibs.forEach(sibId=>{
+        const sibSp=getSpouseId(sibId);
+        if(sibSp&&!placed.has(sibSp)){
+          setPos(sibSp, spSibX, y);
+          spSibX-=SPOUSE_GAP;
         }
-        xPos[id]=x;
-        x+=spacing;
+        setPos(sibId, spSibX, y);
+        minX=spSibX;
+        spSibX-=SIBLING_GAP;
       });
-    });
-  });
+    }
 
-  // Second pass: center parents above their children
-  genNums.forEach(gNum=>{
-    const genPeople=byGen[gNum];
-    genPeople.forEach(p=>{
-      const children=people.filter(c=>(c.parents||[]).includes(p.id));
-      if(children.length>0){
-        const childXs=children.map(c=>xPos[c.id]||c.x||0);
-        const avgX=childXs.reduce((a,b)=>a+b,0)/childXs.length;
-        // Only adjust if this node was auto-positioned
-        if(newIds.includes(p.id)||p.x===undefined||p.x===null){
-          p.x=avgX;
-          xPos[p.id]=avgX;
-        }
+    // Recurse upward: place parents above
+    const p=peopleById[personId];
+    const parentIds=(p?p.parents||[]:[]).filter(pid=>!placed.has(pid));
+    if(parentIds.length>=2){
+      // Two parents: center them above, one left, one right
+      const pCx=(minX+maxX)/2;
+      const [pMin1,pMax1]=placeAncestors(parentIds[0], pCx-BRANCH_GAP/2, y-genH);
+      const [pMin2,pMax2]=placeAncestors(parentIds[1], pCx+BRANCH_GAP/2, y-genH);
+      minX=Math.min(minX,pMin1,pMin2); maxX=Math.max(maxX,pMax1,pMax2);
+    } else if(parentIds.length===1){
+      const pCx=(minX+maxX)/2;
+      const [pMin,pMax]=placeAncestors(parentIds[0], pCx, y-genH);
+      minX=Math.min(minX,pMin); maxX=Math.max(maxX,pMax);
+    }
+
+    // Also place spouse's parents
+    if(spouseId){
+      const sp=peopleById[spouseId];
+      const spParents=(sp?sp.parents||[]:[]).filter(pid=>!placed.has(pid));
+      if(spParents.length>=2){
+        const spCx=maxX+BRANCH_GAP/2;
+        const [sMin1,sMax1]=placeAncestors(spParents[0], spCx-BRANCH_GAP/4, y-genH);
+        const [sMin2,sMax2]=placeAncestors(spParents[1], spCx+BRANCH_GAP/4, y-genH);
+        maxX=Math.max(maxX,sMax1,sMax2);
+      } else if(spParents.length===1){
+        const [sMin,sMax]=placeAncestors(spParents[0], maxX+BRANCH_GAP/2, y-genH);
+        maxX=Math.max(maxX,sMax);
       }
+    }
+
+    return [minX, maxX];
+  }
+
+  // ── Place descendants below ──
+  function placeDescendants(personId, cx, y){
+    const children=getChildrenIds(personId).filter(c=>!placed.has(c));
+    if(!children.length) return;
+    const totalW=(children.length-1)*SIBLING_GAP;
+    let x=cx-totalW/2;
+    children.forEach(cid=>{
+      setPos(cid, x, y+genH);
+      // Place child's spouse
+      const cSp=getSpouseId(cid);
+      if(cSp&&!placed.has(cSp)) setPos(cSp, x+SPOUSE_GAP, y+genH);
+      // Recurse down
+      placeDescendants(cid, x, y+genH);
+      x+=SIBLING_GAP;
     });
+  }
+
+  // Start from isYou
+  const youNode=people.find(p=>p.isYou);
+  if(!youNode) return;
+
+  placeAncestors(youNode.id, centerX, baseY);
+  placeDescendants(youNode.id, centerX, baseY);
+
+  // Place any remaining unplaced nodes
+  let unplacedX=centerX-300;
+  people.forEach(p=>{
+    if(!placed.has(p.id)){
+      const gv=gen[p.id]||0;
+      setPos(p.id, unplacedX, baseY+gv*genH);
+      unplacedX+=SIBLING_GAP;
+    }
   });
 }
 
