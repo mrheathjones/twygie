@@ -563,6 +563,7 @@ function drawNodes(){
 
 // ─── DRAW LEAFS ON TREE ─────────────────────────────────────────────────────
 function drawLeafs(){
+  console.log('[Leafs] drawLeafs called, leafs.length=', leafs?leafs.length:0, 'showLeafs=', showLeafs);
   if(!leafs||!leafs.length) return;
   const nG=document.getElementById('nG');
   const bG=document.getElementById('bG');
@@ -609,22 +610,22 @@ function drawLeafs(){
     glow.setAttribute('fill','rgba(100,180,100,0.06)');
     G.appendChild(glow);
 
-    // Main dot
+    // Main dot — filled green so it's visible even without emoji
     const dot=createSvgElement('circle');
     dot.setAttribute('r',String(LEAF_R));
-    dot.setAttribute('fill','rgba(100,180,100,0.15)');
-    dot.setAttribute('stroke','rgba(100,180,100,0.35)');
-    dot.setAttribute('stroke-width','1');
+    dot.setAttribute('fill','rgba(100,180,100,0.25)');
+    dot.setAttribute('stroke','rgba(100,180,100,0.5)');
+    dot.setAttribute('stroke-width','1.5');
     G.appendChild(dot);
 
-    // Emoji/icon text
-    const icon=createSvgElement('text');
-    icon.setAttribute('text-anchor','middle');
-    icon.setAttribute('dominant-baseline','central');
-    icon.setAttribute('font-size','10');
-    icon.setAttribute('class','leaf-emoji');
-    icon.textContent='🍃';
-    G.appendChild(icon);
+    // Emoji via foreignObject (SVG text doesn't render emoji reliably)
+    const fo=createSvgElement('foreignObject');
+    fo.setAttribute('x',String(-LEAF_R));
+    fo.setAttribute('y',String(-LEAF_R));
+    fo.setAttribute('width',String(LEAF_R*2));
+    fo.setAttribute('height',String(LEAF_R*2));
+    fo.innerHTML=`<div xmlns="http://www.w3.org/1999/xhtml" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:10px;line-height:1">🍃</div>`;
+    G.appendChild(fo);
 
     // Title label below
     const title=(l.title||'').slice(0,20);
