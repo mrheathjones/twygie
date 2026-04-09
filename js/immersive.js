@@ -21,6 +21,7 @@ function enterImmersive(){
   if(!wrap||!canvas||typeof THREE==='undefined') return;
 
   wrap.style.display='block';
+  const exitBtn=document.getElementById('btn-exit-immersive'); if(exitBtn) exitBtn.style.display='';
   const mw=document.getElementById('wrap'); if(mw) mw.style.display='none';
   // Float view toggle over 3D
   const hl=document.querySelector('.hdr-left'); if(hl) hl.style.display='none';
@@ -68,6 +69,7 @@ function enterImmersive(){
 
 function exitImmersive(){
   const wrap=document.getElementById('immersive-wrap'); if(wrap) wrap.style.display='none';
+  const exitBtn=document.getElementById('btn-exit-immersive'); if(exitBtn) exitBtn.style.display='none';
   const mw=document.getElementById('wrap'); if(mw) mw.style.display='';
   const hl=document.querySelector('.hdr-left'); if(hl) hl.style.display='';
   const hr=document.querySelector('.hdr-right'); if(hr) hr.style.display='';
