@@ -430,9 +430,6 @@ function initEventListeners() {
     else render();
   });
 
-  // Restore leafs toggle state from settings
-  if(showLeafs) document.getElementById('btn-leafs').classList.add('active');
-
   // --- Layout mode toggle ---
   async function requestLayoutChange(mode){
     if(mode===layoutMode) return;

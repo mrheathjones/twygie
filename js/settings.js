@@ -175,6 +175,9 @@ async function loadSettings(){
       if(d.dobWarnDismissed!=null) dobWarnDismissed=!!d.dobWarnDismissed;
       if(d.showLeafs!=null) showLeafs=!!d.showLeafs;
     }
+    // Apply toggle states to UI
+    const leafBtn=document.getElementById('btn-leafs');
+    if(leafBtn&&showLeafs) leafBtn.classList.add('active');
   }catch(e){}
 }
 
