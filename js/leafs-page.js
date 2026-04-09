@@ -79,7 +79,7 @@ function renderLeafs(){
 
     return `<div class="lf-card" onclick="openDetail('${l.id}')">
       <div class="lf-header">
-        <span class="lf-type-icon">${t.icon}</span>
+        
         <span class="lf-title">${l.title||t.label}</span>
         ${l.emoji?`<span class="lf-emoji">${l.emoji}</span>`:''}
       </div>
@@ -119,7 +119,7 @@ function openDetail(leafId){
   card.innerHTML=`
     <button class="dc-close" onclick="closeDetail()">✕</button>
     <div style="text-align:center;margin-bottom:16px">
-      <div style="font-size:1.4rem;margin-bottom:6px">${t.icon}${l.emoji?' '+l.emoji:''}</div>
+      <div style="font-size:1.4rem;margin-bottom:6px">${l.emoji||''}</div>
       <div style="font-size:1.2rem;font-weight:600;color:var(--text)">${l.title||t.label}</div>
       ${dateStr?`<div style="font-size:.82rem;color:var(--muted);margin-top:4px">${dateStr}</div>`:''}
     </div>
