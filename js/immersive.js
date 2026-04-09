@@ -29,14 +29,14 @@ function enterImmersive(){
   const hdr=document.getElementById('hdr'); if(hdr) hdr.style.justifyContent='center';
 
   immScene=new THREE.Scene();
-  immScene.background=new THREE.Color(0x04070c);
+  // transparent — HTML atmosphere shows through
   immScene.fog=new THREE.FogExp2(0x04070c,0.0006);
   immCamera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,1,2000);
   immLookAt=new THREE.Vector3(0,0,0);
   immTargetLookAt=new THREE.Vector3(0,0,0);
   updateImmCam();
 
-  immRenderer=new THREE.WebGLRenderer({canvas,antialias:true});
+  immRenderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
   immRenderer.setSize(innerWidth,innerHeight);
   immRenderer.setPixelRatio(Math.min(devicePixelRatio,2));
 
