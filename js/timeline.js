@@ -179,7 +179,7 @@ function renderTimeline(){
       const icon=TL_LEAF[l.type]||'✨';
       const title=(l.title||l.type||'').slice(0,30);
       const content=(l.content||'').slice(0,60);
-      const taggedNames=(l.twygs||[]).map(tid=>{const p=peopleById[tid];return p?fullName(p).split(' ')[0]:null}).filter(Boolean).join(', ');
+      const taggedNames=(l.twygs||[]).map(tid=>{const p=peopleById[tid];return p?(p.isYou?'You':fullName(p).split(' ')[0]):null}).filter(Boolean).join(', ');
 
       // Organic stagger: pseudo-random offset within the leaf zone (bottom 50-65%)
       const hash=(l.id||'').split('').reduce((a,c)=>a+c.charCodeAt(0),0);
