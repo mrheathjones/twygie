@@ -479,9 +479,8 @@ function autoLayoutNew(newIds=[]){
 
 function layoutTraditional(byGen, gen, newIds, params){
   const {genH, centerX, baseY}=params;
-  const SPOUSE_GAP=120;  // gap between couples
-  const SIBLING_GAP=180; // gap between siblings
-  const BRANCH_GAP=300;  // gap between parent branches
+  const SPOUSE_GAP=120;
+  const SIBLING_GAP=180;
 
   const placed=new Set();
 
@@ -494,104 +493,120 @@ function layoutTraditional(byGen, gen, newIds, params){
   function getSpouse(id){
     const p=peopleById[id]; if(!p) return null;
     const sid=p.spouseOf||(people.find(x=>x.spouseOf===id)||{}).id;
-    return sid?peopleById[sid]:null;
+    return sid&&!placed.has(sid)?peopleById[sid]:null;
   }
 
-  function getChildren(id){
+  function getUnplacedChildren(id){
     return people.filter(c=>(c.parents||[]).includes(id)&&!placed.has(c.id));
   }
 
-  function getSiblings(id){
+  function getUnplacedSiblings(id){
     const p=peopleById[id]; if(!p) return [];
     const sibs=[];
     (p.parents||[]).forEach(pid=>{
-      people.filter(s=>s.id!==id&&!placed.has(s.id)&&(s.parents||[]).includes(pid)).forEach(s=>{
-        if(!sibs.find(x=>x.id===s.id)) sibs.push(s);
-      });
+      people.filter(s=>s.id!==id&&!placed.has(s.id)&&(s.parents||[]).includes(pid))
+        .forEach(s=>{ if(!sibs.find(x=>x.id===s.id)) sibs.push(s); });
     });
     return sibs;
   }
 
-  // ── Bottom-up: place ancestors recursively ──
-  // Returns the x center of this subtree
-  function placeUp(personId, cx, y){
-    if(placed.has(personId)) return cx;
+  // Place a person + spouse + siblings in a row, returning {minX, maxX, centerX}
+  function placeRow(personId, cx, y){
+    if(placed.has(personId)) return {minX:cx,maxX:cx,cx};
 
-    // Place person
-    place(personId, cx, y);
-
-    // Place spouse to the right
+    // Collect: person + spouse, then siblings (each with their spouse)
+    const units=[]; // [{id, spouseId}]
+    const person=peopleById[personId];
     const spouse=getSpouse(personId);
-    if(spouse&&!placed.has(spouse.id)){
-      place(spouse.id, cx+SPOUSE_GAP, y);
-    }
-    const coupleCx=spouse&&!placed.has(spouse.id)?cx:cx+SPOUSE_GAP/2;
+    units.push({id:personId, spouseId:spouse?spouse.id:null});
 
-    // Place siblings to the right of the couple
-    const sibs=getSiblings(personId);
-    let sibX=(spouse?cx+SPOUSE_GAP:cx)+SIBLING_GAP;
+    const sibs=getUnplacedSiblings(personId);
     sibs.forEach(sib=>{
-      place(sib.id, sibX, y);
       const sibSp=getSpouse(sib.id);
-      if(sibSp&&!placed.has(sibSp.id)){
-        sibX+=SPOUSE_GAP;
-        place(sibSp.id, sibX, y);
-      }
-      sibX+=SIBLING_GAP;
+      units.push({id:sib.id, spouseId:sibSp?sibSp.id:null});
     });
 
-    // Place parents above — each parent gets its own branch
+    // Calculate total width
+    let totalW=0;
+    units.forEach((u,i)=>{
+      totalW+=u.spouseId?SPOUSE_GAP:0;
+      if(i<units.length-1) totalW+=SIBLING_GAP;
+    });
+
+    // Place centered around cx
+    let x=cx-totalW/2;
+    let personX=cx; // track where the main person ends up
+    units.forEach((u,i)=>{
+      place(u.id, x, y);
+      if(u.id===personId) personX=x;
+      if(u.spouseId){
+        x+=SPOUSE_GAP;
+        place(u.spouseId, x, y);
+      }
+      if(i<units.length-1) x+=SIBLING_GAP;
+    });
+
+    const minX=cx-totalW/2;
+    const maxX=x;
+    return {minX, maxX, cx:(minX+maxX)/2, personX};
+  }
+
+  // Recursive: place ancestors above
+  function placeUp(personId, cx, y){
+    if(placed.has(personId)) return;
+
+    // Place this person's row (person + spouse + siblings)
+    const row=placeRow(personId, cx, y);
+
+    // Find parents and place them above, centered over this row
     const p=peopleById[personId];
     const parentIds=(p?p.parents||[]:[]).filter(pid=>!placed.has(pid));
 
     if(parentIds.length>=2){
-      placeUp(parentIds[0], cx-BRANCH_GAP/2, y-genH);
-      placeUp(parentIds[1], cx+BRANCH_GAP/2, y-genH);
+      // Two parents: place each centered over their side
+      const rowCenter=(row.minX+row.maxX)/2;
+      placeUp(parentIds[0], rowCenter-SIBLING_GAP/2, y-genH);
+      placeUp(parentIds[1], rowCenter+SIBLING_GAP/2, y-genH);
     } else if(parentIds.length===1){
-      placeUp(parentIds[0], cx, y-genH);
+      // Single parent: centered above the row
+      placeUp(parentIds[0], (row.minX+row.maxX)/2, y-genH);
     }
-
-    return cx;
   }
 
-  // ── Top-down: place descendants ──
+  // Place descendants below
   function placeDown(personId, cx, y){
-    const allChildren=getChildren(personId);
-    // Also get spouse's children (shared)
-    const spouse=getSpouse(personId);
+    // Collect all children (from person + spouse)
+    const children=getUnplacedChildren(personId);
+    const spouse=peopleById[personId]?.spouseOf;
     if(spouse){
-      getChildren(spouse.id).forEach(c=>{
-        if(!allChildren.find(x=>x.id===c.id)) allChildren.push(c);
+      getUnplacedChildren(spouse).forEach(c=>{
+        if(!children.find(x=>x.id===c.id)) children.push(c);
       });
     }
-    if(!allChildren.length) return;
+    if(!children.length) return;
 
-    const totalW=(allChildren.length-1)*SIBLING_GAP;
+    const totalW=(children.length-1)*SIBLING_GAP;
     let x=cx-totalW/2;
-    allChildren.forEach(child=>{
+    children.forEach(child=>{
       place(child.id, x, y+genH);
       const childSp=getSpouse(child.id);
-      if(childSp&&!placed.has(childSp.id)){
-        place(childSp.id, x+SPOUSE_GAP, y+genH);
-      }
+      if(childSp) place(childSp.id, x+SPOUSE_GAP, y+genH);
       placeDown(child.id, x, y+genH);
       x+=SIBLING_GAP;
     });
   }
 
-  // Start from isYou
   const youNode=people.find(p=>p.isYou);
   if(!youNode) return;
 
   placeUp(youNode.id, centerX, baseY);
   placeDown(youNode.id, centerX, baseY);
 
-  // Place any remaining unplaced nodes
-  let ux=centerX+400;
+  // Place remaining unplaced nodes
+  let ux=centerX+500;
   people.forEach(p=>{
     if(!placed.has(p.id)){
-      const gv=gen[p.id]||0;
-      place(p.id, ux, baseY+gv*genH);
+      place(p.id, ux, baseY+(gen[p.id]||0)*genH);
       ux+=SIBLING_GAP;
     }
   });
