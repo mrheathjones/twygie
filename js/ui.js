@@ -424,7 +424,15 @@ function closeCard(){
   selectedNodeId=null;
   document.querySelectorAll('.nd').forEach(n=>n.classList.remove('dim','sel'));
   document.querySelectorAll('.br').forEach(b=>b.classList.remove('dim','lit'));
-  resetView();
+  // Zoom back out in immersive mode
+  if(layoutMode==='immersive'&&typeof immTargetLookAt!=='undefined'){
+    immSelectedId=null;
+    immTargetLookAt=new THREE.Vector3(0,0,0);
+    immTargetRadius=350;
+    immZooming=true;
+  } else {
+    resetView();
+  }
 }
 
 async function removePerson(id){

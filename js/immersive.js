@@ -25,6 +25,8 @@ function enterImmersive(){
   // Float view toggle over 3D
   const vt=document.querySelector('.view-toggle');
   if(vt) vt.style.cssText='position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:60';
+  const lt=document.querySelector('.layout-toggle');
+  if(lt) lt.style.display='none';
 
   immScene=new THREE.Scene();
   immScene.background=new THREE.Color(0x050508);
@@ -67,6 +69,7 @@ function exitImmersive(){
   const wrap=document.getElementById('immersive-wrap'); if(wrap) wrap.style.display='none';
   const mw=document.getElementById('wrap'); if(mw) mw.style.display='';
   const vt=document.querySelector('.view-toggle'); if(vt) vt.style.cssText='';
+  const lt=document.querySelector('.layout-toggle'); if(lt) lt.style.display='';
   const ic=document.getElementById('imm-card'); if(ic) ic.remove();
   if(immAnimId) cancelAnimationFrame(immAnimId); immAnimId=null;
   const c=document.getElementById('immersive-canvas');
@@ -91,10 +94,10 @@ function buildImmNodes(){
     const iy=p.isYou, sz=iy?IMM_NODE_SZ*1.8:IMM_NODE_SZ;
     const tgt=iy?new THREE.Vector3(0,0,0):pts[others.indexOf(p)];
     const mesh=new THREE.Mesh(new THREE.SphereGeometry(sz,24,24),
-      new THREE.MeshPhongMaterial({color:col,emissive:col,emissiveIntensity:iy?.8:.4,transparent:true,opacity:.95,shininess:80}));
+      new THREE.MeshPhongMaterial({color:col,emissive:col,emissiveIntensity:iy?1.0:.6,transparent:true,opacity:.95,shininess:80}));
     mesh.userData={personId:p.id,targetPos:tgt}; immScene.add(mesh);
     const glow=new THREE.Mesh(new THREE.SphereGeometry(sz*(iy?3.5:2.5),16,16),
-      new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:iy?.12:.06,side:THREE.BackSide}));
+      new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:iy?.22:.12,side:THREE.BackSide}));
     immScene.add(glow);
     const label=immSprite(iy?'You':fullName(p),col);
     label.userData={offsetY:-sz*2.5}; immScene.add(label);
@@ -146,8 +149,8 @@ function mkLine(idA,idB,color,dashed){
   const nA=immNodes.find(n=>n.personId===idA), nB=immNodes.find(n=>n.personId===idB);
   if(!nA||!nB)return;
   const geo=new THREE.BufferGeometry().setFromPoints([nA.mesh.position.clone(),nB.mesh.position.clone()]);
-  const mat=dashed?new THREE.LineDashedMaterial({color,dashSize:6,gapSize:3,transparent:true,opacity:.5})
-    :new THREE.LineBasicMaterial({color,transparent:true,opacity:.6});
+  const mat=dashed?new THREE.LineDashedMaterial({color,dashSize:6,gapSize:3,transparent:true,opacity:.65})
+    :new THREE.LineBasicMaterial({color,transparent:true,opacity:.7});
   const line=new THREE.Line(geo,mat); if(dashed)line.computeLineDistances();
   line.userData={idA,idB}; immScene.add(line); immLines.push({line,idA,idB});
 }
@@ -188,8 +191,7 @@ function immCK(e){
   const rc=new THREE.Raycaster(); rc.setFromCamera(m,immCamera);
   const hits=rc.intersectObjects(immNodes.map(n=>n.mesh));
   if(hits.length>0){const pid=hits[0].object.userData.personId; if(pid)immZoomTo(pid);}
-  else if(immSelectedId){immSelectedId=null;immTargetLookAt=new THREE.Vector3(0,0,0);immTargetRadius=350;immZooming=true;
-    const ic=document.getElementById('imm-card');if(ic)ic.remove();}
+  else if(immSelectedId){ if(typeof closeCard==='function') closeCard(); }
 }
 
 function immZoomTo(personId){
@@ -197,29 +199,10 @@ function immZoomTo(personId){
   immSelectedId=personId;
   immTargetLookAt=nd.mesh.userData.targetPos.clone();
   immTargetRadius=80; immZooming=true;
-  const ic=document.getElementById('imm-card'); if(ic)ic.remove();
-  setTimeout(()=>showImmCard(peopleById[personId]),800);
+  setTimeout(()=>{ if(typeof selectNode==='function') selectNode(personId); },800);
 }
 
-function showImmCard(p){
-  if(!p)return;
-  const rel=getRelToYou(p.id), age=calcAge(p);
-  const ageStr=age?(p.death||(p.dod&&p.dod.year)?age+' yrs':'Age '+age):'';
-  const nc=getNodeColor(p);
-  const photo=p.photo?'<img src="'+p.photo+'" style="width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid '+nc+'"/>'
-    :'<div style="width:48px;height:48px;border-radius:50%;background:'+nc+';display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.9rem;color:#fff">'+(fullName(p)||'?').split(' ').map(function(w){return w[0]}).join('').slice(0,2).toUpperCase()+'</div>';
-  const d=document.createElement('div'); d.id='imm-card';
-  d.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:65;background:rgba(8,14,26,.92);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:16px 24px;backdrop-filter:blur(16px);font-family:Outfit,sans-serif;color:#e8e4dc;display:flex;align-items:center;gap:16px;max-width:420px;animation:immCI .4s ease-out';
-  d.innerHTML=photo+'<div style="flex:1"><div style="font-size:1rem;font-weight:600">'+(p.isYou?'You':fullName(p))+'</div><div style="font-size:.78rem;color:rgba(255,255,255,.5);margin-top:2px">'+[rel,ageStr,p.city].filter(Boolean).join(' · ')+'</div>'+(p.note?'<div style="font-size:.72rem;color:rgba(255,255,255,.35);margin-top:4px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+p.note+'</div>':'')+'</div>';
-  const cb=document.createElement('button');
-  cb.textContent='✕'; cb.style.cssText='background:none;border:none;color:rgba(255,255,255,.4);font-size:1.2rem;cursor:pointer;padding:4px';
-  cb.onclick=function(){d.remove();immSelectedId=null;immTargetLookAt=new THREE.Vector3(0,0,0);immTargetRadius=350;immZooming=true;};
-  d.appendChild(cb);
-  document.getElementById('immersive-wrap').appendChild(d);
-  if(!document.getElementById('imm-card-style')){const s=document.createElement('style');s.id='imm-card-style';
-    s.textContent='@keyframes immCI{from{opacity:0;transform:translateX(-50%) translateY(20px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}';
-    document.head.appendChild(s);}
-}
+
 
 function immRZ(){if(!immCamera||!immRenderer)return;immCamera.aspect=innerWidth/innerHeight;immCamera.updateProjectionMatrix();immRenderer.setSize(innerWidth,innerHeight);}
 
@@ -245,8 +228,8 @@ function immAnimate(){
   immNodes.forEach((n,i)=>{
     n.glow.position.copy(n.mesh.position);
     n.label.position.copy(n.mesh.position); n.label.position.y+=n.label.userData.offsetY||0;
-    n.mesh.material.emissiveIntensity=(n.isYou?.8:.4)+Math.sin(t*1.5+i*.7)*.15;
-    n.glow.material.opacity=immSelectedId===n.personId?(.2+Math.sin(t*3)*.08):(n.isYou?.12:.06);
+    n.mesh.material.emissiveIntensity=(n.isYou?1.0:.6)+Math.sin(t*1.5+i*.7)*.25;
+    n.glow.material.opacity=immSelectedId===n.personId?(.35+Math.sin(t*3)*.12):(n.isYou?.22:.12);
   });
 
   immLines.forEach((l,i)=>{
@@ -257,8 +240,8 @@ function immAnimate(){
       pos.setXYZ(1,b.mesh.position.x,b.mesh.position.y,b.mesh.position.z);
       pos.needsUpdate=true;
       if(l.line.material.isLineDashedMaterial)l.line.computeLineDistances();
-      const bo=l.line.material.isLineDashedMaterial?.35:.45;
-      l.line.material.opacity=bo+Math.sin(t*1.2+i*.5)*.12;
+      const bo=l.line.material.isLineDashedMaterial?.5:.6;
+      l.line.material.opacity=bo+Math.sin(t*1.2+i*.5)*.2;
     }
   });
 
