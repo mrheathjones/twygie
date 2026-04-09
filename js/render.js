@@ -666,6 +666,11 @@ function drawLeafs(){
   const engine=initLeafEngine();
   leafSvgElements.clear();
 
+  // Register all twyg nodes as static obstacles
+  people.forEach(function(p){
+    engine.addObstacle(p.x, p.y, 50); // 50px radius keeps leafs clear of node glows
+  });
+
   leafs.forEach(l=>{
     const twygs=(l.twygs||[]).map(tid=>peopleById[tid]).filter(Boolean);
     if(!twygs.length) return;

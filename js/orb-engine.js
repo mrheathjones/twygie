@@ -40,6 +40,7 @@ class OrbEngine {
   constructor(config = {}) {
     this.config = { ...OrbEngine.DEFAULTS, ...config };
     this.orbs = new Map();        // id → orb state
+    this.obstacles = [];          // static obstacles [{x, y, radius}]
     this.draggedId = null;        // currently dragged orb id
     this.animId = null;           // rAF handle
     this.running = false;
@@ -76,7 +77,16 @@ class OrbEngine {
 
   clear() {
     this.orbs.clear();
+    this.obstacles = [];
     this.stop();
+  }
+
+  addObstacle(x, y, radius) {
+    this.obstacles.push({ x, y, radius });
+  }
+
+  clearObstacles() {
+    this.obstacles = [];
   }
 
   getOrb(id) { return this.orbs.get(id); }
@@ -199,7 +209,24 @@ class OrbEngine {
         }
       }
 
-      // ── 3. SPRING RETURN TO HOME ─────────────────────────────────
+      // ── 3. OBSTACLE AVOIDANCE (twyg nodes) ───────────────────────
+      for (const obs of this.obstacles) {
+        const dx = orb.x - obs.x;
+        const dy = orb.y - obs.y;
+        const dist = Math.sqrt(dx * dx + dy * dy) || 0.01;
+        const minDist = orb.radius + obs.radius;
+
+        if (dist < minDist) {
+          const nx = dx / dist;
+          const ny = dy / dist;
+          const overlap = minDist - dist;
+          // Strong push — nodes are immovable, orb must move
+          fx += nx * overlap * 0.5;
+          fy += ny * overlap * 0.5;
+        }
+      }
+
+      // ── 4. SPRING RETURN TO HOME ─────────────────────────────────
       const hx = orb.homeX - orb.x;
       const hy = orb.homeY - orb.y;
       const homeDist = Math.sqrt(hx * hx + hy * hy);
@@ -216,33 +243,33 @@ class OrbEngine {
         fy += hny * returnBias * 10;
       }
 
-      // ── 4. APPLY FORCES TO VELOCITY ──────────────────────────────
+      // ── 5. APPLY FORCES TO VELOCITY ──────────────────────────────
       orb.vx += fx;
       orb.vy += fy;
 
-      // ── 5. DAMPING ───────────────────────────────────────────────
+      // ── 6. DAMPING ───────────────────────────────────────────────
       orb.vx *= damping;
       orb.vy *= damping;
 
-      // ── 6. CLAMP VELOCITY ────────────────────────────────────────
+      // ── 7. CLAMP VELOCITY ────────────────────────────────────────
       const speed = Math.sqrt(orb.vx * orb.vx + orb.vy * orb.vy);
       if (speed > maxVelocity) {
         orb.vx = (orb.vx / speed) * maxVelocity;
         orb.vy = (orb.vy / speed) * maxVelocity;
       }
 
-      // ── 7. INTEGRATE POSITION ────────────────────────────────────
+      // ── 8. INTEGRATE POSITION ────────────────────────────────────
       orb.x += orb.vx;
       orb.y += orb.vy;
 
-      // ── 8. BOUNDARY CLAMPING ─────────────────────────────────────
+      // ── 9. BOUNDARY CLAMPING ─────────────────────────────────────
       if (this.bounds) {
         const b = this.bounds;
         orb.x = clamp(orb.x, b.x + orb.radius + edgePadding, b.x + b.width - orb.radius - edgePadding);
         orb.y = clamp(orb.y, b.y + orb.radius + edgePadding, b.y + b.height - orb.radius - edgePadding);
       }
 
-      // ── 9. DISPLACEMENT CHECK ────────────────────────────────────
+      // ── 10. DISPLACEMENT CHECK ────────────────────────────────────
       const distFromHome = Math.sqrt(
         (orb.x - orb.homeX) ** 2 + (orb.y - orb.homeY) ** 2
       );
