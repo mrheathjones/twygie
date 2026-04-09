@@ -508,12 +508,10 @@ function openLeafOnTimeline(leafId){
   const card=document.getElementById('detail-card');
   card.innerHTML=`
     <button class="dc-close" onclick="closeDetail()">✕</button>
-    <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:12px">
-      <div style="font-size:2rem;flex-shrink:0">🍃${l.emoji?' '+l.emoji:''}</div>
-      <div>
-        <div style="font-size:1.1rem;font-weight:600;color:var(--text)">${l.title||l.type}</div>
-        ${dateStr?`<div style="font-size:.82rem;color:var(--muted);margin-top:4px">${dateStr}</div>`:''}
-      </div>
+    <div style="text-align:center;margin-bottom:12px">
+      ${l.emoji?`<div style="font-size:2rem;margin-bottom:4px">${l.emoji}</div>`:''}
+      <div style="font-size:1.1rem;font-weight:600;color:var(--text)">${l.title||l.type}</div>
+      ${dateStr?`<div style="font-size:.82rem;color:var(--muted);margin-top:4px">${dateStr}</div>`:''}
     </div>
     <div style="font-size:.9rem;line-height:1.7;color:var(--text);white-space:pre-wrap;padding:0 8px;margin-bottom:16px">${l.content||''}</div>
     ${taggedNames.length?`<div style="font-size:.76rem;color:rgba(100,180,100,.7);text-align:center">
