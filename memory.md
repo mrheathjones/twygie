@@ -98,7 +98,10 @@ userSettings/{userId}
   photo: string | null,     // base64 data URL
   parents: [id],            // DIRECT parents ONLY
   spouseOf: id | undefined,
-  customLinks: {            // all non-direct relationships
+  relationships: [           // v2 engine — all declared relationships
+    { targetId, label, category: 'blood'|'bond'|'custom', structural: boolean }
+  ],
+  customLinks: {             // legacy — maintained for backward compat
     [targetId]: { label: string, lineType: 'sibling'|'blood'|'labeled' }
   },
   relLabel: string,
@@ -112,44 +115,47 @@ userSettings/{userId}
 
 ## Key Architecture Decisions
 
-### parents[] vs customLinks
-- `parents[]` = Father, Mother, Stepfather, Stepmother, Parent ONLY
-- Everything else → `customLinks` with appropriate lineType
-- This is the only way to prevent false sibling detection (shared parents auto-trigger sibling lines)
+### Three-Layer Relationship Model (v2)
+1. **Structural** (`parents[]`, `spouseOf`) — the skeleton, always correct
+2. **Declared** (`relationships[]`) — user-stated relationships with category
+3. **Computed** (`computeRelationship()`) — runtime resolver, never stored
 
-### lineType values
-| lineType | Source | Visual | Shown in |
-|---|---|---|---|
-| parents[] | direct parents | Green solid bold | Both modes |
-| `sibling` | customLinks | Orange solid bold | Both modes |
-| `blood` | customLinks | Purple solid | All Twygs |
-| `labeled` | customLinks | Purple dashed | All Twygs |
-| spouseOf | direct | Blue dashed | Both modes |
+### Relationship Categories
+| Category | Visual | Meaning |
+|---|---|---|
+| parents[] | Green solid bold | Direct parent-child |
+| spouseOf | Blue dashed | Marriage |
+| `blood` | Orange solid (sibling) or Purple solid (extended) | Shared ancestry |
+| `bond` | Pink dashed | Connected through marriage (in-laws) |
+| `custom` | Purple dashed | User-defined (godparent, friend, etc.) |
 
-### BLOOD_LABELS set
-All blood relations (grandparents, aunts, uncles, cousins, etc.) → `lineType:'blood'` (solid purple).
-Non-blood (in-laws, godparents, etc.) → `lineType:'labeled'` (dashed purple).
+### Cascades (order-independent)
+- **CASCADE A (sibling-of-sibling)**: Adding A as B's sibling → connects A to ALL of B's existing siblings
+- **CASCADE B (parent-to-sibling)**: Adding P as A's parent → adds P to ALL of A's siblings' parents[]
+- **Sibling→Uncle/Nephew**: Adding a sibling → creates uncle/nephew for ALL siblings' children
+- **isDirParent**: Adding a parent → finds ALL children (including CASCADE B additions) → creates grandchild, child-in-law relationships
+- **isDirChild**: Adding a child → finds anchor's parents (grandparents), siblings (uncles/aunts), spouse (co-parent)
 
-### Auto-Connections System
+### Auto-Connections System (v2)
 ```
 autoAssignToYou(newNodeId, anchorId, relToAnchor)
-  → getRelToYou(anchorId)           // how anchor relates to isYou
-  → inferRelToYou(anchorRel, newRel, gender)  // kinship algebra
-  → applyInferredRel(isYou, newNode, inferred) // route to correct storage
-  → repeat for isYou's spouse
+  → Structural cascades (isDirChild, isDirParent, isSibRel, isSpouseRel)
+  → Compute pass: computeRelationship(existing, newNode) for all nodes
+  → Sibling propagation: mirror shared relationships to isYou's siblings
 ```
+
+`computeRelationship(fromId, targetId)`:
+- Calls `getRelToYou_for(targetId, fromId)` — returns "how TARGET appears to FROM"
+- Uses common-ancestor BFS + spouse bridge for in-law detection
+- Returns `{label, category}` or null
 
 `applyInferredRel()` routing:
 - Son/Daughter/Father/Mother → `parents[]` (green line)
 - Husband/Wife/Partner → `spouseOf`
-- Brother/Sister/Half-* → `customLinks` with `lineType:'sibling'`
-- All others → `customLinks` with blood/labeled based on BLOOD_LABELS
+- Everything else → `addRel()` which writes to both `relationships[]` and legacy `customLinks`
 
-Key rules:
-- Spouse's child = Son/Daughter (not Stepchild)
-- Step-relationships don't block inference (in-laws still assigned)
-- Auto-assign propagates to isYou AND isYou's spouse
-- `getRelToYou_for(targetId, fromId)` enables inference from any node's perspective
+### Spouse-Sibling Guard
+`addRel` reclassifies sibling labels to "-in-law" (bond) only when one node is married to the other's actual sibling (shares parents). Being married alone doesn't trigger reclassification.
 
 ### Connection Count → Glow Size
 ```js

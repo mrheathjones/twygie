@@ -514,3 +514,36 @@ Built as a separate HTML page (timeline.html) with:
 - removePerson/getConnectionCount updated for relationships[]
 
 **Design Doc:** Full architecture written in plan.md covering three-layer model, migration plan, edge cases, and future AI engine integration.
+
+### Session 12 — Relationship Engine Completion (April 8, 2026)
+
+**Structural Resolver:**
+- Common-ancestor BFS: traces parent chains upward, finds shared ancestor, counts generation distances
+- Handles uncle/nephew (genA=1, genB=2), cousin degrees, in-law via spouse bridge
+- Inferred parent chains: if isYou has Grandfather link to G and parent P, infers G is P's parent
+- Sibling propagation: inferred parents shared between declared siblings
+
+**Critical Fixes:**
+- computeRelationship had SWAPPED PARAMETERS — was returning labels from wrong perspective (isYou labeled Alan as "Grandson" instead of "Grandfather")
+- Missing SIBLING CASCADE in autoAssignToYou — when adding a sibling, never created uncle/nephew with anchor's children
+- isDirParent cascade only checked anchor's children, not ALL children of new parent (missed CASCADE B additions)
+- Spouse-sibling guard too aggressive — blocked real siblings who happened to be married. Narrowed to only reclassify when one is married to the other's actual sibling.
+
+**Three Cascades (working):**
+- CASCADE A (sibling-of-sibling): Adding A as B's sibling → connects A to ALL of B's existing siblings
+- CASCADE B (parent-to-sibling): Adding P as A's parent → adds P to ALL of A's siblings' parents[]
+- SIBLING→UNCLE/NEPHEW: Adding a sibling → creates uncle/nephew for ALL siblings' children, great-uncle for grandchildren, sibling-in-law for spouses
+
+**Legacy Code Removed:**
+- Auto-detected sibling section (155 lines) — v2 uses relationships[]
+- bloodFamily BFS (60 lines) — v2 uses category directly
+- crossesMarriage (12 lines) — replaced by category field
+- render.js: 764 → 530 lines (-235 lines)
+
+**Other Fixes:**
+- Tooltip stuck visible: inconsistent show/hide (class vs inline opacity)
+- Burn Twygs button added to Settings → Advanced
+
+**Order Independence Verified:**
+- Top-down, bottom-up, and mixed add orders all produce correct relationships
+- Only requirement: each node must be added with a relationship to an existing connected node

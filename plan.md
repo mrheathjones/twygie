@@ -352,30 +352,24 @@ When sharing nodes with a linked user, the data is re-encrypted with a **shared 
 
 ---
 
-## Auto-Assign Status (Updated Session 9)
+## Relationship Engine v2 Status (Updated Session 12)
 
 ### Working ✓
-- Child from either parent gets grandparents from BOTH sides
-- Child node draws green line (parents[]) not purple (customLinks)
-- Spouse's child = Son/Daughter (not Stepchild)
-- Spouse gets auto-assigned when new node is added
-- In-laws assigned when spouse is added
-- Full consanguinity chain: cousin degrees, great-grandparents, etc.
-- Recalculate button in Settings → Connections
+- Three-layer model: Structural (parents[]/spouseOf) + Declared (relationships[]) + Computed (computeRelationship)
+- All cascades working: sibling-of-sibling, parent-to-sibling, sibling→uncle/nephew
+- isDirChild, isDirParent, isSibRel, isSpouseRel structural cascades
+- computeRelationship: common-ancestor BFS with spouse bridge for in-laws
+- Order-independent: top-down, bottom-up, or mixed add orders all produce correct relationships
+- Spouse-sibling guard: reclassifies only when married to the other's actual sibling
+- Renderer reads relationships[] category directly — no runtime inference
+- Migration: customLinks auto-converted to relationships[] on load
+- Burn Twygs: clean start option in Settings → Advanced
+- 235 lines of legacy workarounds removed from render.js
 
-### Paused / Known Issues ⚠️
-- ~~Alternating parent additions creates wrong cross-family links~~ **FIXED Session 10**
-- ~~`recalcAllRelationships` can amplify wrong links~~ **FIXED Session 10** (cleanFalseConnections runs after every auto-assign)
-- ~~Root: isDirParent cascade + remaining inference chains through anchorSpouse path~~ **FIXED Session 10**
-
-### Fixed in Session 10
-1. ✅ cleanFalseConnections validates ALL customLink types structurally
-2. ✅ Spouse addition links co-parent to children regardless of auto-connections toggle
-3. ✅ Inference table: 3 bugs fixed, 11 missing rules added, Step defaults removed
-4. ✅ Siblings copy parents and trigger full isDirChild cascade
-
----
-
+### Remaining ⚠️
+- 154 customLinks references remain (dual-write for backward compat)
+- Declared-only relationships (e.g. cousin without uncle) don't backfill when intermediate nodes are added
+- AI Relationship Engine not yet implemented (natural language input, consistency checking)
 
 ---
 
@@ -565,20 +559,22 @@ delete person.customLinks;
 - Update `saveTree`/`loadTree` to handle new format
 - Burn Twygs: clean start option ✅ (implemented)
 
-**Phase 2 — Renderer refactor**
+**Phase 2 — Renderer refactor** ✅ COMPLETE
 - `drawBranches()` reads `relationships[]` category directly
-- Remove `BLOOD_LABELS`, `crossesMarriage()`, `isSibLabel` checks
-- Sibling detection: shared `parents[]` only (no more transitive expansion)
+- Removed auto-detected sibling section (155 lines), bloodFamily BFS (60 lines), crossesMarriage (12 lines)
+- render.js: 764 → 530 lines
 
-**Phase 3 — Auto-assign simplification**
-- `computeRelationship()` replaces `getRelToYou_for()`, `inferRelToYou()`, and most of `autoAssignToYou()`
-- Remove `cleanFalseConnections()`, `hasSharedParent()`, `hasBloodPath()`, `hasInLawPath()`
-- Remove `inferredParents` preprocessing
+**Phase 3 — Auto-assign simplification** ✅ COMPLETE
+- `computeRelationship()` as single source of truth (parameter order fixed)
+- Three cascades: sibling-of-sibling, parent-to-sibling, sibling→uncle/nephew
+- isDirParent expanded to check ALL children of new parent
+- Spouse-sibling guard narrowed to actual in-law cases
+- getRelToYou badge: 40 → 6 lines
 
-**Phase 4 — UI updates**
-- Card connections display reads `relationships[]`
-- Add Connection modal stores `category` on creation
-- Edit connection can change category
+**Phase 4 — UI updates** ✅ PARTIAL
+- Card connections display reads `relationships[]` with customLinks fallback
+- Tooltip fixed (consistent show/hide mechanism)
+- Edit/delete connection updates both relationships[] and customLinks
 
 **Phase 5 — AI Relationship Engine (future)**
 - Natural language input → AI resolves to label + category
