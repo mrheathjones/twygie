@@ -421,6 +421,11 @@ function initEventListeners() {
   on('btn-all',      'click', () => setTreeMode('complex'));
   on('btn-blood',    'click', () => setTreeMode('bloodline'));
   on('btn-bonds',    'click', () => setTreeMode('bonds'));
+  on('btn-leafs',    'click', () => {
+    showLeafs=!showLeafs;
+    document.getElementById('btn-leafs').classList.toggle('active',showLeafs);
+    render();
+  });
 
   // --- Layout mode toggle ---
   async function requestLayoutChange(mode){

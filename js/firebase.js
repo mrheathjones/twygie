@@ -415,6 +415,7 @@ let autoConnections=true; // auto-infer relationships to isYou
 let layoutMode='relaxed'; // 'compact' | 'relaxed' | 'expanded' | 'traditional' | 'immersive'
 let layoutWarnDismissed=false; // "don't warn me again" for layout changes
 let dobWarnDismissed=false; // "don't warn me again" for missing birthdate
+let showLeafs=false; // show leaf nodes on tree view
 function setTreeMode(mode){
   treeMode=mode;
   ['btn-tree','btn-all','btn-blood','btn-bonds'].forEach(id=>{

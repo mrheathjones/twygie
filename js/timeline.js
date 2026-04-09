@@ -162,15 +162,16 @@ function renderTimeline(){
     }
   });
 
-  // ── Dated Leafs below the timeline line ──
+  // ── Dated Leafs — above the timeline, furthest zone ──
+  // Zone layout (from line outward): nodes (32%) → anniversaries (42%) → leafs (50-65%)
   const datedLeafs=(window._tlLeafs||[]).filter(l=>l.date&&l.date.year);
-  // Group leafs by year for stacking
   const leafsByYear={};
   datedLeafs.forEach(l=>{
     const yr=l.date.year;
     if(!leafsByYear[yr]) leafsByYear[yr]=[];
     leafsByYear[yr].push(l);
   });
+
   Object.keys(leafsByYear).forEach(yr=>{
     const yLeafs=leafsByYear[yr];
     const x=xOf(parseInt(yr));
@@ -179,18 +180,24 @@ function renderTimeline(){
       const title=(l.title||l.type||'').slice(0,30);
       const content=(l.content||'').slice(0,60);
       const taggedNames=(l.twygs||[]).map(tid=>{const p=peopleById[tid];return p?fullName(p).split(' ')[0]:null}).filter(Boolean).join(', ');
-      const offset=68+i*5; // stagger below line
-      html+=`<div class="tl-leaf" style="left:${x}px;top:${offset}%" onclick="openLeafOnTimeline('${l.id}')">
-        <div class="tl-leaf-line" style="height:${8+i*4}px"></div>
-        <div class="tl-leaf-dot">${icon}</div>
+
+      // Organic stagger: pseudo-random offset within the leaf zone (bottom 50-65%)
+      const hash=(l.id||'').split('').reduce((a,c)=>a+c.charCodeAt(0),0);
+      const baseBottom=52+((hash%15));        // 52-67% from bottom
+      const xJitter=((hash*7)%30)-15;         // ±15px horizontal scatter
+      const bottomPct=baseBottom+i*3;          // stagger same-year leafs
+
+      html+=`<div class="tl-leaf" style="left:${x+xJitter}px;bottom:${bottomPct}%" onclick="openLeafOnTimeline('${l.id}')">
         <div class="tl-leaf-popup">
           <div class="tl-leaf-pop">
             <div style="font-size:.9rem;margin-bottom:2px">${icon}${l.emoji?' '+l.emoji:''}</div>
             <div style="font-size:.82rem;font-weight:500;color:var(--text)">${title||l.type}</div>
-            ${content?`<div style="font-size:.72rem;color:var(--muted);margin-top:3px">${content}${l.content&&l.content.length>60?'…':''}</div>`:''}
+            ${content?`<div style="font-size:.72rem;color:var(--muted);margin-top:3px;white-space:normal;max-width:200px">${content}${l.content&&l.content.length>60?'…':''}</div>`:''}
             ${taggedNames?`<div style="font-size:.66rem;color:rgba(100,180,100,.7);margin-top:4px">${taggedNames}</div>`:''}
           </div>
         </div>
+        <div class="tl-leaf-stem"></div>
+        <div class="tl-leaf-dot">${icon}</div>
       </div>`;
     });
   });
