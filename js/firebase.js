@@ -318,30 +318,26 @@ let people=[], peopleById={};
 let leafs=[];
 
 // ─── LEAFS DATA LAYER ───────────────────────────────────────────────────────
-function leafsDoc(){ return db.collection('leafs').doc(currentUser.uid); }
+// Stored as encryptedLeafs field in familyTrees/{uid} — same doc as tree data
 
 async function loadLeafs(){
   try{
-    const snap=await leafsDoc().get();
+    const snap=await userDoc().get();
     if(snap.exists){
       const d=snap.data();
-      if(d.encryptedData&&encryptionKey){
-        leafs=await decryptPeople(encryptionKey, d.encryptedData);
-      } else if(d.entries){
-        leafs=d.entries;
-      }
+      if(d.encryptedLeafs&&encryptionKey){
+        leafs=await decryptPeople(encryptionKey, d.encryptedLeafs);
+      } else { leafs=[]; }
     } else { leafs=[]; }
   }catch(e){ console.warn('Load leafs failed:',e); leafs=[]; }
 }
 
 async function saveLeafs(){
-  if(!currentUser||!treeLoaded) { console.warn('saveLeafs blocked: currentUser=',!!currentUser,'treeLoaded=',treeLoaded); return; }
+  if(!currentUser||!treeLoaded) { console.warn('saveLeafs blocked'); return; }
   try{
     if(encryptionKey){
       const encrypted=await encryptPeople(encryptionKey, leafs);
-      await leafsDoc().set({encryptedData:encrypted, encryptionVersion:1, ownerEmail:currentUser.email||'', count:leafs.length, updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
-    } else {
-      await leafsDoc().set({entries:leafs, count:leafs.length, updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+      await userDoc().update({encryptedLeafs:encrypted, leafCount:leafs.length});
     }
     flashSaved();
   }catch(e){ console.error('Save leafs failed:',e); }
