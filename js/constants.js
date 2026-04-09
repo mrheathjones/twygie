@@ -125,6 +125,22 @@ function getRelCategory(label){
 function addRel(nodeA, nodeB, label, category){
   if(!nodeA||!nodeB||nodeA.id===nodeB.id) return;
   if(!category) category=getRelCategory(label);
+
+  // Reclassify: sibling label between non-structural-siblings where one is a spouse
+  // e.g. "Sister" between Sara (wife) and Maddy (sister) → should be "Sister-in-law" (bond)
+  if(SIBLING_LABELS.has(label) && !label.includes('-in-law')){
+    const pA=new Set(nodeA.parents||[]);
+    const sharesParent=pA.size>0 && (nodeB.parents||[]).some(pid=>pA.has(pid));
+    if(!sharesParent){
+      const aIsSpouse=!!nodeA.spouseOf || !!(typeof people!=='undefined'&&people.find(x=>x.spouseOf===nodeA.id));
+      const bIsSpouse=!!nodeB.spouseOf || !!(typeof people!=='undefined'&&people.find(x=>x.spouseOf===nodeB.id));
+      if(aIsSpouse||bIsSpouse){
+        label=label+'-in-law';
+        category='bond';
+      }
+    }
+  }
+
   if(!nodeA.relationships) nodeA.relationships=[];
   if(!nodeB.relationships) nodeB.relationships=[];
   // Remove existing relationship between this pair (if any) before adding

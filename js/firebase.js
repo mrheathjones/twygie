@@ -328,7 +328,20 @@ function migrateCustomLinks(p){
     if(!label) return;
     // Skip if already in relationships[]
     if(p.relationships.some(r=>r.targetId===tid)) return;
-    const category=getRelCategory(label);
+    let category=getRelCategory(label);
+    // Reclassify: sibling label where one side is a spouse
+    if(SIBLING_LABELS.has(label) && !label.includes('-in-law')){
+      const other=peopleById[tid];
+      if(other){
+        const pA=new Set(p.parents||[]);
+        const sharesParent=pA.size>0 && (other.parents||[]).some(pid=>pA.has(pid));
+        if(!sharesParent){
+          const pIsSpouse=!!p.spouseOf;
+          const oIsSpouse=!!other.spouseOf;
+          if(pIsSpouse||oIsSpouse) category='bond';
+        }
+      }
+    }
     p.relationships.push({targetId:tid, label, category, structural:false});
   });
 }

@@ -221,8 +221,24 @@ function drawBranches(){
       if(relDrawn.has(key)) return;
       relDrawn.add(key);
       const other=peopleById[rel.targetId]; if(!other) return;
-      const cat=rel.category||getRelCategory(rel.label);
-      const isSib=SIBLING_LABELS.has(rel.label);
+      let cat=rel.category||getRelCategory(rel.label);
+      let isSib=SIBLING_LABELS.has(rel.label);
+
+      // Structural validation: if labeled as sibling, verify they share a parent
+      // If they don't, one is likely a spouse who was incorrectly assigned "Sister"
+      if(isSib){
+        const pA=new Set(p.parents||[]);
+        const sharesParent=pA.size>0 && (other.parents||[]).some(pid=>pA.has(pid));
+        if(!sharesParent){
+          // Not structural siblings — check if one is married to the other's sibling
+          const pIsSpouse=!!p.spouseOf || !!people.find(x=>x.spouseOf===p.id);
+          const oIsSpouse=!!other.spouseOf || !!people.find(x=>x.spouseOf===other.id);
+          if(pIsSpouse||oIsSpouse){
+            isSib=false;
+            cat='bond'; // render as in-law bond
+          }
+        }
+      }
 
       // View mode filtering
       if(isSib && !showBlood) return;                    // siblings are blood
