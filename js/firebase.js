@@ -260,7 +260,7 @@ async function loadTree(){
                 ownerEmail:currentUser.email||'',
                 nodeCount:people.length,
                 updatedAt:firebase.firestore.FieldValue.serverTimestamp()
-              });
+              },{merge:true});
               debug('Migration complete — tree data is now encrypted.');
             }catch(migErr){ console.warn('Migration save failed — will retry on next save:',migErr); }
           }
@@ -296,7 +296,7 @@ async function saveTree(ind=true){
         ownerEmail:currentUser.email||'',
         nodeCount:people.length,
         updatedAt:firebase.firestore.FieldValue.serverTimestamp()
-      });
+      },{merge:true});
     } else {
       // ── Fallback: plaintext save (Web Crypto unavailable) ──
       await userDoc().set({
@@ -304,7 +304,7 @@ async function saveTree(ind=true){
         ownerEmail:currentUser.email||'',
         nodeCount:people.length,
         updatedAt:firebase.firestore.FieldValue.serverTimestamp()
-      });
+      },{merge:true});
     }
     if(ind) flashSaved();
   }catch(e){ console.warn('Save failed',e); }
