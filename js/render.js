@@ -569,14 +569,14 @@ let leafSvgElements=new Map(); // leafId → {group, lines:[]}
 function initLeafEngine(){
   if(leafEngine){ leafEngine.stop(); }
   leafEngine=new OrbEngine({
-    repulsionRadius: 35,      // influence starts close (was 80)
-    minimumSeparation: 12,    // can nearly touch before hard push (was 40)
-    springStrength: 0.05,
-    damping: 0.78,
-    pushStrength: 0.6,        // softer push (was 1.0)
-    maxVelocity: 10,
-    returnBias: 0.04,
-    dragInfluenceFalloff: 1.8,
+    repulsionRadius: 60,      // wider influence zone for dragged orb
+    minimumSeparation: 28,    // meaningful gap between orbs
+    springStrength: 0.04,
+    damping: 0.75,
+    pushStrength: 1.2,        // strong push from dragged orb
+    maxVelocity: 12,
+    returnBias: 0.03,
+    dragInfluenceFalloff: 1.5, // gentler falloff = wider soft push
     onUpdate: updateLeafPositions
   });
   return leafEngine;
@@ -584,29 +584,28 @@ function initLeafEngine(){
 
 // Snap position away from twyg nodes AND other leafs on drop
 function snapLeafFromNodes(x, y, leafId){
-  var NODE_SNAP=60, LEAF_SNAP=24;
-  var origX=x, origY=y, MAX_DRIFT=120;
+  var NODE_SNAP=60, LEAF_SNAP=30;
+  var origX=x, origY=y, MAX_DRIFT=150;
 
-  for(var pass=0;pass<5;pass++){
+  // Phase 1: iterative push away from overlaps
+  for(var pass=0;pass<6;pass++){
     var moved=false;
-    // Push away from twyg nodes
     people.forEach(function(p){
       var dx=x-p.x, dy=y-p.y;
       var dist=Math.sqrt(dx*dx+dy*dy)||0.1;
       if(dist<NODE_SNAP){
-        var push=(NODE_SNAP-dist)*0.6;
+        var push=(NODE_SNAP-dist)*0.7;
         x+=dx/dist*push; y+=dy/dist*push;
         moved=true;
       }
     });
-    // Push away from other leaf orbs
     if(leafEngine){
       leafEngine.getAllOrbs().forEach(function(orb){
         if(orb.id===leafId) return;
         var dx=x-orb.x, dy=y-orb.y;
         var dist=Math.sqrt(dx*dx+dy*dy)||0.1;
         if(dist<LEAF_SNAP){
-          var push=(LEAF_SNAP-dist)*0.5;
+          var push=(LEAF_SNAP-dist)*0.6;
           x+=dx/dist*push; y+=dy/dist*push;
           moved=true;
         }
@@ -615,7 +614,39 @@ function snapLeafFromNodes(x, y, leafId){
     if(!moved) break;
   }
 
-  // Cap total displacement so leaf doesn't fly across the tree
+  // Phase 2: verify no overlaps remain — if still overlapping, find clear angle
+  var stillBlocked=false;
+  people.forEach(function(p){
+    var d=Math.sqrt((x-p.x)*(x-p.x)+(y-p.y)*(y-p.y));
+    if(d<NODE_SNAP*0.8) stillBlocked=true;
+  });
+  if(stillBlocked){
+    // Find the primary twyg and orbit to a clear angle
+    var bestX=x, bestY=y, bestScore=-1;
+    var primary=null;
+    leafs.forEach(function(l){ if(l.id===leafId){ primary=peopleById[(l.twygs||[])[0]]; }});
+    if(!primary) primary=people[0];
+    if(primary){
+      for(var angle=0;angle<Math.PI*2;angle+=Math.PI/12){
+        var tx=primary.x+Math.cos(angle)*NODE_SNAP*1.2;
+        var ty=primary.y+Math.sin(angle)*NODE_SNAP*1.2;
+        var minD=9999;
+        people.forEach(function(p){
+          var d=Math.sqrt((tx-p.x)*(tx-p.x)+(ty-p.y)*(ty-p.y));
+          if(d<minD) minD=d;
+        });
+        if(leafEngine) leafEngine.getAllOrbs().forEach(function(orb){
+          if(orb.id===leafId) return;
+          var d=Math.sqrt((tx-orb.x)*(tx-orb.x)+(ty-orb.y)*(ty-orb.y));
+          if(d<minD) minD=d;
+        });
+        if(minD>bestScore){ bestScore=minD; bestX=tx; bestY=ty; }
+      }
+      x=bestX; y=bestY;
+    }
+  }
+
+  // Cap total displacement
   var driftDx=x-origX, driftDy=y-origY;
   var driftDist=Math.sqrt(driftDx*driftDx+driftDy*driftDy);
   if(driftDist>MAX_DRIFT){

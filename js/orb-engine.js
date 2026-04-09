@@ -187,15 +187,15 @@ class OrbEngine {
         const dx = orb.x - other.x;
         const dy = orb.y - other.y;
         const dist = Math.sqrt(dx * dx + dy * dy) || 0.01;
-        const minDist = orb.radius + other.radius + minimumSeparation * 0.5;
+        const minDist = orb.radius + other.radius + minimumSeparation;
 
         if (dist < minDist) {
           const nx = dx / dist;
           const ny = dy / dist;
           const overlap = minDist - dist;
-          // Softer push between resting orbs
-          fx += nx * overlap * 0.15;
-          fy += ny * overlap * 0.15;
+          // Strong push to prevent overlap
+          fx += nx * overlap * 0.35;
+          fy += ny * overlap * 0.35;
         }
       }
 
