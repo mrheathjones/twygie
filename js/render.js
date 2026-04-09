@@ -148,18 +148,26 @@ function drawBranches(){
   const showExtended=treeMode==='complex'||treeMode==='bloodline'||treeMode==='bonds'; // extended connections
 
   // ── Parent-child lines (BLOOD: solid, bold) ──
+  const isTraditional=layoutMode==='traditional';
   if(showBlood) people.forEach(child=>{
     (child.parents||[]).forEach(pid=>{
       const par=peopleById[pid]; if(!par) return;
       const dy=par.y-child.y;
       const {w,o}=getBranchStyle(dy);
-      const ox=deterministicOffset(pid,child.id);
-      const r=Math.abs(dy)*.3;
-      const d=`M ${par.x} ${par.y} C ${par.x+ox*.3} ${par.y+r} ${child.x+ox*.2} ${child.y-r} ${child.x} ${child.y}`;
+      let d;
+      if(isTraditional){
+        // Straight angular: vertical from parent down to midpoint, horizontal, vertical down to child
+        const midY=(par.y+child.y)/2;
+        d=`M ${par.x} ${par.y} L ${par.x} ${midY} L ${child.x} ${midY} L ${child.x} ${child.y}`;
+      } else {
+        const ox=deterministicOffset(pid,child.id);
+        const r=Math.abs(dy)*.3;
+        d=`M ${par.x} ${par.y} C ${par.x+ox*.3} ${par.y+r} ${child.x+ox*.2} ${child.y-r} ${child.x} ${child.y}`;
+      }
       const path=createSvgElement('path');
       path.setAttribute('d',d);
       path.setAttribute('stroke', getBranchRgba('parentChild', o));
-      path.setAttribute('stroke-width',String(w));
+      path.setAttribute('stroke-width',String(isTraditional?2:w));
       path.setAttribute('fill','none');
       path.setAttribute('stroke-linecap','round');
       path.setAttribute('class','br');
@@ -252,7 +260,13 @@ function drawBranches(){
 
       const mx=(p.x+other.x)/2, my=(p.y+other.y)/2-(isSib?22:cat==='blood'?22:30);
       const path=createSvgElement('path');
-      path.setAttribute('d',`M ${p.x} ${p.y} Q ${mx} ${my} ${other.x} ${other.y}`);
+      if(isTraditional){
+        // Straight angular line for Traditional
+        const midY=(p.y+other.y)/2;
+        path.setAttribute('d',`M ${p.x} ${p.y} L ${p.x} ${midY} L ${other.x} ${midY} L ${other.x} ${other.y}`);
+      } else {
+        path.setAttribute('d',`M ${p.x} ${p.y} Q ${mx} ${my} ${other.x} ${other.y}`);
+      }
 
       if(isSib){
         // Sibling: solid orange
