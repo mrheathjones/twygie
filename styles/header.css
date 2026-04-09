@@ -12,7 +12,7 @@
 #mcount:hover{background:rgba(200,168,75,.1);border-color:rgba(200,168,75,.25);color:var(--gold)}
 #mcount strong{color:var(--text);font-weight:600}
 .hbtns{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center}
-.hbtn{padding:6px 15px;border-radius:100px;background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--text);font-family:'Outfit',sans-serif;font-size:.78rem;cursor:pointer;transition:all .2s}
+.hbtn{padding:6px 15px;border-radius:100px;background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--text);font-family:'Outfit',sans-serif;font-size:.78rem;cursor:pointer;transition:all .2s;text-decoration:none}
 .hbtn:hover{background:rgba(200,168,75,.12);border-color:rgba(200,168,75,.28);color:var(--gold)}
 .hbtn.acc{background:var(--gold);color:#04070c;border-color:transparent;font-weight:600}
 .hbtn.acc:hover{background:#d4b454}
