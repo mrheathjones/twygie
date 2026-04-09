@@ -15,6 +15,7 @@ const nodeColors={you:'#f0efeb',spouse:'#e8a838',parent:'#7ab8e8',child:'#6ecb8a
 
 async function deriveKey(uid){const e=new TextEncoder();const km=await crypto.subtle.importKey('raw',e.encode(uid),'PBKDF2',false,['deriveKey']);return crypto.subtle.deriveKey({name:'PBKDF2',salt:e.encode('twygie-encryption-v1'),iterations:100000,hash:'SHA-256'},km,{name:'AES-GCM',length:256},false,['encrypt','decrypt'])}
 async function decrypt(key,b64){const bin=atob(b64);const raw=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)raw[i]=bin.charCodeAt(i);const dec=await crypto.subtle.decrypt({name:'AES-GCM',iv:raw.slice(0,12)},key,raw.slice(12));return JSON.parse(new TextDecoder().decode(dec))}
+async function encrypt(key,data){const iv=crypto.getRandomValues(new Uint8Array(12));const enc=await crypto.subtle.encrypt({name:'AES-GCM',iv},key,new TextEncoder().encode(JSON.stringify(data)));const buf=new Uint8Array(iv.length+enc.byteLength);buf.set(iv);buf.set(new Uint8Array(enc),iv.length);return btoa(String.fromCharCode(...buf))}
 function fullName(p){return p.name||[(p.firstName||''),(p.lastName||'')].filter(Boolean).join(' ')||'Unknown'}
 function initials(p){return fullName(p).split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}
 function calcAge(p){const by=parseInt(p.dob&&p.dob.year)||p.birth||null;if(!by)return null;const dy=parseInt(p.dod&&p.dod.year)||p.death||null;return(dy||new Date().getFullYear())-by}
@@ -60,17 +61,17 @@ function renderTimeline(){
           const c=getNodeColor(p);
           const nm=fullName(p);
           const ini=initials(p);
-          return `<div class="tl-miss-row" id="miss-${p.id}" style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.06)">
-            <div style="width:28px;height:28px;border-radius:50%;background:${c};display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:600;color:#04070c;flex-shrink:0">${ini}</div>
+          return `<div class="tl-miss-row" id="miss-${p.id}" style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.06)">
+            <div style="width:34px;height:34px;border-radius:50%;background:${c};display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:600;color:#04070c;flex-shrink:0">${ini}</div>
             <div style="flex:1;min-width:0">
-              <div style="font-size:.82rem;font-weight:500;color:var(--text)">${nm}</div>
-              <div style="display:flex;gap:4px;margin-top:4px">
-                <input type="number" placeholder="Year" min="1800" max="2030" style="width:60px;padding:3px 6px;border-radius:6px;background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);font-family:Outfit,sans-serif;font-size:.72rem" data-pid="${p.id}" data-field="year"/>
-                <select style="padding:3px 4px;border-radius:6px;background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);font-family:Outfit,sans-serif;font-size:.72rem" data-pid="${p.id}" data-field="month">
+              <div style="font-size:.92rem;font-weight:500;color:var(--text)">${nm}</div>
+              <div style="display:flex;gap:6px;margin-top:6px">
+                <input type="number" placeholder="Year" min="1800" max="2030" style="width:72px;padding:6px 8px;border-radius:8px;background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);font-family:Outfit,sans-serif;font-size:.82rem" data-pid="${p.id}" data-field="year"/>
+                <select style="padding:6px 8px;border-radius:8px;background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);font-family:Outfit,sans-serif;font-size:.82rem" data-pid="${p.id}" data-field="month">
                   <option value="">Mo</option>${MONTHS.map((m,i)=>`<option value="${i+1}">${m}</option>`).join('')}
                 </select>
-                <input type="number" placeholder="Day" min="1" max="31" style="width:42px;padding:3px 6px;border-radius:6px;background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);font-family:Outfit,sans-serif;font-size:.72rem" data-pid="${p.id}" data-field="day"/>
-                <button onclick="saveMissingDob('${p.id}')" style="padding:3px 10px;border-radius:6px;background:var(--gold);border:none;color:#04070c;font-family:Outfit,sans-serif;font-size:.7rem;font-weight:600;cursor:pointer">✓</button>
+                <input type="number" placeholder="Day" min="1" max="31" style="width:50px;padding:6px 8px;border-radius:8px;background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);font-family:Outfit,sans-serif;font-size:.82rem" data-pid="${p.id}" data-field="day"/>
+                <button onclick="saveMissingDob('${p.id}')" style="padding:6px 12px;border-radius:8px;background:var(--gold);border:none;color:#04070c;font-family:Outfit,sans-serif;font-size:.82rem;font-weight:600;cursor:pointer">✓</button>
               </div>
             </div>
           </div>`;
@@ -519,25 +520,16 @@ async function saveMissingDob(pid){
   if(month) p.dob.month=month;
   if(day) p.dob.day=day;
 
-  // Save to Firestore
+  // Save to Firestore using same encryption as load
   try{
     const treeRef=db.collection('trees').doc(currentUser.uid);
-    const snap=await treeRef.get();
-    if(snap.exists){
-      const d=snap.data(), key=d.key;
-      let nodes=JSON.parse(decrypt(d.data,key));
-      const n=nodes.find(x=>x.id===pid);
-      if(n){
-        if(!n.dob) n.dob={};
-        n.dob.year=year;
-        if(month) n.dob.month=month;
-        if(day) n.dob.day=day;
-        await treeRef.update({data:encrypt(JSON.stringify(nodes),key)});
-      }
-    }
+    const key=await deriveKey(currentUser.uid);
+    const encrypted=await encrypt(key, people);
+    await treeRef.set({encryptedData:encrypted},{merge:true});
+
     // Animate row removal then re-render
     const row=document.getElementById('miss-'+pid);
-    if(row){ row.style.transition='all .3s'; row.style.opacity='0'; row.style.height='0'; row.style.padding='0'; row.style.overflow='hidden';
+    if(row){ row.style.transition='all .3s'; row.style.opacity='0'; row.style.maxHeight='0'; row.style.padding='0'; row.style.overflow='hidden';
       setTimeout(()=>renderTimeline(), 350);
     } else renderTimeline();
   }catch(e){console.error('Save DOB failed:',e)}
