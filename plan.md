@@ -234,7 +234,7 @@ An interactive, beautiful family tree web app. Each family member is a "Twyg" �
   - [x] **Phase 3**: Timeline integration — dated Leafs on timeline with previews ✅ (Session 14)
   - [x] **Phase 4**: Tree view integration — Show Leafs toggle, orb collision engine, tag brightness ✅ (Session 14)
   - [ ] **Phase 5**: Linked sharing — Leafs visible across linked trees
-  - [ ] **Phase 6**: Dedicated Leafs page — browsable, searchable, filterable (IN PROGRESS)
+  - [x] **Phase 6**: Dedicated Leafs page ✅ (Session 14) — browsable, searchable, filterable (IN PROGRESS)
 
 - [ ] **Timeline Enhancement** — chronological family story
   - String together event dates + Leafs to tell the family story

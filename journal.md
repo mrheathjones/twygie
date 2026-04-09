@@ -662,3 +662,39 @@ Built as a separate HTML page (timeline.html) with:
 - Node avoidance: continuous in engine (not just on drop)
 - Encrypt: for-loop btoa (spread operator crashes on large arrays)
 - Firestore: leafs stored in familyTrees/{uid} (not separate collection)
+
+### Leafs Phase 6 — Dedicated Leafs Page (Session 14 continued)
+
+**New Files:**
+- leafs.html — page shell with filters, grid, modals
+- styles/leafs.css — masonry grid, cards, filter UI, modals
+- js/leafs-page.js — self-contained Firebase + rendering + CRUD
+
+**Page Features:**
+- 3-column masonry grid (responsive: 2 at 900px, 1 at 560px)
+- Search bar filters by title + content
+- Type filter pills: All / Stories / Moments / Photos / Quotes / Milestones
+- Twyg filter dropdown: filter by tagged person
+- Sort dropdown: Newest/Oldest Created, Recently/Least Recently Modified
+- Green-tinted cards matching leaf theme
+- Click card → detail modal with Edit + Delete buttons
+
+**New Leaf Button:**
+- Green accent button in header
+- Full creation modal: type picker, title, content, date, emoji, twyg tags
+- Saves encrypted to Firestore
+
+**Edit + Delete:**
+- Edit reopens add modal pre-populated, stamps modifiedBy/modifiedAt
+- Delete uses branded confirmation modal (not browser confirm)
+
+**Metadata:**
+- createdBy/createdByName/createdAt on all leafs
+- modifiedBy/modifiedByName/modifiedAt stamped on edit
+- Displayed on cards and detail modal
+
+**UI Polish:**
+- Tree view toggle: "🍃 Leafs" → just "🍃" emoji (no text confusion)
+- "🍃 Leafs" header link navigates to page
+- Green tinted modals (dark green bg + green border)
+- Type icons removed from card/detail titles
