@@ -91,19 +91,19 @@ function renderLeafs(){
 }
 
 function renderTwygFilters(){
-  // Build twyg filter buttons from all unique tagged people
+  const el=document.getElementById('twyg-filter');
+  if(!el) return;
   const twygIds=new Set();
   leafs.forEach(l=>(l.twygs||[]).forEach(tid=>twygIds.add(tid)));
-  const el=document.getElementById('twyg-filters');
-  if(!twygIds.size){el.innerHTML='';return;}
   
-  el.innerHTML=[...twygIds].map(tid=>{
+  let opts='<option value="">All Twygs</option>';
+  [...twygIds].forEach(tid=>{
     const p=peopleById[tid];
-    if(!p) return '';
-    const nm=p.isYou?'You':fullName(p).split(' ')[0];
-    const c=getNodeColor(p);
-    return `<button class="twyg-btn${activeTwyg===tid?' active':''}" data-tid="${tid}"><span class="twyg-dot" style="background:${c}"></span>${nm}</button>`;
-  }).filter(Boolean).join('');
+    if(!p) return;
+    const nm=p.isYou?'You':fullName(p);
+    opts+=`<option value="${tid}"${activeTwyg===tid?' selected':''}>${nm}</option>`;
+  });
+  el.innerHTML=opts;
 }
 
 // ─── DETAIL MODAL ───
@@ -176,12 +176,8 @@ document.getElementById('type-filters')?.addEventListener('click',e=>{
   renderLeafs();
 });
 
-document.getElementById('twyg-filters')?.addEventListener('click',e=>{
-  const btn=e.target.closest('.twyg-btn');
-  if(!btn) return;
-  const tid=btn.dataset.tid;
-  if(activeTwyg===tid){activeTwyg=null;} else {activeTwyg=tid;}
-  document.querySelectorAll('.twyg-btn').forEach(b=>b.classList.toggle('active',b.dataset.tid===activeTwyg));
+document.getElementById('twyg-filter')?.addEventListener('change',e=>{
+  activeTwyg=e.target.value||null;
   renderLeafs();
 });
 
