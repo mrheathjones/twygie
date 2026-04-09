@@ -187,6 +187,13 @@ function renderTimeline(){
       const xJitter=((hash*7)%30)-15;         // ±15px horizontal scatter
       const bottomPct=baseBottom+i*3;          // stagger same-year leafs
 
+      var tagCount=(l.twygs||[]).length;
+      var tb=tagCount/(tagCount+5);
+      var dotBg=(0.08+tb*0.25).toFixed(3);
+      var dotBorder=(0.20+tb*0.40).toFixed(3);
+      var dotShadow=tb>0.3?'0 0 '+(8+tb*16).toFixed(0)+'px rgba(100,180,100,'+(0.1+tb*0.25).toFixed(2)+')':'none';
+      var dotSize=24+Math.round(tb*8);
+
       html+=`<div class="tl-leaf" style="left:${x+xJitter}px;bottom:32%;height:${bottomPct-32}%" onclick="openLeafOnTimeline('${l.id}')">
         <div class="tl-leaf-popup">
           <div class="tl-leaf-pop">
@@ -196,7 +203,7 @@ function renderTimeline(){
             ${taggedNames?`<div style="font-size:.66rem;color:rgba(100,180,100,.7);margin-top:4px">${taggedNames}</div>`:''}
           </div>
         </div>
-        <div class="tl-leaf-dot">🍃</div>
+        <div class="tl-leaf-dot" style="width:${dotSize}px;height:${dotSize}px;background:rgba(100,180,100,${dotBg});border-color:rgba(100,180,100,${dotBorder});box-shadow:${dotShadow}">🍃</div>
         <div class="tl-leaf-stem"></div>
       </div>`;
     });
