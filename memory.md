@@ -448,3 +448,48 @@ treeLinks/{linkId}
 **lineType detection at draw time**: always derived from label text + BLOOD_LABELS. Never uses stored v.lineType.
 **cleanFalseConnections**: trusts BLOOD_LABELS labels AND '-in-law' labels. Only validates non-family labeled connections.
 **cleanFalseParents()**: runs after every autoAssignToYou. Removes parent-child where "parent" has an in-law customLink to child.
+
+---
+
+## Session 13 — View Modes + Immersive + Birthdate Awareness
+
+### Immersive Mode (js/immersive.js ~270 lines)
+- Three.js r128 via CDN
+- **Transparent canvas** (`alpha:true`) — app's warm `#atm` gradient shows through
+- Spherical shell layout: isYou at center, family on Fibonacci sphere (IMM_SPHERE_R=200)
+- **Zoom-to-node**: Click → camera orbits to node (immTargetLookAt + immTargetRadius=80) → selectNode() card overlay after 800ms
+- **Line glow pulse**: `baseOp + sin(t*1.2+i*0.5)*0.2` — solid lines 0.6±0.2, dashed 0.5±0.2
+- **Node emissive pulse**: base 0.6-1.0 + ±0.25 oscillation; selected glow 0.35+±0.12
+- **View mode filtering**: immRefreshLines() called from setTreeMode() when layoutMode==='immersive'
+- **Exit button**: Outside immersive-wrap (z-index 101), solid gold, show/hide in enter/exit
+- In immersive mode: hdr-left + hdr-right hidden, only view toggle visible centered
+
+### Header Structure (3-section)
+```html
+#hdr (flex, space-between)
+  .hdr-left: logo + #mcount
+  .hdr-center: .toggle-stack > .view-toggle + .layout-toggle
+  .hdr-right: #save-ind + #btn-add-member + timeline link + gear button
+```
+- User avatar removed — gear icon opens settings
+- Export moved to Settings → Export section (collapsible)
+- Gold hover tint on all interactive elements: `rgba(200,168,75,.12)` bg + `var(--gold)` text
+
+### Traditional Layout (layoutTraditional in firebase.js)
+- Classic pedigree binary tree, recursive from isYou
+- placeParents(childId, childX, childY, spread): spread×1.2 each generation
+- COUPLE_GAP=80px, initial spread=300px
+- Spouses toward outside (away from center line)
+- Straight angular lines in render.js: `M x1 y1 L x1 midY L x2 midY L x2 y2`
+
+### Birthdate Awareness
+- `dobWarnDismissed` persisted to Firestore userSettings
+- `persistDobWarn()` in firebase.js
+- Timeline Missing Twygs modal: `window._saveDob(pid)` global function
+- Save: `deriveKey(uid)` → `encrypt(key, people)` → `familyTrees/{uid}.set({encryptedData, encryptionVersion:1, ownerEmail})`
+- encrypt() uses for-loop btoa (not spread operator — crashes on large data)
+
+### Timeline Page
+- Has own `#atm` div for warm atmosphere (inline styles in timeline.html)
+- `encrypt(key,data)` and `decrypt(key,b64)` functions local to timeline.js
+- Firestore collection: `familyTrees` (NOT `trees`)

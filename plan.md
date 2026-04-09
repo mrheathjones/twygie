@@ -125,11 +125,18 @@ An interactive, beautiful family tree web app. Each family member is a "Twyg" �
   - When spouse connection is made, branded modal prompts for Wedding Date
   - Shows 💍 Married [date] · [years] in node card info section
   - Editable in the edit form when node has a spouse
-- [ ] **View Modifiers** — layout modes for the tree
-  - Compact: nodes cluster close in a tight orb pattern
-  - Relaxed: nodes spread out a bit (current default)
-  - Expanded: exploded view like stars in space
-  - Traditional: classic top-down family tree layout
+- [x] **View Modifiers** — layout modes for the tree (Session 12-13)
+  - Compact: 80px spacing, tight cluster
+  - Relaxed: 165px spacing (default, unchanged)
+  - Expanded: 300px spacing, breathing room
+  - Traditional: Classic pedigree chart — recursive binary tree, straight angular lines (WIP — close but needs polish)
+  - ✦ Immersive: Three.js 3D mode — spherical layout, zoom-to-node, glow pulse, view mode filtering
+- [x] **Birthdate Awareness** (Session 13)
+  - Missing Twygs indicator + modal on timeline with inline birthdate entry
+  - Creation warning with "Don't remind me again" checkbox
+  - Settings reset for birthdate reminders
+- [x] **Header Cleanup** (Session 13) — 3-section layout, removed Fit to Screen/Export/avatar, renamed buttons, gold hover tint
+- [x] **Timeline Polish** (Session 13) — warm atmosphere background, gold hover, underline fix
 
 ### Long-term
 - [x] **Phase 3a — Tree Linking infrastructure** (Session 10) — link codes, bridge nodes, real-time sync

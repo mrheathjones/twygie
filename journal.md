@@ -547,3 +547,62 @@ Built as a separate HTML page (timeline.html) with:
 **Order Independence Verified:**
 - Top-down, bottom-up, and mixed add orders all produce correct relationships
 - Only requirement: each node must be added with a relationship to an existing connected node
+
+---
+
+## Session 13 — View Modes, Immersive Polish, Header Cleanup, Birthdate Awareness (April 9, 2026)
+
+### Immersive Mode Improvements
+- **Zoom-to-node**: Click node → camera smoothly orbits to it → opens full selectNode card as overlay (stays in 3D)
+- **Line glow pulse**: Sine wave opacity oscillation on all connection lines (baseOp + sin(t*1.2+i*0.5)*0.2)
+- **View mode filtering**: All Twygs/Roots/Bonds work in 3D — immRefreshLines() rebuilds on view change
+- **Transparent canvas**: alpha:true so app's warm #atm gradient shows through (consistent background everywhere)
+- **Node pulse strengthened**: Emissive base 0.6→1.0, glow opacity doubled, selected node highlight 0.35+±0.12
+- **Exit button**: Solid gold, z-index 101 (outside immersive-wrap stacking context), hover brightens to #e0c060
+
+### Header Toolbar Cleanup
+- Restructured: 3-section layout (.hdr-left / .hdr-center / .hdr-right)
+- Removed: "Fit to Screen" button, Export dropdown (moved to Settings), user avatar icon
+- Renamed: "Tree view" → "Tree", "Add member" → "Add Twyg"
+- Toggle stack: view toggle + layout toggle stacked vertically in center
+- Gold hover tint (rgba(200,168,75,.12) + gold text) applied consistently across all buttons
+- Timeline link underline removed (force-override all anchor states)
+
+### Traditional Layout — Classic Pedigree Chart
+- Recursive binary tree: isYou at center, parents spread above (300px), each generation 1.2x wider
+- Spouses toward outside (80px couple gap)
+- Siblings placed beside their family unit
+- Straight angular lines for Traditional mode (vertical→horizontal→vertical connectors)
+- Relationship lines also use angular style in Traditional mode
+- Work in progress — close but needs further refinement
+
+### Birthdate Awareness System
+- **Timeline indicator**: Gold "X Missing Twygs" button in timeline header
+- **Missing Twygs modal**: Centered 640px glassmorphism card, single-column scrollable (45vh max)
+  - Each row: color dot, name, inline year/month/day inputs, Save button
+  - Header: "Pick up your Twygs" / "We think you dropped something"
+  - Save writes to Firestore with correct encryption (deriveKey + AES-GCM)
+  - Row animates out on save, timeline re-renders with node placed
+  - Close via ✕ button or click outside
+- **Creation warning**: appConfirm when adding node without birthdate
+  - "Don't remind me again" checkbox, persisted as dobWarnDismissed to Firestore
+  - "Got it" / "Edit now" options
+- **Settings reset**: Advanced → "Birthdate Reminders" with Reset button
+
+### Timeline Page
+- Warm brown atmosphere background added (#atm div matching main app)
+- Gold hover tint on Reset and Back to Tree buttons
+
+### Bug Fixes
+- Firebase save in timeline: was writing to wrong collection ('trees' vs 'familyTrees')
+- encrypt() spread operator crash on large data — switched to for-loop btoa
+- January missing from month select (i>0 filter skipped index 0)
+- Layout toggle invisible: header used align-items:center, gradient faded too quickly
+- Immersive exit button trapped inside stacking context (z-index capped by parent)
+
+### Export Moved to Settings
+- New collapsible "Export" section in Settings panel
+- Contains "Save as Image" and "Save as PDF" buttons
+- Section toggle handler wired in app.js
+
+### Commits: ~25 commits across app.html, timeline.html, 7 JS files, 3 CSS files
