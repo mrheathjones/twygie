@@ -55,25 +55,11 @@
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg>
       Saved
     </div>
-    <button class="hbtn" id="btn-fit">Fit to screen</button>
     <a class="hbtn" href="/timeline" title="Timeline view">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2v20M2 12h4M18 12h4M2 6h4M18 6h4M2 18h4M18 18h4"/></svg>
       Timeline
     </a>
-    <div class="export-wrap">
-      <button class="hbtn" id="export-btn">Export ▾</button>
-      <div id="export-menu" class="export-menu">
-        <button id="btn-export-png" class="export-item">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-          Save as Image
-        </button>
-        <button id="btn-export-pdf" class="export-item">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8M16 17H8M10 9H8"/></svg>
-          Save as PDF
-        </button>
-      </div>
-    </div>
-    <button class="hbtn acc" id="btn-add-member">+ Add member</button>
+    <button class="hbtn acc" id="btn-add-member">+ Add Twyg</button>
     <button class="zb gear-btn" id="btn-settings-gear" title="Settings">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
     </button>
@@ -329,6 +315,29 @@
         <div class="sp-color-row"><div class="sp-color-info"><div class="sp-color-label">Extended Bonds</div><div class="sp-color-sub">In-law family connections</div></div><div class="sp-color-swatch" id="swatch-inlaw"><input type="color" id="color-inlaw"/><div class="sp-color-preview" id="preview-inlaw"></div></div></div>
         <button class="sp-color-reset" id="btn-reset-line-colors">Reset line colors</button>
         <div class="sp-spacer-lg"></div>
+      </div>
+    </div>
+
+    <!-- EXPORT -->
+    <div>
+      <div class="sp-collapse-hdr" id="hdr-sec-export">
+        <span class="sp-collapse-title">Export</span>
+        <span class="sp-collapse-icon" id="icon-sec-export">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+        </span>
+      </div>
+      <div class="sp-collapse-body" id="sec-export">
+        <div class="sp-helper" style="margin-bottom:12px">Save your tree as an image or document.</div>
+        <div style="display:flex;gap:8px">
+          <button class="hbtn" id="btn-export-png" style="flex:1;text-align:center">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+            Save as Image
+          </button>
+          <button class="hbtn" id="btn-export-pdf" style="flex:1;text-align:center">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8M16 17H8M10 9H8"/></svg>
+            Save as PDF
+          </button>
+        </div>
       </div>
     </div>
 

@@ -429,8 +429,6 @@ function initEventListeners() {
     setLayoutMode('relaxed');
     persistLayoutMode();
   });
-  on('btn-fit',      'click', resetView);
-  on('export-btn',   'click', toggleExportMenu);
   on('btn-export-png','click', () => exportTree('png'));
   on('btn-export-pdf','click', () => exportTree('pdf'));
   on('btn-add-member','click', () => openModal(null));
@@ -484,6 +482,7 @@ function initEventListeners() {
   on('hdr-sec-links',  'click', () => toggleSection('sec-links'));
   on('hdr-sec-conn',   'click', () => toggleSection('sec-conn'));
   on('hdr-sec-appear', 'click', () => toggleSection('sec-appear'));
+  on('hdr-sec-export', 'click', () => toggleSection('sec-export'));
   on('hdr-sec-adv',    'click', () => toggleSection('sec-adv'));
 
   // --- Settings: action buttons ---
