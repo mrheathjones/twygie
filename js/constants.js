@@ -176,6 +176,15 @@ function getAllRels(node){
   return (node&&node.relationships)||[];
 }
 
+// ─── LEAF TYPES ──────────────────────────────────────────────────────────────
+const LEAF_TYPES={
+  story:    {icon:'📖', label:'Story',     placeholder:'Tell the story…'},
+  moment:   {icon:'✨', label:'Moment',    placeholder:'A quick memory or one-liner…'},
+  photo:    {icon:'📷', label:'Photo',     placeholder:'Describe the photo…'},
+  quote:    {icon:'💬', label:'Quote',     placeholder:'What did they say?'},
+  milestone:{icon:'🏆', label:'Milestone', placeholder:'What happened?'}
+};
+
 // ─── DEBUG LOGGING ───────────────────────────────────────────────────────────
 // Set window.TWYGIE_DEBUG = true in browser console to enable verbose logging
 // console.warn and console.error always fire regardless of this flag

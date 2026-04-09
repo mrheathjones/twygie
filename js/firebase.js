@@ -114,6 +114,7 @@ auth.onAuthStateChanged(async user => {
   if(avatarEl&&user.photoURL){ if(initEl) initEl.style.display='none'; const img=document.createElement('img'); img.src=user.photoURL; avatarEl.appendChild(img); }
   else if(initEl) initEl.textContent=(user.displayName||user.email||'?')[0].toUpperCase();
   await loadTree();
+  await loadLeafs();
   await loadActiveLinks();
   await loadSharedNodes();
   subscribeActiveLinks();
@@ -314,6 +315,66 @@ function hideLoading(){ const e=document.getElementById('loading'); e.classList.
 
 // ─── DATA ─────────────────────────────────────────────────────────────────────
 let people=[], peopleById={};
+let leafs=[];
+
+// ─── LEAFS DATA LAYER ───────────────────────────────────────────────────────
+function leafsDoc(){ return db.collection('leafs').doc(currentUser.uid); }
+
+async function loadLeafs(){
+  try{
+    const snap=await leafsDoc().get();
+    if(snap.exists){
+      const d=snap.data();
+      if(d.encryptedData&&encryptionKey){
+        leafs=await decryptPeople(encryptionKey, d.encryptedData);
+      } else if(d.entries){
+        leafs=d.entries;
+      }
+    } else { leafs=[]; }
+  }catch(e){ console.warn('Load leafs failed:',e); leafs=[]; }
+}
+
+async function saveLeafs(){
+  if(!currentUser||!treeLoaded) return;
+  try{
+    if(encryptionKey){
+      const encrypted=await encryptPeople(encryptionKey, leafs);
+      await leafsDoc().set({encryptedData:encrypted, encryptionVersion:1, ownerEmail:currentUser.email||'', count:leafs.length, updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+    } else {
+      await leafsDoc().set({entries:leafs, count:leafs.length, updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+    }
+  }catch(e){ console.error('Save leafs failed:',e); }
+}
+
+function addLeaf(leaf){
+  leaf.id='leaf_'+Date.now();
+  leaf.createdBy=currentUser.uid;
+  leaf.createdAt=Date.now();
+  leafs.push(leaf);
+  saveLeafs();
+  return leaf;
+}
+
+function editLeaf(leafId, updates){
+  const l=leafs.find(x=>x.id===leafId);
+  if(!l) return null;
+  Object.assign(l, updates);
+  saveLeafs();
+  return l;
+}
+
+function deleteLeaf(leafId){
+  const idx=leafs.findIndex(x=>x.id===leafId);
+  if(idx<0) return false;
+  leafs.splice(idx,1);
+  saveLeafs();
+  return true;
+}
+
+function getLeafsForNode(personId){
+  return leafs.filter(l=>(l.twygs||[]).includes(personId));
+}
+
 function migrateCustomLinks(p){
   if(!p.customLinks) p.customLinks={};
   // Legacy: string values → object

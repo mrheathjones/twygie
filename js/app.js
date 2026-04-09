@@ -545,6 +545,12 @@ function initEventListeners() {
   document.getElementById('f-deceased-track')?.addEventListener('click', () => {
     document.getElementById('f-deceased').click();
   });
+
+  // --- Leaf modal ---
+  on('btn-submit-leaf', 'click', submitLeaf);
+  document.getElementById('leaf-bg')?.addEventListener('click', e => {
+    if(e.target===e.currentTarget) closeLeafModal();
+  });
 }
 
 // Run after DOM is ready (scripts are at bottom of body)

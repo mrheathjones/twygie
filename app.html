@@ -189,6 +189,44 @@
   </div>
 </div>
 
+<!-- ADD LEAF MODAL -->
+<div id="leaf-bg">
+  <div id="leaf-modal">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div class="leaf-modal-title">Add a Leaf</div>
+      <button onclick="closeLeafModal()" style="background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer;padding:4px">✕</button>
+    </div>
+    <div id="leaf-for-name" style="font-size:.78rem;color:var(--muted);margin-bottom:14px"></div>
+    <div class="leaf-type-picker" id="leaf-type-picker"></div>
+    <input id="leaf-title" placeholder="Title (optional)" class="leaf-input"/>
+    <textarea id="leaf-content" placeholder="Write something…" class="leaf-input leaf-textarea"></textarea>
+    <div class="leaf-date-row">
+      <input type="number" id="leaf-date-year" placeholder="Year" min="1800" max="2030" class="leaf-input leaf-sm"/>
+      <select id="leaf-date-month" class="leaf-input leaf-sm">
+        <option value="">Month</option>
+        <option value="1">Jan</option><option value="2">Feb</option><option value="3">Mar</option>
+        <option value="4">Apr</option><option value="5">May</option><option value="6">Jun</option>
+        <option value="7">Jul</option><option value="8">Aug</option><option value="9">Sep</option>
+        <option value="10">Oct</option><option value="11">Nov</option><option value="12">Dec</option>
+      </select>
+      <input type="number" id="leaf-date-day" placeholder="Day" min="1" max="31" class="leaf-input leaf-sm"/>
+    </div>
+    <div id="leaf-twyg-tags" style="margin-bottom:14px"></div>
+    <div class="leaf-emoji-row" id="leaf-emoji-row">
+      <span class="leaf-emoji-pick" data-em="😂">😂</span>
+      <span class="leaf-emoji-pick" data-em="❤️">❤️</span>
+      <span class="leaf-emoji-pick" data-em="😢">😢</span>
+      <span class="leaf-emoji-pick" data-em="🎉">🎉</span>
+      <span class="leaf-emoji-pick" data-em="🙏">🙏</span>
+      <span class="leaf-emoji-pick" data-em="😮">😮</span>
+    </div>
+    <input type="hidden" id="leaf-for-id"/>
+    <input type="hidden" id="leaf-emoji-val"/>
+    <input type="hidden" id="leaf-type-val" value="moment"/>
+    <button id="btn-submit-leaf" class="leaf-submit">Save Leaf</button>
+  </div>
+</div>
+
 <!-- SETTINGS PANEL -->
 <div id="settings-panel">
   <div class="sp-head">

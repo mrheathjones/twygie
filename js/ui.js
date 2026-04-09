@@ -239,6 +239,32 @@ function fillCard(p){
     html+=`</div>`;
   }
 
+  // ── Leafs section ──
+  const nodeLeafs=getLeafsForNode(p.id);
+  html+=`<div class="csec" style="display:flex;justify-content:space-between;align-items:center">Leafs${nodeLeafs.length?` <span style="font-size:.7rem;color:var(--muted);font-weight:400;text-transform:none">${nodeLeafs.length}</span>`:''}<button class="leaf-add-btn" onclick="openLeafModal('${p.id}')" style="font-size:.68rem;padding:3px 10px;border-radius:100px;background:rgba(100,180,100,.1);border:1px solid rgba(100,180,100,.25);color:rgba(140,210,140,.9);cursor:pointer;font-family:'Outfit',sans-serif;font-weight:500">+ Add Leaf</button></div>`;
+  if(nodeLeafs.length){
+    const showLeafs=nodeLeafs.slice(0,3);
+    html+=`<div class="leaf-list">`;
+    showLeafs.forEach(l=>{
+      const t=LEAF_TYPES[l.type]||LEAF_TYPES.moment;
+      const dateStr=l.date&&l.date.year?l.date.year:'';
+      html+=`<div class="leaf-card" onclick="openLeafDetail('${l.id}')">
+        <div class="leaf-icon">${t.icon}</div>
+        <div class="leaf-body">
+          <div class="leaf-title">${l.title||t.label}</div>
+          <div class="leaf-preview">${(l.content||'').slice(0,80)}${(l.content||'').length>80?'…':''}</div>
+        </div>
+        ${dateStr?`<div class="leaf-date">${dateStr}</div>`:''}
+      </div>`;
+    });
+    if(nodeLeafs.length>3){
+      html+=`<button class="leaf-see-all" onclick="openLeafList('${p.id}')">See all ${nodeLeafs.length} Leafs</button>`;
+    }
+    html+=`</div>`;
+  } else {
+    html+=`<div style="padding:8px 0;font-size:.76rem;color:var(--muted);font-style:italic">No Leafs yet — add a story, moment, or quote.</div>`;
+  }
+
   // Bridge info for this node
   const bridgeLink=getBridgeInfo(p.id);
 
@@ -843,5 +869,216 @@ function saveConnection(){
   rebuild([]); render(); scheduleSave();
   closeConnModal();
   selectNode(connectionForNodeId);
+}
+
+// ═══ LEAFS UI ════════════════════════════════════════════════════════════════
+
+let leafModalForId=null;
+let leafEditId=null;
+
+function openLeafModal(personId, editId){
+  leafModalForId=personId;
+  leafEditId=editId||null;
+  const bg=document.getElementById('leaf-bg');
+  const p=peopleById[personId];
+  if(!bg||!p) return;
+
+  // Header
+  document.getElementById('leaf-for-name').textContent=`For ${p.isYou?'You':fullName(p)}`;
+  document.getElementById('leaf-for-id').value=personId;
+
+  // Build type picker
+  const picker=document.getElementById('leaf-type-picker');
+  picker.innerHTML=Object.entries(LEAF_TYPES).map(([key,t])=>
+    `<div class="leaf-type-btn${key==='moment'?' active':''}" data-type="${key}">
+      <span class="lt-icon">${t.icon}</span><span class="lt-label">${t.label}</span>
+    </div>`
+  ).join('');
+  document.getElementById('leaf-type-val').value='moment';
+
+  // Type picker clicks
+  picker.querySelectorAll('.leaf-type-btn').forEach(btn=>{
+    btn.onclick=()=>{
+      picker.querySelectorAll('.leaf-type-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('leaf-type-val').value=btn.dataset.type;
+      const t=LEAF_TYPES[btn.dataset.type];
+      document.getElementById('leaf-content').placeholder=t.placeholder;
+    };
+  });
+
+  // Emoji picker
+  document.getElementById('leaf-emoji-val').value='';
+  document.querySelectorAll('.leaf-emoji-pick').forEach(em=>{
+    em.classList.remove('active');
+    em.onclick=()=>{
+      const wasActive=em.classList.contains('active');
+      document.querySelectorAll('.leaf-emoji-pick').forEach(e=>e.classList.remove('active'));
+      if(!wasActive){em.classList.add('active');document.getElementById('leaf-emoji-val').value=em.dataset.em;}
+      else{document.getElementById('leaf-emoji-val').value='';}
+    };
+  });
+
+  // Twyg tags — show other people to optionally tag
+  const tagsEl=document.getElementById('leaf-twyg-tags');
+  const others=people.filter(x=>x.id!==personId).slice(0,12);
+  if(others.length){
+    tagsEl.innerHTML=`<div style="font-size:.7rem;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em">Tag other Twygs</div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px">${others.map(o=>{
+        const nm=(o.isYou?'You':fullName(o)).split(' ')[0];
+        return `<label style="display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;background:rgba(255,255,255,.04);border:1px solid var(--border);font-size:.72rem;color:var(--muted);cursor:pointer;transition:all .15s">
+          <input type="checkbox" class="leaf-tag-cb" value="${o.id}" style="width:12px;height:12px;accent-color:var(--gold)"/> ${nm}
+        </label>`;
+      }).join('')}</div>`;
+  } else { tagsEl.innerHTML=''; }
+
+  // Clear or populate for edit
+  if(leafEditId){
+    const l=leafs.find(x=>x.id===leafEditId);
+    if(l){
+      document.querySelector(`.leaf-type-btn[data-type="${l.type}"]`)?.click();
+      document.getElementById('leaf-title').value=l.title||'';
+      document.getElementById('leaf-content').value=l.content||'';
+      document.getElementById('leaf-date-year').value=l.date?.year||'';
+      document.getElementById('leaf-date-month').value=l.date?.month||'';
+      document.getElementById('leaf-date-day').value=l.date?.day||'';
+      if(l.emoji){
+        const em=document.querySelector(`.leaf-emoji-pick[data-em="${l.emoji}"]`);
+        if(em){em.classList.add('active');document.getElementById('leaf-emoji-val').value=l.emoji;}
+      }
+      // Check tagged twygs
+      (l.twygs||[]).forEach(tid=>{
+        const cb=document.querySelector(`.leaf-tag-cb[value="${tid}"]`);
+        if(cb) cb.checked=true;
+      });
+      document.querySelector('.leaf-modal-title').textContent='Edit Leaf';
+      document.getElementById('btn-submit-leaf').textContent='Save Changes';
+    }
+  } else {
+    document.getElementById('leaf-title').value='';
+    document.getElementById('leaf-content').value='';
+    document.getElementById('leaf-date-year').value='';
+    document.getElementById('leaf-date-month').value='';
+    document.getElementById('leaf-date-day').value='';
+    document.getElementById('leaf-content').placeholder=LEAF_TYPES.moment.placeholder;
+    document.querySelector('.leaf-modal-title').textContent='Add a Leaf';
+    document.getElementById('btn-submit-leaf').textContent='Save Leaf';
+  }
+
+  bg.classList.add('open');
+}
+
+function closeLeafModal(){
+  document.getElementById('leaf-bg').classList.remove('open');
+  leafModalForId=null;
+  leafEditId=null;
+}
+
+function submitLeaf(){
+  const personId=document.getElementById('leaf-for-id').value;
+  if(!personId) return;
+
+  const type=document.getElementById('leaf-type-val').value;
+  const title=document.getElementById('leaf-title').value.trim();
+  const content=document.getElementById('leaf-content').value.trim();
+  if(!content&&!title){
+    document.getElementById('leaf-content').style.borderColor='rgba(200,80,80,.6)';
+    setTimeout(()=>{document.getElementById('leaf-content').style.borderColor='';},2000);
+    return;
+  }
+
+  const year=parseInt(document.getElementById('leaf-date-year').value)||0;
+  const month=parseInt(document.getElementById('leaf-date-month').value)||0;
+  const day=parseInt(document.getElementById('leaf-date-day').value)||0;
+  const date=year?{year,month,day}:null;
+
+  const emoji=document.getElementById('leaf-emoji-val').value||null;
+
+  // Collect tagged twygs
+  const twygs=[personId];
+  document.querySelectorAll('.leaf-tag-cb:checked').forEach(cb=>{
+    if(!twygs.includes(cb.value)) twygs.push(cb.value);
+  });
+
+  if(leafEditId){
+    editLeaf(leafEditId,{type,title,content,date,emoji,twygs});
+  } else {
+    addLeaf({type,title,content,date,emoji,twygs,media:[]});
+  }
+
+  closeLeafModal();
+  // Refresh card if open
+  if(selectedNodeId) selectNode(selectedNodeId);
+}
+
+function openLeafDetail(leafId){
+  const l=leafs.find(x=>x.id===leafId);
+  if(!l) return;
+  const t=LEAF_TYPES[l.type]||LEAF_TYPES.moment;
+  const dateStr=l.date&&l.date.year?formatLeafDate(l.date):'';
+  const taggedNames=(l.twygs||[]).map(tid=>{const p=peopleById[tid];return p?(p.isYou?'You':fullName(p)):null;}).filter(Boolean);
+
+  const msg=`
+    <div style="text-align:left">
+      <div style="font-size:1.8rem;margin-bottom:4px">${t.icon}${l.emoji?' '+l.emoji:''}</div>
+      <div style="font-size:1.1rem;font-weight:600;margin-bottom:4px;color:var(--text)">${l.title||t.label}</div>
+      ${dateStr?`<div style="font-size:.78rem;color:var(--muted);margin-bottom:10px">${dateStr}</div>`:''}
+      <div style="font-size:.88rem;line-height:1.6;color:var(--text);white-space:pre-wrap;margin-bottom:12px">${l.content||''}</div>
+      ${taggedNames.length>1?`<div style="font-size:.72rem;color:var(--muted)">Tagged: ${taggedNames.join(', ')}</div>`:''}
+    </div>
+  `;
+
+  appChoice(msg, '✏️ Edit', '🗑 Delete', 'Close').then(choice=>{
+    if(choice==='a'){
+      // Edit
+      const firstTwyg=l.twygs&&l.twygs[0]?l.twygs[0]:null;
+      if(firstTwyg) openLeafModal(firstTwyg, l.id);
+    } else if(choice==='b'){
+      // Delete
+      appConfirm('Delete this Leaf? This can\'t be undone.','Delete','Cancel').then(yes=>{
+        if(yes){
+          deleteLeaf(l.id);
+          if(selectedNodeId) selectNode(selectedNodeId);
+        }
+      });
+    }
+  });
+}
+
+function openLeafList(personId){
+  const nodeLeafs=getLeafsForNode(personId);
+  if(!nodeLeafs.length) return;
+  const p=peopleById[personId];
+  const name=p?(p.isYou?'You':fullName(p)):'Unknown';
+
+  let cards='';
+  nodeLeafs.forEach(l=>{
+    const t=LEAF_TYPES[l.type]||LEAF_TYPES.moment;
+    const dateStr=l.date&&l.date.year?l.date.year:'';
+    cards+=`<div onclick="closeAllModals();openLeafDetail('${l.id}')" style="display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid var(--border);cursor:pointer;transition:all .15s;margin-bottom:6px">
+      <span style="font-size:1.1rem">${t.icon}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:.84rem;font-weight:500;color:var(--text)">${l.title||t.label}</div>
+        <div style="font-size:.72rem;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(l.content||'').slice(0,100)}</div>
+      </div>
+      ${dateStr?`<span style="font-size:.66rem;color:var(--muted)">${dateStr}</span>`:''}
+    </div>`;
+  });
+
+  appAlert(`<div style="text-align:left"><div style="font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">All Leafs for ${name}</div>${cards}</div>`);
+}
+
+function closeAllModals(){
+  document.getElementById('app-modal-bg').classList.remove('open');
+}
+
+function formatLeafDate(d){
+  if(!d||!d.year) return '';
+  const months=['','January','February','March','April','May','June','July','August','September','October','November','December'];
+  let s='';
+  if(d.month&&months[d.month]) s+=months[d.month]+' ';
+  if(d.day) s+=d.day+', ';
+  s+=d.year;
+  return s;
 }
 

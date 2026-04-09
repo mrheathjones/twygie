@@ -138,3 +138,50 @@
 .tl-entry::before{content:'';position:absolute;left:29px;top:16px;width:8px;height:8px;border-radius:50%;border:2px solid var(--dot-color,#666);opacity:.6}
 .tl-photo{width:36px;height:36px;border-radius:50%;overflow:hidden;flex-shrink:0;background:rgba(255,255,255,.06);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:600}
 .tl-photo img{width:100%;height:100%;object-fit:cover}
+
+/* ═══ LEAFS ═══ */
+
+/* Leaf modal overlay */
+#leaf-bg{position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);opacity:0;pointer-events:none;transition:opacity .25s;display:flex;align-items:center;justify-content:center}
+#leaf-bg.open{opacity:1;pointer-events:all}
+#leaf-modal{width:460px;max-height:85vh;overflow-y:auto;background:rgba(8,14,26,.97);border:1px solid var(--border);border-radius:16px;padding:24px;backdrop-filter:blur(16px);box-shadow:0 16px 48px rgba(0,0,0,.6);transform:scale(.95);transition:transform .2s}
+#leaf-bg.open #leaf-modal{transform:scale(1)}
+.leaf-modal-title{font-family:'Cormorant Garamond',serif;font-size:1.3rem;font-weight:600;color:var(--text)}
+
+/* Type picker */
+.leaf-type-picker{display:flex;gap:6px;margin-bottom:16px}
+.leaf-type-btn{flex:1;padding:10px 6px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,.03);cursor:pointer;text-align:center;transition:all .15s;font-family:'Outfit',sans-serif}
+.leaf-type-btn:hover{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.15)}
+.leaf-type-btn.active{background:rgba(100,180,100,.12);border-color:rgba(100,180,100,.35)}
+.leaf-type-btn .lt-icon{font-size:1.3rem;display:block;margin-bottom:2px}
+.leaf-type-btn .lt-label{font-size:.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.leaf-type-btn.active .lt-label{color:rgba(140,210,140,.9)}
+
+/* Inputs */
+.leaf-input{width:100%;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--text);font-family:'Outfit',sans-serif;font-size:.86rem;margin-bottom:10px;box-sizing:border-box;outline:none;transition:border-color .15s}
+.leaf-input:focus{border-color:rgba(100,180,100,.4)}
+.leaf-textarea{min-height:100px;resize:vertical}
+.leaf-sm{width:auto;flex:1}
+.leaf-date-row{display:flex;gap:8px;margin-bottom:12px}
+
+/* Emoji row */
+.leaf-emoji-row{display:flex;gap:8px;margin-bottom:16px}
+.leaf-emoji-pick{font-size:1.4rem;cursor:pointer;padding:4px 6px;border-radius:8px;border:1px solid transparent;transition:all .15s}
+.leaf-emoji-pick:hover{background:rgba(255,255,255,.06)}
+.leaf-emoji-pick.active{background:rgba(100,180,100,.15);border-color:rgba(100,180,100,.3)}
+
+/* Submit */
+.leaf-submit{width:100%;padding:12px;border-radius:10px;background:rgba(100,180,100,.18);border:1px solid rgba(100,180,100,.35);color:rgba(140,210,140,.95);font-family:'Outfit',sans-serif;font-size:.88rem;font-weight:600;cursor:pointer;transition:all .15s}
+.leaf-submit:hover{background:rgba(100,180,100,.25)}
+
+/* Leaf cards on node card */
+.leaf-list{display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
+.leaf-card{display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid var(--border);cursor:pointer;transition:all .15s}
+.leaf-card:hover{background:rgba(100,180,100,.06);border-color:rgba(100,180,100,.2)}
+.leaf-icon{font-size:1.1rem;flex-shrink:0;margin-top:1px}
+.leaf-body{flex:1;min-width:0}
+.leaf-title{font-size:.82rem;font-weight:500;color:var(--text)}
+.leaf-preview{font-size:.72rem;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.leaf-date{font-size:.66rem;color:var(--muted);flex-shrink:0;margin-top:2px}
+.leaf-see-all{width:100%;padding:7px;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:8px;color:var(--gold);font-size:.74rem;cursor:pointer;font-family:'Outfit',sans-serif;text-align:center}
+.leaf-see-all:hover{background:rgba(200,168,75,.08)}
