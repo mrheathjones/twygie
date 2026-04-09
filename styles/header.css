@@ -24,7 +24,7 @@
 /* View toggle group */
 .view-toggle{display:flex;gap:0;border-radius:100px;overflow:hidden;border:1px solid var(--border);background:rgba(255,255,255,.04)}
 .view-toggle-btn{padding:5px 14px;border:none;font-family:'Outfit',sans-serif;font-size:.76rem;cursor:pointer;transition:all .15s;background:transparent;color:var(--muted)}
-.view-toggle-btn:hover{color:var(--text);background:rgba(255,255,255,.06)}
+.view-toggle-btn:hover{color:var(--gold);background:rgba(200,168,75,.12)}
 .view-toggle-btn.active{background:var(--gold);color:#04070c;font-weight:600}
 
 /* Export dropdown */
@@ -40,7 +40,7 @@
 /* Layout toggle (second row) */
 .layout-toggle{display:flex;gap:2px;background:rgba(255,255,255,.04);border-radius:8px;padding:2px;margin-top:4px}
 .layout-toggle-btn{padding:4px 10px;border:none;border-radius:6px;background:transparent;color:var(--muted);font-family:'Outfit',sans-serif;font-size:.65rem;cursor:pointer;transition:all .15s;white-space:nowrap;letter-spacing:.02em;text-transform:uppercase}
-.layout-toggle-btn:hover{color:var(--text);background:rgba(255,255,255,.06)}
+.layout-toggle-btn:hover{color:var(--gold);background:rgba(200,168,75,.12)}
 .layout-toggle-btn.active{color:var(--text);background:rgba(255,255,255,.1);box-shadow:0 1px 4px rgba(0,0,0,.3)}
 
 /* Stack view + layout toggles vertically */
