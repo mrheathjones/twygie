@@ -365,6 +365,8 @@ function setTreeMode(mode){
       (id==='btn-blood'&&mode==='bloodline')||(id==='btn-bonds'&&mode==='bonds'));
   });
   render();
+  // Refresh 3D lines if in immersive mode
+  if(layoutMode==='immersive'&&typeof immRefreshLines==='function') immRefreshLines();
 }
 
 function setLayoutMode(mode, force){
