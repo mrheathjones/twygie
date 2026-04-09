@@ -85,7 +85,7 @@ function exitImmersive(){
   removeEventListener('resize',immRZ);
   immNodes.forEach(n=>{immScene.remove(n.mesh);immScene.remove(n.glow);immScene.remove(n.label);});
   immLines.forEach(l=>{immScene.remove(l.line);});
-  immLeafNodes.forEach(n=>{immScene.remove(n.mesh);immScene.remove(n.glow);if(n.label)immScene.remove(n.label);});
+  immLeafNodes.forEach(n=>{immScene.remove(n.mesh);immScene.remove(n.glow);(n.lines||[]).forEach(l=>immScene.remove(l.line));});
   immNodes=[]; immLines=[]; immLeafNodes=[];
   if(immRenderer) immRenderer.dispose();
   immScene=immCamera=immRenderer=null;
@@ -164,7 +164,7 @@ function immRefreshLines(){if(immScene){buildImmLines();buildImmLeafs();}}
 
 // ─── LEAFS IN 3D ────────────────────────────────────────────────────────────
 function buildImmLeafs(){
-  immLeafNodes.forEach(n=>{immScene.remove(n.mesh);immScene.remove(n.glow);if(n.line)immScene.remove(n.line);});
+  immLeafNodes.forEach(n=>{immScene.remove(n.mesh);immScene.remove(n.glow);(n.lines||[]).forEach(l=>immScene.remove(l.line));});
   immLeafNodes=[];
   if(!leafs||!leafs.length||!showLeafs) return;
 
@@ -226,14 +226,20 @@ function buildImmLeafs(){
     );
     immScene.add(glow);
 
-    // Connection line to primary twyg
-    const lineGeo=new THREE.BufferGeometry().setFromPoints([leafPos.clone(),tgt.clone()]);
-    const lineMat=new THREE.LineDashedMaterial({color:0x64b464,dashSize:3,gapSize:2,transparent:true,opacity:.2});
-    const line=new THREE.Line(lineGeo,lineMat);
-    line.computeLineDistances();
-    immScene.add(line);
+    // Connection lines to ALL tagged twygs
+    const leafLines=[];
+    twygs.forEach(twygNode=>{
+      const twygPos=twygNode.mesh.userData.targetPos;
+      if(!twygPos) return;
+      const lineGeo=new THREE.BufferGeometry().setFromPoints([leafPos.clone(),twygPos.clone()]);
+      const lineMat=new THREE.LineDashedMaterial({color:0x64b464,dashSize:3,gapSize:2,transparent:true,opacity:.25+t*.15});
+      const line=new THREE.Line(lineGeo,lineMat);
+      line.computeLineDistances();
+      immScene.add(line);
+      leafLines.push({line,targetId:twygNode.personId});
+    });
 
-    immLeafNodes.push({mesh,glow,line,primaryId:primary.personId});
+    immLeafNodes.push({mesh,glow,lines:leafLines,primaryId:primary.personId});
   });
 }
 
@@ -349,17 +355,17 @@ function immAnimate(){
     }
     ln.glow.position.copy(ln.mesh.position);
     ln.mesh.material.emissiveIntensity=0.4+Math.sin(t*1.2+i*0.9)*0.2;
-    // Update connection line
-    if(ln.line){
-      const primary=immNodes.find(n=>n.personId===ln.primaryId);
-      if(primary){
-        const pos=ln.line.geometry.attributes.position;
+    // Update connection lines to all tagged twygs
+    (ln.lines||[]).forEach(ll=>{
+      const twygNd=immNodes.find(n=>n.personId===ll.targetId);
+      if(twygNd&&ll.line){
+        const pos=ll.line.geometry.attributes.position;
         pos.setXYZ(0,ln.mesh.position.x,ln.mesh.position.y,ln.mesh.position.z);
-        pos.setXYZ(1,primary.mesh.position.x,primary.mesh.position.y,primary.mesh.position.z);
+        pos.setXYZ(1,twygNd.mesh.position.x,twygNd.mesh.position.y,twygNd.mesh.position.z);
         pos.needsUpdate=true;
-        ln.line.computeLineDistances();
+        ll.line.computeLineDistances();
       }
-    }
+    });
   });
 
   immLines.forEach((l,i)=>{

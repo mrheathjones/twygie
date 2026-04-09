@@ -145,7 +145,7 @@
 /* Leaf modal overlay */
 #leaf-bg{position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);opacity:0;pointer-events:none;transition:opacity .25s;display:flex;align-items:center;justify-content:center}
 #leaf-bg.open{opacity:1;pointer-events:all}
-#leaf-modal{width:460px;max-height:85vh;overflow-y:auto;background:rgba(8,14,26,.97);border:1px solid var(--border);border-radius:16px;padding:24px;backdrop-filter:blur(16px);box-shadow:0 16px 48px rgba(0,0,0,.6);transform:scale(.95);transition:transform .2s}
+#leaf-modal{width:460px;max-height:85vh;overflow-y:auto;background:rgba(10,20,14,.97);border:1px solid rgba(100,180,100,.25);border-radius:16px;padding:24px;backdrop-filter:blur(16px);box-shadow:0 16px 48px rgba(0,0,0,.6);transform:scale(.95);transition:transform .2s}
 #leaf-bg.open #leaf-modal{transform:scale(1)}
 .leaf-modal-title{font-family:'Cormorant Garamond',serif;font-size:1.3rem;font-weight:600;color:var(--text)}
 
