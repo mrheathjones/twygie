@@ -725,12 +725,12 @@ function drawLeafs(){
     // t = 0→0, 1→0.17, 3→0.38, 5→0.5, 10→0.67, 50→0.91, 100→0.95
     var tagCount=(l.twygs||[]).length;
     var t=tagCount/(tagCount+5);
-    var glowOp=(0.03+t*0.12).toFixed(3);   // 0.03 → 0.15
-    var dotOp=(0.10+t*0.25).toFixed(3);     // 0.10 → 0.35
-    var strokeOp=(0.20+t*0.35).toFixed(3);  // 0.20 → 0.55
-    var labelOp=(0.35+t*0.30).toFixed(3);   // 0.35 → 0.65
-    var lineOp=(0.08+t*0.15).toFixed(3);    // 0.08 → 0.23
-    var glowR=LEAF_R*(1.8+t*1.2);           // 14.4 → 24
+    var glowOp=(0.05+t*0.25).toFixed(3);   // 0.05 → 0.30
+    var dotOp=(0.15+t*0.45).toFixed(3);     // 0.15 → 0.60
+    var strokeOp=(0.25+t*0.50).toFixed(3);  // 0.25 → 0.75
+    var labelOp=(0.40+t*0.40).toFixed(3);   // 0.40 → 0.80
+    var lineOp=(0.10+t*0.25).toFixed(3);    // 0.10 → 0.35
+    var glowR=LEAF_R*(2.0+t*2.0);           // 16 → 32
 
     // Glow
     var glow=createSvgElement('circle');
