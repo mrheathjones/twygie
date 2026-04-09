@@ -194,6 +194,30 @@ function submitMember(){
       if(directParentLabelsSet.has(rel)){
         // Direct parent — add to target's parents array
         if(target) target.parents=[...(target.parents||[]),id];
+
+        // CASCADE B: parent-to-sibling — add this parent to ALL of target's siblings
+        if(target){
+          const targetSibs=new Set();
+          // From shared parents
+          (target.parents||[]).forEach(pid=>{
+            if(pid===id) return; // skip the parent we just added
+            people.filter(s=>s.id!==target.id&&(s.parents||[]).includes(pid)).forEach(s=>targetSibs.add(s.id));
+          });
+          // From sibling relationships/customLinks
+          (target.relationships||[]).forEach(r=>{
+            if(SIBLING_LABELS.has(r.label)) targetSibs.add(r.targetId);
+          });
+          Object.entries(target.customLinks||{}).forEach(([tid,v])=>{
+            const lbl=typeof v==='string'?v:v.label||'';
+            if(SIBLING_LABELS.has(lbl)) targetSibs.add(tid);
+          });
+          targetSibs.forEach(sibId=>{
+            const sib=peopleById[sibId]; if(!sib) return;
+            if(!(sib.parents||[]).includes(id)){
+              sib.parents=[...(sib.parents||[]),id];
+            }
+          });
+        }
       } else {
         // Grandparent, uncle, etc — store as customLink only
         if(!np.customLinks) np.customLinks={};
@@ -206,13 +230,44 @@ function submitMember(){
     else if(baseRel==='Sibling'){
       const directSibSet=new Set(['Brother','Sister','Half-brother','Half-sister','Stepbrother','Stepsister','Sibling']);
       if(directSibSet.has(rel)){
-        // Direct siblings share parents — enables grandparent/uncle cascades
+        // Direct siblings share parents — copy target's parents
         np.parents=[...(target?.parents||[])];
         if(!np.customLinks) np.customLinks={};
         if(!target.customLinks) target.customLinks={};
         const sibLabel=np.gender==='male'?'Brother':np.gender==='female'?'Sister':'Sibling';
         np.customLinks[addForNodeId]={label:sibLabel,lineType:'sibling'};
         target.customLinks[id]={label:sibLabel,lineType:'sibling'};
+
+        // CASCADE A: sibling-of-sibling — find ALL of target's existing siblings
+        // and make the new node their sibling too
+        const targetSibs=new Set();
+        // From shared parents
+        (target.parents||[]).forEach(pid=>{
+          people.filter(s=>s.id!==target.id&&s.id!==id&&(s.parents||[]).includes(pid)).forEach(s=>targetSibs.add(s.id));
+        });
+        // From sibling relationships/customLinks
+        (target.relationships||[]).forEach(r=>{
+          if(SIBLING_LABELS.has(r.label)&&r.targetId!==id) targetSibs.add(r.targetId);
+        });
+        Object.entries(target.customLinks||{}).forEach(([tid,v])=>{
+          if(tid===id) return;
+          const lbl=typeof v==='string'?v:v.label||'';
+          if(SIBLING_LABELS.has(lbl)) targetSibs.add(tid);
+        });
+        // Create sibling relationships between new node and each existing sibling
+        targetSibs.forEach(sibId=>{
+          const sib=peopleById[sibId]; if(!sib) return;
+          const sl=sib.gender==='male'?'Brother':sib.gender==='female'?'Sister':'Sibling';
+          if(!np.customLinks) np.customLinks={};
+          if(!sib.customLinks) sib.customLinks={};
+          np.customLinks[sibId]={label:sl,lineType:'sibling'};
+          sib.customLinks[id]={label:sibLabel,lineType:'sibling'};
+          addRel(np, sib, sibLabel);
+          // Also share parents
+          (sib.parents||[]).forEach(pid=>{
+            if(!(np.parents||[]).includes(pid)) np.parents=[...(np.parents||[]),pid];
+          });
+        });
       } else {
         // Cousins, in-laws, etc — customLink only (don't copy parents)
         np.parents=[];

@@ -750,8 +750,12 @@ function saveConnection(){
   if(type==='parent'){
     if(directParentLabels.includes(label)){
       if(!(target.parents||[]).includes(other.id)) target.parents=[...(target.parents||[]),other.id];
+      // CASCADE B: parent-to-sibling — add parent to all of target's siblings
+      const tSibs=new Set();
+      (target.relationships||[]).forEach(r=>{ if(SIBLING_LABELS.has(r.label)) tSibs.add(r.targetId); });
+      Object.entries(target.customLinks||{}).forEach(([tid,v])=>{ const l=typeof v==='string'?v:v.label||''; if(SIBLING_LABELS.has(l)) tSibs.add(tid); });
+      tSibs.forEach(sibId=>{ const s=peopleById[sibId]; if(s&&!(s.parents||[]).includes(other.id)) s.parents=[...(s.parents||[]),other.id]; });
     } else {
-      // Grandparent, uncle, etc. → store as customLink with correct line type
       if(!target.customLinks) target.customLinks={};
       if(!other.customLinks) other.customLinks={};
       const ltype=BLOOD_LABELS.has(label)?'blood':'labeled';
@@ -762,8 +766,12 @@ function saveConnection(){
   } else if(type==='child'){
     if(directChildLabels.includes(label)){
       if(!(other.parents||[]).includes(target.id)) other.parents=[...(other.parents||[]),target.id];
+      // CASCADE B: parent-to-sibling — add parent (target) to all of other's siblings
+      const oSibs=new Set();
+      (other.relationships||[]).forEach(r=>{ if(SIBLING_LABELS.has(r.label)) oSibs.add(r.targetId); });
+      Object.entries(other.customLinks||{}).forEach(([tid,v])=>{ const l=typeof v==='string'?v:v.label||''; if(SIBLING_LABELS.has(l)) oSibs.add(tid); });
+      oSibs.forEach(sibId=>{ const s=peopleById[sibId]; if(s&&!(s.parents||[]).includes(target.id)) s.parents=[...(s.parents||[]),target.id]; });
     } else {
-      // Grandchild, nephew, etc. → customLink with correct line type
       if(!target.customLinks) target.customLinks={};
       if(!other.customLinks) other.customLinks={};
       const ltype2=BLOOD_LABELS.has(label)?'blood':'labeled';
@@ -772,13 +780,31 @@ function saveConnection(){
     }
     other.relLabel=label;
   } else if(type==='sibling'){
-    // Do NOT copy parents — avoids false grandparent connections
     if(!target.customLinks) target.customLinks={};
     if(!other.customLinks) other.customLinks={};
     const sLbl=label||'Sibling';
     target.customLinks[other.id]={label:sLbl,lineType:'sibling'};
     other.customLinks[target.id]={label:sLbl,lineType:'sibling'};
     if(!other.relLabel) other.relLabel=sLbl;
+    // Share parents between the two siblings
+    (target.parents||[]).forEach(pid=>{ if(!(other.parents||[]).includes(pid)) other.parents=[...(other.parents||[]),pid]; });
+    (other.parents||[]).forEach(pid=>{ if(!(target.parents||[]).includes(pid)) target.parents=[...(target.parents||[]),pid]; });
+    // CASCADE A: sibling-of-sibling — connect other to all of target's existing siblings
+    const tSibs2=new Set();
+    (target.relationships||[]).forEach(r=>{ if(SIBLING_LABELS.has(r.label)&&r.targetId!==other.id) tSibs2.add(r.targetId); });
+    Object.entries(target.customLinks||{}).forEach(([tid,v])=>{ if(tid===other.id) return; const l=typeof v==='string'?v:v.label||''; if(SIBLING_LABELS.has(l)) tSibs2.add(tid); });
+    tSibs2.forEach(sibId=>{
+      const sib=peopleById[sibId]; if(!sib) return;
+      if(!other.customLinks[sibId]){
+        const sl=sib.gender==='male'?'Brother':sib.gender==='female'?'Sister':'Sibling';
+        other.customLinks[sibId]={label:sl,lineType:'sibling'};
+        if(!sib.customLinks) sib.customLinks={};
+        sib.customLinks[other.id]={label:other.gender==='male'?'Brother':other.gender==='female'?'Sister':'Sibling',lineType:'sibling'};
+        addRel(other, sib, sl);
+      }
+      // Share parents
+      (sib.parents||[]).forEach(pid=>{ if(!(other.parents||[]).includes(pid)) other.parents=[...(other.parents||[]),pid]; });
+    });
   } else if(type==='spouse'){
     other.spouseOf=target.id;
     target.spouseOf=other.id;
