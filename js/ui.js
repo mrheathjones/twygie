@@ -1082,3 +1082,213 @@ function formatLeafDate(d){
   return s;
 }
 
+// ─── LEAFS MODAL ─────────────────────────────────────────────────────────────
+
+function openLeafModal(personId, editLeafId){
+  const bg=document.getElementById('leaf-bg');
+  if(!bg) return;
+
+  const p=peopleById[personId];
+  document.getElementById('leaf-for-id').value=personId;
+  document.getElementById('leaf-for-name').textContent=p?`For ${fullName(p)}`:'';
+
+  // Build type picker
+  const picker=document.getElementById('leaf-type-picker');
+  picker.innerHTML=Object.entries(LEAF_TYPES).map(([k,v])=>
+    `<button class="leaf-type-btn${k==='moment'?' active':''}" data-type="${k}">
+      <span class="lt-icon">${v.icon}</span><span class="lt-label">${v.label}</span>
+    </button>`
+  ).join('');
+
+  // Type picker clicks
+  picker.querySelectorAll('.leaf-type-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      picker.querySelectorAll('.leaf-type-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('leaf-type-val').value=btn.dataset.type;
+      const t=LEAF_TYPES[btn.dataset.type];
+      document.getElementById('leaf-content').placeholder=t?t.placeholder:'Write something…';
+    });
+  });
+
+  // Emoji picker clicks
+  document.querySelectorAll('.leaf-emoji-pick').forEach(em=>{
+    em.onclick=()=>{
+      document.querySelectorAll('.leaf-emoji-pick').forEach(e=>e.classList.remove('active'));
+      const cur=document.getElementById('leaf-emoji-val').value;
+      if(cur===em.dataset.em){
+        document.getElementById('leaf-emoji-val').value='';
+      } else {
+        em.classList.add('active');
+        document.getElementById('leaf-emoji-val').value=em.dataset.em;
+      }
+    };
+  });
+
+  // Reset fields
+  document.getElementById('leaf-title').value='';
+  document.getElementById('leaf-content').value='';
+  document.getElementById('leaf-content').placeholder=LEAF_TYPES.moment.placeholder;
+  document.getElementById('leaf-date-year').value='';
+  document.getElementById('leaf-date-month').value='';
+  document.getElementById('leaf-date-day').value='';
+  document.getElementById('leaf-emoji-val').value='';
+  document.getElementById('leaf-type-val').value='moment';
+  document.querySelectorAll('.leaf-emoji-pick').forEach(e=>e.classList.remove('active'));
+
+  // Build twyg tags (who else is in this leaf)
+  const tagsEl=document.getElementById('leaf-twyg-tags');
+  const others=people.filter(x=>x.id!==personId);
+  if(others.length){
+    tagsEl.innerHTML=`<div style="font-size:.72rem;color:var(--muted);margin-bottom:6px">Tag other Twygs (optional)</div>
+    <div class="leaf-tag-grid">${others.map(o=>{
+      const c=getNodeColor(o);
+      return `<label class="leaf-tag-item"><input type="checkbox" value="${o.id}" class="leaf-tag-cb"/><span class="leaf-tag-dot" style="background:${c}"></span><span class="leaf-tag-name">${fullName(o).split(' ')[0]}</span></label>`;
+    }).join('')}</div>`;
+  } else {
+    tagsEl.innerHTML='';
+  }
+
+  // If editing, pre-fill
+  if(editLeafId){
+    const l=leafs.find(x=>x.id===editLeafId);
+    if(l){
+      document.getElementById('leaf-title').value=l.title||'';
+      document.getElementById('leaf-content').value=l.content||'';
+      document.getElementById('leaf-type-val').value=l.type||'moment';
+      if(l.date){
+        document.getElementById('leaf-date-year').value=l.date.year||'';
+        document.getElementById('leaf-date-month').value=l.date.month||'';
+        document.getElementById('leaf-date-day').value=l.date.day||'';
+      }
+      if(l.emoji){
+        document.getElementById('leaf-emoji-val').value=l.emoji;
+        document.querySelectorAll('.leaf-emoji-pick').forEach(e=>{
+          if(e.dataset.em===l.emoji) e.classList.add('active');
+        });
+      }
+      // Activate correct type
+      picker.querySelectorAll('.leaf-type-btn').forEach(b=>{
+        b.classList.toggle('active',b.dataset.type===l.type);
+      });
+      const t=LEAF_TYPES[l.type];
+      if(t) document.getElementById('leaf-content').placeholder=t.placeholder;
+      // Check tagged twygs
+      (l.twygs||[]).forEach(tid=>{
+        const cb=tagsEl.querySelector(`input[value="${tid}"]`);
+        if(cb) cb.checked=true;
+      });
+      // Change button to "Update"
+      document.getElementById('btn-submit-leaf').textContent='Update Leaf';
+      document.getElementById('btn-submit-leaf').dataset.editId=editLeafId;
+    }
+  } else {
+    document.getElementById('btn-submit-leaf').textContent='Save Leaf';
+    delete document.getElementById('btn-submit-leaf').dataset.editId;
+  }
+
+  bg.classList.add('open');
+}
+
+function closeLeafModal(){
+  const bg=document.getElementById('leaf-bg');
+  if(bg) bg.classList.remove('open');
+}
+
+function submitLeaf(){
+  const personId=document.getElementById('leaf-for-id').value;
+  const type=document.getElementById('leaf-type-val').value;
+  const title=document.getElementById('leaf-title').value.trim();
+  const content=document.getElementById('leaf-content').value.trim();
+  const emoji=document.getElementById('leaf-emoji-val').value||null;
+  const yr=parseInt(document.getElementById('leaf-date-year').value)||0;
+  const mo=parseInt(document.getElementById('leaf-date-month').value)||0;
+  const dy=parseInt(document.getElementById('leaf-date-day').value)||0;
+
+  if(!content){ document.getElementById('leaf-content').style.borderColor='#c44'; return; }
+
+  // Collect tagged twygs
+  const twygs=[personId];
+  document.querySelectorAll('.leaf-tag-cb:checked').forEach(cb=>{
+    if(!twygs.includes(cb.value)) twygs.push(cb.value);
+  });
+
+  const date=yr?{year:yr, month:mo||undefined, day:dy||undefined}:null;
+  const editId=document.getElementById('btn-submit-leaf').dataset.editId;
+
+  if(editId){
+    editLeaf(editId, {type, title, content, emoji, date, twygs});
+  } else {
+    addLeaf({type, title, content, emoji, date, twygs, media:[]});
+  }
+
+  closeLeafModal();
+  // Refresh card if open
+  if(selectedNodeId) selectNode(selectedNodeId);
+}
+
+// ─── LEAF DETAIL VIEW ────────────────────────────────────────────────────────
+
+function openLeafDetail(leafId){
+  const l=leafs.find(x=>x.id===leafId);
+  if(!l) return;
+  const t=LEAF_TYPES[l.type]||LEAF_TYPES.moment;
+  const dateStr=formatLeafDate(l.date);
+
+  // Build tagged twygs list
+  const twygNames=(l.twygs||[]).map(tid=>{
+    const p=peopleById[tid]; return p?fullName(p):'Unknown';
+  }).join(', ');
+
+  const msg=`
+    <div style="text-align:left">
+      <div style="font-size:1.5rem;margin-bottom:8px">${t.icon}${l.emoji?' '+l.emoji:''}</div>
+      <div style="font-size:1.1rem;font-weight:600;margin-bottom:4px">${l.title||t.label}</div>
+      ${dateStr?`<div style="font-size:.76rem;color:var(--muted);margin-bottom:12px">${dateStr}</div>`:''}
+      <div style="font-size:.88rem;line-height:1.5;white-space:pre-wrap;margin-bottom:14px">${l.content||''}</div>
+      <div style="font-size:.72rem;color:var(--muted)">Tagged: ${twygNames}</div>
+    </div>
+  `;
+
+  // Use appChoice for view/edit/delete
+  appChoice(msg,'Edit','Delete','Close').then(choice=>{
+    if(choice==='a'){
+      // Edit
+      const pid=(l.twygs||[])[0];
+      if(pid) openLeafModal(pid, leafId);
+    } else if(choice==='b'){
+      // Delete
+      appConfirm('Delete this Leaf? This cannot be undone.','Delete','Cancel').then(ok=>{
+        if(ok){
+          deleteLeaf(leafId);
+          if(selectedNodeId) selectNode(selectedNodeId);
+        }
+      });
+    }
+  });
+}
+
+// ─── LEAF LIST (all leafs for a node) ────────────────────────────────────────
+
+function openLeafList(personId){
+  const nodeLeafs=getLeafsForNode(personId);
+  const p=peopleById[personId];
+  const pName=p?fullName(p):'Unknown';
+
+  let html=`<div style="text-align:left;max-height:50vh;overflow-y:auto">
+    <div style="font-size:.88rem;font-weight:600;margin-bottom:12px">${pName}'s Leafs</div>`;
+  nodeLeafs.forEach(l=>{
+    const t=LEAF_TYPES[l.type]||LEAF_TYPES.moment;
+    const dateStr=formatLeafDate(l.date);
+    html+=`<div style="display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid var(--border);margin-bottom:6px;cursor:pointer" onclick="document.getElementById('app-modal-bg').classList.remove('open');openLeafDetail('${l.id}')">
+      <div style="font-size:1.1rem;flex-shrink:0">${t.icon}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:.82rem;font-weight:500">${l.title||t.label}${l.emoji?' '+l.emoji:''}</div>
+        <div style="font-size:.72rem;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(l.content||'').slice(0,100)}</div>
+      </div>
+      ${dateStr?`<div style="font-size:.66rem;color:var(--muted);flex-shrink:0">${dateStr}</div>`:''}
+    </div>`;
+  });
+  html+=`</div>`;
+  appAlert(html);
+}
