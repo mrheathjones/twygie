@@ -173,6 +173,7 @@ async function loadSettings(){
       if(d.layoutMode) layoutMode=d.layoutMode;
       if(d.layoutWarnDismissed!=null) layoutWarnDismissed=!!d.layoutWarnDismissed;
       if(d.dobWarnDismissed!=null) dobWarnDismissed=!!d.dobWarnDismissed;
+      if(d.showLeafs!=null) showLeafs=!!d.showLeafs;
     }
   }catch(e){}
 }

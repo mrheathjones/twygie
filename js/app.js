@@ -425,9 +425,13 @@ function initEventListeners() {
     showLeafs=!showLeafs;
     if(!showLeafs) leafs.forEach(l=>{delete l._px;delete l._py;});
     document.getElementById('btn-leafs').classList.toggle('active',showLeafs);
+    settingsDoc().set({showLeafs},{merge:true}).catch(()=>{});
     if(layoutMode==='immersive'&&typeof buildImmLeafs==='function') buildImmLeafs();
     else render();
   });
+
+  // Restore leafs toggle state from settings
+  if(showLeafs) document.getElementById('btn-leafs').classList.add('active');
 
   // --- Layout mode toggle ---
   async function requestLayoutChange(mode){
