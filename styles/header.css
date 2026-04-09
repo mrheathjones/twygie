@@ -4,6 +4,9 @@
 #hdr{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:flex-start;justify-content:space-between;padding:12px 24px;
   background:linear-gradient(to bottom,rgba(4,7,12,.95) 0%,rgba(4,7,12,.85) 70%,transparent 100%);pointer-events:none}
 #hdr>*{pointer-events:all}
+.hdr-left{display:flex;align-items:center;gap:12px}
+.hdr-center{display:flex;justify-content:center}
+.hdr-right{display:flex;align-items:center;gap:8px}
 .logo{font-family:'Cormorant Garamond',serif;font-size:1.15rem;font-weight:600;letter-spacing:.07em;color:var(--gold);display:flex;align-items:center;gap:9px}
 #mcount{display:flex;align-items:center;gap:6px;padding:5px 13px;border-radius:100px;background:rgba(255,255,255,.05);border:1px solid var(--border);font-size:.78rem;color:var(--muted);cursor:pointer;transition:all .2s}
 #mcount:hover{background:rgba(200,168,75,.1);border-color:rgba(200,168,75,.25);color:var(--gold)}

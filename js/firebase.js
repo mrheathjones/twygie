@@ -111,8 +111,8 @@ auth.onAuthStateChanged(async user => {
   currentUser=user;
   const initEl=document.getElementById('uinitial');
   const avatarEl=document.getElementById('uavatar');
-  if(user.photoURL){ initEl.style.display='none'; const img=document.createElement('img'); img.src=user.photoURL; avatarEl.appendChild(img); }
-  else initEl.textContent=(user.displayName||user.email||'?')[0].toUpperCase();
+  if(avatarEl&&user.photoURL){ if(initEl) initEl.style.display='none'; const img=document.createElement('img'); img.src=user.photoURL; avatarEl.appendChild(img); }
+  else if(initEl) initEl.textContent=(user.displayName||user.email||'?')[0].toUpperCase();
   await loadTree();
   await loadActiveLinks();
   await loadSharedNodes();

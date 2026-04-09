@@ -433,7 +433,6 @@ function initEventListeners() {
   on('btn-export-pdf','click', () => exportTree('pdf'));
   on('btn-add-member','click', () => openModal(null));
   on('btn-settings-gear','click', openSettings);
-  on('uavatar',      'click', openSettings);
 
   // --- Zoom controls ---
   on('btn-zoom-in',  'click', () => zoomBy(1.25));

@@ -23,10 +23,10 @@ function enterImmersive(){
   wrap.style.display='block';
   const mw=document.getElementById('wrap'); if(mw) mw.style.display='none';
   // Float view toggle over 3D
-  const ts=document.querySelector('.toggle-stack');
-  if(ts) ts.style.cssText='position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:60';
-  const lt=document.querySelector('.layout-toggle');
-  if(lt) lt.style.display='none';
+  const hl=document.querySelector('.hdr-left'); if(hl) hl.style.display='none';
+  const hr=document.querySelector('.hdr-right'); if(hr) hr.style.display='none';
+  const lt=document.querySelector('.layout-toggle'); if(lt) lt.style.display='none';
+  const hdr=document.getElementById('hdr'); if(hdr) hdr.style.justifyContent='center';
 
   immScene=new THREE.Scene();
   immScene.background=new THREE.Color(0x050508);
@@ -68,8 +68,10 @@ function enterImmersive(){
 function exitImmersive(){
   const wrap=document.getElementById('immersive-wrap'); if(wrap) wrap.style.display='none';
   const mw=document.getElementById('wrap'); if(mw) mw.style.display='';
-  const ts=document.querySelector('.toggle-stack'); if(ts) ts.style.cssText='';
+  const hl=document.querySelector('.hdr-left'); if(hl) hl.style.display='';
+  const hr=document.querySelector('.hdr-right'); if(hr) hr.style.display='';
   const lt=document.querySelector('.layout-toggle'); if(lt) lt.style.display='';
+  const hdr=document.getElementById('hdr'); if(hdr) hdr.style.justifyContent='';
   const ic=document.getElementById('imm-card'); if(ic) ic.remove();
   if(immAnimId) cancelAnimationFrame(immAnimId); immAnimId=null;
   const c=document.getElementById('immersive-canvas');
