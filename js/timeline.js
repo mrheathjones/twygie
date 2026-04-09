@@ -187,17 +187,17 @@ function renderTimeline(){
       const xJitter=((hash*7)%30)-15;         // ±15px horizontal scatter
       const bottomPct=baseBottom+i*3;          // stagger same-year leafs
 
-      html+=`<div class="tl-leaf" style="left:${x+xJitter}px;bottom:${bottomPct}%" onclick="openLeafOnTimeline('${l.id}')">
+      html+=`<div class="tl-leaf" style="left:${x+xJitter}px;bottom:32%;height:${bottomPct-32}%" onclick="openLeafOnTimeline('${l.id}')">
         <div class="tl-leaf-popup">
           <div class="tl-leaf-pop">
-            <div style="font-size:.9rem;margin-bottom:2px">${icon}${l.emoji?' '+l.emoji:''}</div>
+            <div style="font-size:.9rem;margin-bottom:2px">🍃${l.emoji?' '+l.emoji:''}</div>
             <div style="font-size:.82rem;font-weight:500;color:var(--text)">${title||l.type}</div>
             ${content?`<div style="font-size:.72rem;color:var(--muted);margin-top:3px;white-space:normal;max-width:200px">${content}${l.content&&l.content.length>60?'…':''}</div>`:''}
             ${taggedNames?`<div style="font-size:.66rem;color:rgba(100,180,100,.7);margin-top:4px">${taggedNames}</div>`:''}
           </div>
         </div>
+        <div class="tl-leaf-dot">🍃</div>
         <div class="tl-leaf-stem"></div>
-        <div class="tl-leaf-dot">${icon}</div>
       </div>`;
     });
   });
@@ -208,7 +208,7 @@ function renderTimeline(){
   const cats=new Set(entries.map(p=>relCategory(p)));
   const cl={you:'You',spouse:'Spouse',parent:'Parent',child:'Child',sibling:'Sibling',grandparent:'Grandparent',extended:'Extended',deceased:'Deceased',young:'Young',default:'Other'};
   let lh='';cats.forEach(c=>{lh+=`<div class="leg-i"><div class="leg-d" style="background:${nodeColors[c]}"></div>${cl[c]||c}</div>`});
-  if(datedLeafs.length) lh+=`<div class="leg-i"><span style="font-size:.7rem">✨</span> Leafs</div>`;
+  if(datedLeafs.length) lh+=`<div class="leg-i"><span style="font-size:.7rem">🍃</span> Leafs</div>`;
   document.getElementById('legend').innerHTML=lh;
 
   applyScroll();
@@ -509,7 +509,7 @@ function openLeafOnTimeline(leafId){
   card.innerHTML=`
     <button class="dc-close" onclick="closeDetail()">✕</button>
     <div style="text-align:center;margin-bottom:12px">
-      <div style="font-size:2rem;margin-bottom:4px">${icon}${l.emoji?' '+l.emoji:''}</div>
+      <div style="font-size:2rem;margin-bottom:4px">🍃${l.emoji?' '+l.emoji:''}</div>
       <div style="font-size:1.1rem;font-weight:600;color:var(--text)">${l.title||l.type}</div>
       ${dateStr?`<div style="font-size:.82rem;color:var(--muted);margin-top:4px">${dateStr}</div>`:''}
     </div>
