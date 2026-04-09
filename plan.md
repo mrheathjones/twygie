@@ -150,10 +150,89 @@ An interactive, beautiful family tree web app. Each family member is a "Twyg" �
     - Text
     - Notify/Share
     - Generate Code
-- [ ] **Leafs** — new tab for shared stories & memories
-  - Stories shared by nodes: memories, funny stories, photos, etc.
-  - Share access to individual nodes so they can contribute their own stories
-  - Stories can be "linked" to other nodes (like Add Connection)
+- [ ] **Leafs** — family stories, memories, and moments attached to Twygs
+  
+  #### What is a Leaf?
+  A Leaf is a piece of living memory attached to one or more Twygs. Not profile data — the stories
+  you'd tell at Thanksgiving, the photo from that one summer, the thing grandpa always said.
+
+  #### Five Leaf Types
+  | Type | Icon | What it is | Example |
+  |------|------|-----------|---------|
+  | Story | 📖 | Longer narrative | "The time Dad got lost in Rome and came back with a puppy" |
+  | Moment | ✨ | Quick memory, one-liner | "Mom always burned the Thanksgiving turkey" |
+  | Photo | 📷 | Image with caption | Beach trip 1994, matching shirts |
+  | Quote | 💬 | Something they said | "Grandpa always said: If you're not early, you're late" |
+  | Milestone | 🏆 | Life event | Graduated MIT 2018, First house 2022 |
+
+  #### Data Model
+  ```js
+  Leaf {
+    id: 'leaf_{timestamp}',
+    type: 'story' | 'moment' | 'photo' | 'quote' | 'milestone',
+    title: string,
+    content: string,
+    media: [string],               // photo URLs (Firebase Storage, future)
+    date: { year, month, day },    // optional — feeds timeline
+    twygs: [personId],             // multi-node attachment (1+)
+    createdBy: userId,
+    createdAt: timestamp,
+    emoji: string | null,          // mood: 😂 ❤️ 😢 🎉
+  }
+  ```
+
+  #### Storage: Separate Firestore Collection (encrypted)
+  ```
+  leafs/{treeOwnerUid}/entries/{leafId}
+  ```
+  Separate from tree data — Leafs grow large (especially photos). Core tree stays fast,
+  Leafs lazy-load on demand. Shareable independently for linked trees.
+
+  #### Key Design Decisions
+  - **Multi-node attachment**: A Leaf connects to multiple Twygs. "Dad and Uncle Henry built
+    the treehouse" belongs to both. Creates a web of shared memories.
+  - **Date optional but encouraged**: Dated Leafs feed the timeline. Prompt "Do you remember
+    roughly when?" with decade/year/season pickers.
+  - **CreatedBy attribution**: Linked tree users see "Added by Sara" vs your own Leafs.
+
+  #### UX Flow
+  - Node card: new "Leafs" section below Connections with count
+  - Shows 2-3 most recent Leafs as compact cards
+  - "See all Leafs" expands or opens dedicated view
+  - "+ Add a Leaf" button with type picker (5 icons in a row)
+  - Quick-add: pick type → write content → tag other Twygs → optional date/photo/emoji → save
+
+  #### Tree View Integration (Show Leafs Toggle)
+  Three levels:
+  - **Off** — just the tree (default)
+  - **Highlights** — only photo/milestone Leafs as tiny dots on connection lines
+  - **All Leafs** — everything visible, tree becomes a dense story web
+  
+  Leafs appear as smaller teardrop/leaf-shaped nodes near tagged Twygs. Multi-Twyg Leafs
+  create hub nodes connecting all tagged people. Visual hierarchy: Twygs primary (big circles),
+  Leafs secondary (smaller, semi-transparent until hovered).
+
+  In Immersive mode: tiny glowing leaf particles orbiting between Twyg spheres.
+
+  #### Linked Tree Sharing
+  When Share All is active:
+  - Leafs on shared Twygs visible to linked tree
+  - Linked users can ADD Leafs to shared Twygs (attributed to them)
+  - Your Leafs: full control. Their Leafs: read-only. Either side can hide/flag.
+
+  #### Timeline Integration
+  Dated Leafs appear as small icons below the timeline line. Hover shows preview, click opens
+  full Leaf. Timeline becomes a *story* — births, milestones, moments, photos woven chronologically.
+  Future: "The Family Story" auto-narrate mode from earliest to latest.
+
+  #### Implementation Phases
+  - [ ] **Phase 1**: Data model, Firestore collection, CRUD on node card, basic display
+  - [ ] **Phase 2**: Firebase Storage photo upload, gallery view
+  - [ ] **Phase 3**: Timeline integration — dated Leafs on timeline with previews
+  - [ ] **Phase 4**: Tree view integration — Show Leafs toggle, leaf-shaped nodes
+  - [ ] **Phase 5**: Linked sharing — Leafs visible across linked trees
+  - [ ] **Phase 6**: Dedicated Leafs page — browsable, searchable, filterable
+
 - [ ] **Timeline Enhancement** — chronological family story
   - String together event dates + Leafs to tell the family story
     - Person A + Person B got married
