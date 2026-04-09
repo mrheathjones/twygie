@@ -231,10 +231,10 @@ An interactive, beautiful family tree web app. Each family member is a "Twyg" �
   #### Implementation Phases
   - [x] **Phase 1**: Data model, Firestore storage, CRUD on node card, basic display ✅ (Session 13)
   - [ ] **Phase 2**: Firebase Storage photo upload, gallery view
-  - [ ] **Phase 3**: Timeline integration — dated Leafs on timeline with previews (IN PROGRESS)
-  - [ ] **Phase 4**: Tree view integration — Show Leafs toggle, leaf-shaped nodes
+  - [x] **Phase 3**: Timeline integration — dated Leafs on timeline with previews ✅ (Session 14)
+  - [x] **Phase 4**: Tree view integration — Show Leafs toggle, orb collision engine, tag brightness ✅ (Session 14)
   - [ ] **Phase 5**: Linked sharing — Leafs visible across linked trees
-  - [ ] **Phase 6**: Dedicated Leafs page — browsable, searchable, filterable
+  - [ ] **Phase 6**: Dedicated Leafs page — browsable, searchable, filterable (IN PROGRESS)
 
 - [ ] **Timeline Enhancement** — chronological family story
   - String together event dates + Leafs to tell the family story
