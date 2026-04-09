@@ -493,3 +493,25 @@ treeLinks/{linkId}
 - Has own `#atm` div for warm atmosphere (inline styles in timeline.html)
 - `encrypt(key,data)` and `decrypt(key,b64)` functions local to timeline.js
 - Firestore collection: `familyTrees` (NOT `trees`)
+
+### Leafs Storage (Final — Session 14)
+- Stored as `encryptedLeafs` field in `familyTrees/{uid}` document
+- NOT a separate Firestore collection (rules weren't deployed, caused silent write failures)
+- `saveLeafs()` → `userDoc().update({encryptedLeafs, leafCount})`
+- `loadLeafs()` → `userDoc().get()` → `d.encryptedLeafs` → `decryptPeople()`
+- Same AES-256-GCM encryption as tree data
+- All CRUD functions are async and await saveLeafs()
+
+### Leafs UI Functions (ui.js)
+- `openLeafModal(personId, editId)` — opens add/edit modal
+- `closeLeafModal()` — closes modal
+- `submitLeaf()` — async, collects form data, calls addLeaf/editLeaf
+- `openLeafDetail(leafId)` — appChoice with full content + Edit/Delete
+- `openLeafList(personId)` — appAlert with all leafs for a node
+- `formatLeafDate(d)` — formats {year,month,day} to readable string
+- `closeAllModals()` — closes app-modal-bg
+
+### Tag System
+- Toggle pill buttons with `.leaf-tag-btn[data-tid]` + `.active` class
+- Replaces checkbox approach (was invisible against dark bg)
+- Multi-node: primary node always tagged, others optional

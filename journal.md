@@ -606,3 +606,23 @@ Built as a separate HTML page (timeline.html) with:
 - Section toggle handler wired in app.js
 
 ### Commits: ~25 commits across app.html, timeline.html, 7 JS files, 3 CSS files
+
+## Session 14 — Leafs Phase 1 Complete + Phase 3/4 Started (April 9, 2026)
+
+### Leafs Phase 1 — COMPLETE
+- LEAF_TYPES constant: story/moment/photo/quote/milestone with icons
+- Data layer: loadLeafs/saveLeafs/addLeaf/editLeaf/deleteLeaf/getLeafsForNode
+- Storage: encryptedLeafs field in familyTrees/{uid} (same doc as tree)
+  - Initially tried separate leafs/{uid} collection — failed because Firestore rules not deployed
+  - Moved to familyTrees doc — uses existing rules, same encryption
+- Node card: Leafs section with count, 3 most recent, "+ Add Leaf", "See all N Leafs"
+- Add Leaf modal: 5-type picker, title, content, date, emoji picker, tag other Twygs
+- Tag buttons: toggle pill buttons with node color dots (replaced broken checkboxes)
+- Leaf detail: appChoice modal with Edit/Delete options
+- Leaf list: appAlert with all leafs, click to open detail
+- All CRUD async with await — persistence verified
+
+### Roadmap Update
+- Added: Connection lines assessment (edge cases found)
+- Added: Traditional layout polish, customLinks cleanup to near-term
+- Priority order: Leafs Phase 3 (timeline) → Phase 4 (tree view) → mobile → GEDCOM

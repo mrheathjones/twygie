@@ -110,6 +110,9 @@ An interactive, beautiful family tree web app. Each family member is a "Twyg" �
 ### Near-term
 - [ ] Connect twygie.com to Vercel + add to Firebase authorized domains
 - [ ] Mobile layout polish
+- [ ] Connection lines assessment — edge cases in line routing/classification not yet accounted for
+- [ ] Traditional layout polish — parent centering, line routing refinement
+- [ ] customLinks cleanup — remove 154 legacy dual-write references
 - [x] Demo Mode for testing (Session 10)
 - [x] Data protection — treeLoaded flag prevents wipe on failed load (Session 10)
 - [x] **Phase 1 — Firestore Security Rules** (Session 10)
@@ -226,9 +229,9 @@ An interactive, beautiful family tree web app. Each family member is a "Twyg" �
   Future: "The Family Story" auto-narrate mode from earliest to latest.
 
   #### Implementation Phases
-  - [ ] **Phase 1**: Data model, Firestore collection, CRUD on node card, basic display
+  - [x] **Phase 1**: Data model, Firestore storage, CRUD on node card, basic display ✅ (Session 13)
   - [ ] **Phase 2**: Firebase Storage photo upload, gallery view
-  - [ ] **Phase 3**: Timeline integration — dated Leafs on timeline with previews
+  - [ ] **Phase 3**: Timeline integration — dated Leafs on timeline with previews (IN PROGRESS)
   - [ ] **Phase 4**: Tree view integration — Show Leafs toggle, leaf-shaped nodes
   - [ ] **Phase 5**: Linked sharing — Leafs visible across linked trees
   - [ ] **Phase 6**: Dedicated Leafs page — browsable, searchable, filterable
