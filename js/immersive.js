@@ -23,8 +23,8 @@ function enterImmersive(){
   wrap.style.display='block';
   const mw=document.getElementById('wrap'); if(mw) mw.style.display='none';
   // Float view toggle over 3D
-  const vt=document.querySelector('.view-toggle');
-  if(vt) vt.style.cssText='position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:60';
+  const ts=document.querySelector('.toggle-stack');
+  if(ts) ts.style.cssText='position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:60';
   const lt=document.querySelector('.layout-toggle');
   if(lt) lt.style.display='none';
 
@@ -68,7 +68,7 @@ function enterImmersive(){
 function exitImmersive(){
   const wrap=document.getElementById('immersive-wrap'); if(wrap) wrap.style.display='none';
   const mw=document.getElementById('wrap'); if(mw) mw.style.display='';
-  const vt=document.querySelector('.view-toggle'); if(vt) vt.style.cssText='';
+  const ts=document.querySelector('.toggle-stack'); if(ts) ts.style.cssText='';
   const lt=document.querySelector('.layout-toggle'); if(lt) lt.style.display='';
   const ic=document.getElementById('imm-card'); if(ic) ic.remove();
   if(immAnimId) cancelAnimationFrame(immAnimId); immAnimId=null;
