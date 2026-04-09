@@ -26,6 +26,7 @@ function getNodeColor(p){return nodeColors[relCategory(p)]||nodeColors.default}
 
 // ─── TIMELINE STATE ───
 const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const TL_LEAF={story:'📖',moment:'✨',photo:'📷',quote:'💬',milestone:'🏆'};
 let scrollPos=0.5; // 0-1 horizontal position — start centered
 let zoomLevel=0.5; // 0=overview, 1=month-level — start mid-bar
 let minY=1950, maxY=2030, byYearCount={};
@@ -161,12 +162,46 @@ function renderTimeline(){
     }
   });
 
+  // ── Dated Leafs below the timeline line ──
+  const datedLeafs=(window._tlLeafs||[]).filter(l=>l.date&&l.date.year);
+  // Group leafs by year for stacking
+  const leafsByYear={};
+  datedLeafs.forEach(l=>{
+    const yr=l.date.year;
+    if(!leafsByYear[yr]) leafsByYear[yr]=[];
+    leafsByYear[yr].push(l);
+  });
+  Object.keys(leafsByYear).forEach(yr=>{
+    const yLeafs=leafsByYear[yr];
+    const x=xOf(parseInt(yr));
+    yLeafs.forEach((l,i)=>{
+      const icon=TL_LEAF[l.type]||'✨';
+      const title=(l.title||l.type||'').slice(0,30);
+      const content=(l.content||'').slice(0,60);
+      const taggedNames=(l.twygs||[]).map(tid=>{const p=peopleById[tid];return p?fullName(p).split(' ')[0]:null}).filter(Boolean).join(', ');
+      const offset=68+i*5; // stagger below line
+      html+=`<div class="tl-leaf" style="left:${x}px;top:${offset}%" onclick="openLeafOnTimeline('${l.id}')">
+        <div class="tl-leaf-line" style="height:${8+i*4}px"></div>
+        <div class="tl-leaf-dot">${icon}</div>
+        <div class="tl-leaf-popup">
+          <div class="tl-leaf-pop">
+            <div style="font-size:.9rem;margin-bottom:2px">${icon}${l.emoji?' '+l.emoji:''}</div>
+            <div style="font-size:.82rem;font-weight:500;color:var(--text)">${title||l.type}</div>
+            ${content?`<div style="font-size:.72rem;color:var(--muted);margin-top:3px">${content}${l.content&&l.content.length>60?'…':''}</div>`:''}
+            ${taggedNames?`<div style="font-size:.66rem;color:rgba(100,180,100,.7);margin-top:4px">${taggedNames}</div>`:''}
+          </div>
+        </div>
+      </div>`;
+    });
+  });
+
   inner.innerHTML=`<div id="tl-line"></div>${html}`;
 
   // Legend
   const cats=new Set(entries.map(p=>relCategory(p)));
   const cl={you:'You',spouse:'Spouse',parent:'Parent',child:'Child',sibling:'Sibling',grandparent:'Grandparent',extended:'Extended',deceased:'Deceased',young:'Young',default:'Other'};
   let lh='';cats.forEach(c=>{lh+=`<div class="leg-i"><div class="leg-d" style="background:${nodeColors[c]}"></div>${cl[c]||c}</div>`});
+  if(datedLeafs.length) lh+=`<div class="leg-i"><span style="font-size:.7rem">✨</span> Leafs</div>`;
   document.getElementById('legend').innerHTML=lh;
 
   applyScroll();
@@ -450,6 +485,35 @@ function openDetail(id){
   document.getElementById('detail-bg').classList.add('open');
 }
 
+function openLeafOnTimeline(leafId){
+  const l=(window._tlLeafs||[]).find(x=>x.id===leafId);
+  if(!l) return;
+  const icon=TL_LEAF[l.type]||'✨';
+  const FMONTHS=['','January','February','March','April','May','June','July','August','September','October','November','December'];
+  let dateStr='';
+  if(l.date&&l.date.year){
+    if(l.date.month&&FMONTHS[l.date.month]) dateStr+=FMONTHS[l.date.month]+' ';
+    if(l.date.day) dateStr+=l.date.day+', ';
+    dateStr+=l.date.year;
+  }
+  const taggedNames=(l.twygs||[]).map(tid=>{const p=peopleById[tid];return p?fullName(p):null}).filter(Boolean);
+
+  const card=document.getElementById('detail-card');
+  card.innerHTML=`
+    <button class="dc-close" onclick="closeDetail()">✕</button>
+    <div style="text-align:center;margin-bottom:12px">
+      <div style="font-size:2rem;margin-bottom:4px">${icon}${l.emoji?' '+l.emoji:''}</div>
+      <div style="font-size:1.1rem;font-weight:600;color:var(--text)">${l.title||l.type}</div>
+      ${dateStr?`<div style="font-size:.82rem;color:var(--muted);margin-top:4px">${dateStr}</div>`:''}
+    </div>
+    <div style="font-size:.9rem;line-height:1.7;color:var(--text);white-space:pre-wrap;padding:0 8px;margin-bottom:16px">${l.content||''}</div>
+    ${taggedNames.length?`<div style="font-size:.76rem;color:rgba(100,180,100,.7);text-align:center">
+      ${taggedNames.map(n=>`<span style="display:inline-block;padding:3px 10px;border-radius:100px;background:rgba(100,180,100,.08);border:1px solid rgba(100,180,100,.2);margin:2px">${n}</span>`).join('')}
+    </div>`:''}
+  `;
+  document.getElementById('detail-bg').classList.add('open');
+}
+
 // ─── INITIAL SCROLL TO isYou ───
 function scrollToYou(){
   const you=people.find(p=>p.isYou);if(!you)return;
@@ -473,8 +537,10 @@ auth.onAuthStateChanged(async user=>{
     const ss=await db.collection('userSettings').doc(user.uid).get();
     if(ss.exists){const d=ss.data();if(d.nodeColors)Object.assign(nodeColors,d.nodeColors);if(d.youngAge!=null)youngAge=parseInt(d.youngAge)||17}
     const snap=await db.collection('familyTrees').doc(user.uid).get();
-    if(snap.exists){const d=snap.data();if(d.encryptedData){const key=await deriveKey(user.uid);people=await decrypt(key,d.encryptedData)}else if(d.people&&d.people.length)people=d.people}
+    let tlLeafs=[];
+    if(snap.exists){const d=snap.data();if(d.encryptedData){const key=await deriveKey(user.uid);people=await decrypt(key,d.encryptedData);if(d.encryptedLeafs)tlLeafs=await decrypt(key,d.encryptedLeafs)}else if(d.people&&d.people.length)people=d.people}
     peopleById={};people.forEach(p=>{if(!p.customLinks)p.customLinks={};peopleById[p.id]=p});
+    window._tlLeafs=tlLeafs;
     buildBars();
     renderTimeline();
     scrollToYou();
