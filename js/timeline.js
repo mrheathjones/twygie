@@ -59,18 +59,18 @@ function renderTimeline(){
       if(listEl){
         listEl.innerHTML=undated.map(p=>{
           const c=getNodeColor(p), nm=fullName(p), ini=initials(p);
-          return `<div class="tl-miss-row" id="miss-${p.id}" style="display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid rgba(255,255,255,.06)">
-            <div style="width:40px;height:40px;border-radius:50%;background:${c};display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:600;color:#04070c;flex-shrink:0">${ini}</div>
-            <div style="flex:1;min-width:0">
-              <div style="font-size:1rem;font-weight:500;color:var(--text);margin-bottom:8px">${nm}</div>
-              <div style="display:flex;gap:8px;align-items:center">
-                <input type="number" placeholder="Year" min="1800" max="2030" data-pid="${p.id}" data-field="year" style="width:80px;padding:8px 10px;border-radius:8px;background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);font-family:Outfit,sans-serif;font-size:.88rem"/>
-                <select data-pid="${p.id}" data-field="month" style="padding:8px 6px;border-radius:8px;background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);font-family:Outfit,sans-serif;font-size:.88rem">
-                  <option value="">Month</option>${MONTHS.map((m,i)=>`<option value="${i+1}">${m}</option>`).join('')}
-                </select>
-                <input type="number" placeholder="Day" min="1" max="31" data-pid="${p.id}" data-field="day" style="width:55px;padding:8px 10px;border-radius:8px;background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);font-family:Outfit,sans-serif;font-size:.88rem"/>
-                <button class="miss-save-btn" data-pid="${p.id}" style="padding:8px 14px;border-radius:8px;background:var(--gold);border:none;color:#04070c;font-family:Outfit,sans-serif;font-size:.88rem;font-weight:600;cursor:pointer;transition:all .15s">Save</button>
-              </div>
+          return `<div class="tl-miss-row" id="miss-${p.id}" style="background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;padding:12px;transition:all .3s">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+              <div style="width:32px;height:32px;border-radius:50%;background:${c};display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:600;color:#04070c;flex-shrink:0">${ini}</div>
+              <div style="font-size:.88rem;font-weight:500;color:var(--text)">${nm}</div>
+            </div>
+            <div style="display:flex;gap:4px;align-items:center">
+              <input type="number" placeholder="Year" min="1800" max="2030" id="yr-${p.id}" style="flex:2;padding:6px 8px;border-radius:6px;background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);font-family:Outfit,sans-serif;font-size:.8rem"/>
+              <select id="mo-${p.id}" style="flex:2;padding:6px 4px;border-radius:6px;background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);font-family:Outfit,sans-serif;font-size:.8rem">
+                <option value="">Mo</option>${MONTHS.map((m,i)=>`<option value="${i+1}">${m}</option>`).join('')}
+              </select>
+              <input type="number" placeholder="Day" min="1" max="31" id="dy-${p.id}" style="flex:1.5;padding:6px 8px;border-radius:6px;background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);font-family:Outfit,sans-serif;font-size:.8rem"/>
+              <button onclick="window._saveDob('${p.id}')" style="padding:6px 10px;border-radius:6px;background:var(--gold);border:none;color:#04070c;font-family:Outfit,sans-serif;font-size:.78rem;font-weight:600;cursor:pointer">Save</button>
             </div>
           </div>`;
         }).join('');
@@ -504,19 +504,21 @@ document.getElementById('missing-bg')?.addEventListener('click', e => {
   if(e.target===e.currentTarget) closeMissing();
 });
 
-// Event delegation for save buttons
+// Event delegation for save buttons — also expose globally
 document.getElementById('tl-missing-list')?.addEventListener('click', e => {
-  const btn=e.target.closest('.miss-save-btn');
-  if(btn) saveMissingDob(btn.dataset.pid);
+  const btn=e.target.closest('button[onclick]');
+  // handled by inline onclick → window._saveDob
 });
 
 // Save birthdate from Missing Twygs modal
-async function saveMissingDob(pid){
+window._saveDob = async function(pid){
   const p=people.find(x=>x.id===pid); if(!p) return;
-  const yr=document.querySelector(`[data-pid="${pid}"][data-field="year"]`);
-  const mo=document.querySelector(`[data-pid="${pid}"][data-field="month"]`);
-  const dy=document.querySelector(`[data-pid="${pid}"][data-field="day"]`);
-  const year=parseInt(yr?.value); if(!year)return;
+  const yr=document.getElementById('yr-'+pid);
+  const mo=document.getElementById('mo-'+pid);
+  const dy=document.getElementById('dy-'+pid);
+  const year=parseInt(yr?.value);
+  if(!year){ if(yr) yr.style.borderColor='#c44'; return; }
+
   const month=parseInt(mo?.value)||0;
   const day=parseInt(dy?.value)||0;
 
@@ -525,7 +527,11 @@ async function saveMissingDob(pid){
   if(month) p.dob.month=month;
   if(day) p.dob.day=day;
 
-  // Save to Firestore
+  // Visual feedback
+  const row=document.getElementById('miss-'+pid);
+  const saveBtn=row?.querySelector('button');
+  if(saveBtn){ saveBtn.textContent='Saving…'; saveBtn.disabled=true; }
+
   try{
     const treeRef=db.collection('trees').doc(currentUser.uid);
     const key=await deriveKey(currentUser.uid);
@@ -533,14 +539,13 @@ async function saveMissingDob(pid){
     await treeRef.set({encryptedData:encrypted},{merge:true});
 
     // Animate row removal then re-render
-    const row=document.getElementById('miss-'+pid);
     if(row){
-      row.style.transition='all .3s';
       row.style.opacity='0';
-      row.style.maxHeight='0';
-      row.style.padding='0';
-      row.style.overflow='hidden';
+      row.style.transform='scale(.95)';
       setTimeout(()=>renderTimeline(), 350);
     } else renderTimeline();
-  }catch(e){console.error('Save DOB failed:',e)}
-}
+  }catch(e){
+    console.error('Save DOB failed:',e);
+    if(saveBtn){ saveBtn.textContent='Error'; setTimeout(()=>{saveBtn.textContent='Save';saveBtn.disabled=false;},2000); }
+  }
+};

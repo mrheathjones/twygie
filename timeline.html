@@ -29,13 +29,13 @@
 
 <!-- Missing Twygs Modal -->
 <div id="missing-bg" style="position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);opacity:0;pointer-events:none;transition:opacity .25s;display:flex;align-items:center;justify-content:center">
-  <div id="missing-card" style="width:480px;max-height:80vh;overflow-y:auto;background:rgba(8,14,26,.97);border:1px solid var(--border);border-radius:16px;padding:28px;backdrop-filter:blur(16px);box-shadow:0 16px 48px rgba(0,0,0,.6)">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+  <div id="missing-card" style="width:640px;max-height:70vh;overflow-y:auto;background:rgba(8,14,26,.97);border:1px solid var(--border);border-radius:16px;padding:24px 28px;backdrop-filter:blur(16px);box-shadow:0 16px 48px rgba(0,0,0,.6)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
       <div style="font-size:1rem;font-weight:600;color:var(--text)">Hey, dropped something?</div>
       <button onclick="closeMissing()" style="background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer;padding:4px">✕</button>
     </div>
-    <div style="font-size:.8rem;color:var(--muted);margin-bottom:18px">Pick up your Twygs — add birthdates so they show on the timeline.</div>
-    <div id="tl-missing-list"></div>
+    <div style="font-size:.78rem;color:var(--muted);margin-bottom:16px">Pick up your Twygs — add birthdates so they show on the timeline.</div>
+    <div id="tl-missing-list" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"></div>
   </div>
 </div>
 
