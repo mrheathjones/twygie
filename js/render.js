@@ -721,17 +721,28 @@ function drawLeafs(){
       leafDragMoved=false;
     },{passive:true});
 
+    // Brightness scales with tag count: more tags = brighter
+    // t = 0→0, 1→0.17, 3→0.38, 5→0.5, 10→0.67, 50→0.91, 100→0.95
+    var tagCount=(l.twygs||[]).length;
+    var t=tagCount/(tagCount+5);
+    var glowOp=(0.03+t*0.12).toFixed(3);   // 0.03 → 0.15
+    var dotOp=(0.10+t*0.25).toFixed(3);     // 0.10 → 0.35
+    var strokeOp=(0.20+t*0.35).toFixed(3);  // 0.20 → 0.55
+    var labelOp=(0.35+t*0.30).toFixed(3);   // 0.35 → 0.65
+    var lineOp=(0.08+t*0.15).toFixed(3);    // 0.08 → 0.23
+    var glowR=LEAF_R*(1.8+t*1.2);           // 14.4 → 24
+
     // Glow
     var glow=createSvgElement('circle');
-    glow.setAttribute('r',String(LEAF_R*2));
-    glow.setAttribute('fill','rgba(100,180,100,0.04)');
+    glow.setAttribute('r',String(glowR));
+    glow.setAttribute('fill','rgba(100,180,100,'+glowOp+')');
     G.appendChild(glow);
 
     // Dot
     var dot=createSvgElement('circle');
     dot.setAttribute('r',String(LEAF_R));
-    dot.setAttribute('fill','rgba(100,180,100,0.12)');
-    dot.setAttribute('stroke','rgba(100,180,100,0.25)');
+    dot.setAttribute('fill','rgba(100,180,100,'+dotOp+')');
+    dot.setAttribute('stroke','rgba(100,180,100,'+strokeOp+')');
     dot.setAttribute('stroke-width','1');
     G.appendChild(dot);
 
@@ -753,7 +764,7 @@ function drawLeafs(){
       label.setAttribute('text-anchor','middle');
       label.setAttribute('font-family','Outfit, sans-serif');
       label.setAttribute('font-size','8');
-      label.setAttribute('fill','rgba(100,180,100,0.4)');
+      label.setAttribute('fill','rgba(100,180,100,'+labelOp+')');
       label.setAttribute('style','pointer-events:none');
       label.textContent=title;
       G.appendChild(label);
@@ -766,7 +777,7 @@ function drawLeafs(){
     twygs.forEach(function(t){
       var line=createSvgElement('path');
       line.setAttribute('d','M '+hx+' '+hy+' L '+t.x+' '+t.y);
-      line.setAttribute('stroke','rgba(100,180,100,0.12)');
+      line.setAttribute('stroke','rgba(100,180,100,'+lineOp+')');
       line.setAttribute('stroke-width','1');
       line.setAttribute('stroke-dasharray','3,4');
       line.setAttribute('fill','none');
