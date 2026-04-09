@@ -190,7 +190,7 @@ function renderTimeline(){
       html+=`<div class="tl-leaf" style="left:${x+xJitter}px;bottom:32%;height:${bottomPct-32}%" onclick="openLeafOnTimeline('${l.id}')">
         <div class="tl-leaf-popup">
           <div class="tl-leaf-pop">
-            <div style="font-size:.9rem;margin-bottom:2px">🍃${l.emoji?' '+l.emoji:''}</div>
+            ${l.emoji?`<div style="font-size:.9rem;margin-bottom:2px">${l.emoji}</div>`:''}
             <div style="font-size:.82rem;font-weight:500;color:var(--text)">${title||l.type}</div>
             ${content?`<div style="font-size:.72rem;color:var(--muted);margin-top:3px;white-space:normal;min-width:160px">${content}${l.content&&l.content.length>60?'…':''}</div>`:''}
             ${taggedNames?`<div style="font-size:.66rem;color:rgba(100,180,100,.7);margin-top:4px">${taggedNames}</div>`:''}
