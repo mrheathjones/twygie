@@ -16,58 +16,90 @@
  * ═══════════════════════════════════════════════════════════════════════════ */
 // ─── NODE DRAG ────────────────────────────────────────────────────────────────
 let nodeDragState=null;
+let nodePhysicsActive=false, nodeSettleId=null;
 
-// Store original positions on drag start, spring back when dragged node moves away
-function nodePhysicsStart(){
+function nodePhysicsStart(draggedId){
   if(layoutMode==='traditional'||layoutMode==='immersive') return;
-  people.forEach(p=>{ p._origX=p.x; p._origY=p.y; });
+  if(nodeSettleId){cancelAnimationFrame(nodeSettleId);nodeSettleId=null;}
+  people.forEach(p=>{
+    p._homeX=p.x; p._homeY=p.y;
+    p._vx=0; p._vy=0;
+  });
+  nodePhysicsActive=true;
 }
 
 function pushNodesFromDragged(draggedId){
-  if(layoutMode==='traditional'||layoutMode==='immersive') return;
+  if(!nodePhysicsActive) return;
   const dragged=peopleById[draggedId]; if(!dragged) return;
-  const PUSH_DIST=84, NODE_SEP=70;
+  const REPULSE_R=100, PUSH_STR=0.8, SPRING=0.06, DAMP=0.75, SEP=65;
 
-  // Reset to originals first, then apply push
   people.forEach(p=>{
-    if(p.id===draggedId||p._origX==null) return;
-    p.x=p._origX; p.y=p._origY;
+    if(p.id===draggedId) return;
+    let fx=0, fy=0;
+
+    // Repulsion from dragged node
+    const dx=p.x-dragged.x, dy=p.y-dragged.y;
+    const dist=Math.sqrt(dx*dx+dy*dy)||0.1;
+    if(dist<REPULSE_R){
+      const t=1-dist/REPULSE_R;
+      const force=PUSH_STR*t*t*6;
+      fx+=dx/dist*force; fy+=dy/dist*force;
+    }
+
+    // Spring return toward home
+    const hx=p._homeX-p.x, hy=p._homeY-p.y;
+    fx+=hx*SPRING; fy+=hy*SPRING;
+
+    // Apply forces
+    p._vx=(p._vx+fx)*DAMP;
+    p._vy=(p._vy+fy)*DAMP;
+    p.x+=p._vx; p.y+=p._vy;
   });
 
-  // Push from dragged node (2 passes for settling)
-  for(let pass=0;pass<2;pass++){
-    people.forEach(p=>{
-      if(p.id===draggedId) return;
-      const dx=p.x-dragged.x, dy=p.y-dragged.y;
-      const dist=Math.sqrt(dx*dx+dy*dy)||0.1;
-      if(dist<PUSH_DIST){
-        const push=(PUSH_DIST-dist)*0.4;
-        const nx=dx/dist, ny=dy/dist;
-        p.x+=nx*push; p.y+=ny*push;
-      }
-    });
-    // Separate pushed nodes from each other
-    for(let i=0;i<people.length;i++){
-      if(people[i].id===draggedId) continue;
-      for(let j=i+1;j<people.length;j++){
-        if(people[j].id===draggedId) continue;
-        const a=people[i], b=people[j];
-        const dx=b.x-a.x, dy=b.y-a.y;
-        const dist=Math.sqrt(dx*dx+dy*dy)||0.1;
-        if(dist<NODE_SEP){
-          const push=(NODE_SEP-dist)/2*0.2;
-          const nx=dx/dist, ny=dy/dist;
-          a.x-=nx*push; a.y-=ny*push;
-          b.x+=nx*push; b.y+=ny*push;
-        }
+  // Node-to-node separation (non-dragged only)
+  for(let i=0;i<people.length;i++){
+    if(people[i].id===draggedId) continue;
+    for(let j=i+1;j<people.length;j++){
+      if(people[j].id===draggedId) continue;
+      const a=people[i], b=people[j];
+      const dx=b.x-a.x, dy=b.y-a.y;
+      const d=Math.sqrt(dx*dx+dy*dy)||0.1;
+      if(d<SEP){
+        const push=(SEP-d)/2*0.15;
+        const nx=dx/d, ny=dy/d;
+        a.x-=nx*push; a.y-=ny*push;
+        b.x+=nx*push; b.y+=ny*push;
       }
     }
   }
 }
 
 function nodePhysicsEnd(){
-  // Clean up stored originals — final positions are saved
-  people.forEach(p=>{ delete p._origX; delete p._origY; });
+  if(!nodePhysicsActive) return;
+  // Animate spring-back after drag ends
+  function settle(){
+    let anyMoved=false;
+    people.forEach(p=>{
+      if(p._homeX==null) return;
+      const hx=p._homeX-p.x, hy=p._homeY-p.y;
+      const homeDist=Math.sqrt(hx*hx+hy*hy);
+      if(homeDist<0.5&&Math.abs(p._vx)<0.1&&Math.abs(p._vy)<0.1){
+        p.x=p._homeX; p.y=p._homeY; p._vx=0; p._vy=0;
+        return;
+      }
+      p._vx=(p._vx+hx*0.08)*0.72;
+      p._vy=(p._vy+hy*0.08)*0.72;
+      p.x+=p._vx; p.y+=p._vy;
+      anyMoved=true;
+    });
+    if(anyMoved){render();nodeSettleId=requestAnimationFrame(settle);}
+    else{
+      people.forEach(p=>{delete p._homeX;delete p._homeY;delete p._vx;delete p._vy;});
+      nodePhysicsActive=false; nodeSettleId=null;
+      scheduleSave();
+    }
+  }
+  settle();
 }
 
 function onNodeMouseDown(e,id){
@@ -118,7 +150,7 @@ document.addEventListener('mousemove',e=>{
 document.addEventListener('mouseup',e=>{
   if(nodeDragState){
     if(!nodeDragState.moved) selectNode(nodeDragState.id);
-    else scheduleSave();
+    else if(!nodePhysicsActive) scheduleSave();
     nodePhysicsEnd();
     nodeDragState=null; return;
   }
@@ -142,7 +174,7 @@ document.addEventListener('touchmove',e=>{
 document.addEventListener('touchend',()=>{
   if(nodeDragState){
     if(!nodeDragState.moved) selectNode(nodeDragState.id);
-    else scheduleSave();
+    else if(!nodePhysicsActive) scheduleSave();
     nodePhysicsEnd();
     nodeDragState=null;
   }

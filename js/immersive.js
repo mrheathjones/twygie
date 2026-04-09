@@ -188,12 +188,28 @@ function buildImmLeafs(){
     const hash=(l.id||'').split('').reduce((a,c)=>a+c.charCodeAt(0),0);
     const angle=((hash%360)*Math.PI)/180;
     const elev=((hash*7%180)-90)*Math.PI/180;
-    const dist=15+(hash%10);
+    const dist=25+(hash%12);
     const leafPos=new THREE.Vector3(
       tgt.x+Math.cos(angle)*Math.cos(elev)*dist,
       tgt.y+Math.sin(elev)*dist,
       tgt.z+Math.sin(angle)*Math.cos(elev)*dist
     );
+
+    // Push away from the center node (isYou at origin)
+    const fromCenter=leafPos.length();
+    if(fromCenter<25){
+      leafPos.normalize().multiplyScalar(25);
+    }
+    // Push away from all twyg node positions
+    immNodes.forEach(nd=>{
+      const ndPos=nd.mesh.userData.targetPos;
+      if(!ndPos) return;
+      const d=leafPos.distanceTo(ndPos);
+      if(d<15){
+        const dir=leafPos.clone().sub(ndPos).normalize();
+        leafPos.add(dir.multiplyScalar(15-d));
+      }
+    });
 
     // Leaf sphere
     const mesh=new THREE.Mesh(
@@ -255,9 +271,11 @@ function immCK(e){
   const m=new THREE.Vector2(((e.clientX-r.left)/r.width)*2-1,-((e.clientY-r.top)/r.height)*2+1);
   const rc=new THREE.Raycaster(); rc.setFromCamera(m,immCamera);
 
-  // Check leaf meshes first (smaller, harder to click)
+  // Check leaf meshes first (smaller, harder to click — use wider threshold)
   if(immLeafNodes.length){
-    const leafHits=rc.intersectObjects(immLeafNodes.map(n=>n.mesh));
+    const leafRc=new THREE.Raycaster(); leafRc.setFromCamera(m,immCamera);
+    leafRc.params.Mesh={threshold:5};
+    const leafHits=leafRc.intersectObjects(immLeafNodes.map(n=>n.mesh));
     if(leafHits.length>0){
       const lid=leafHits[0].object.userData.leafId;
       if(lid&&typeof openLeafDetail==='function'){
