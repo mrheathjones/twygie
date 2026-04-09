@@ -126,15 +126,19 @@ function addRel(nodeA, nodeB, label, category){
   if(!nodeA||!nodeB||nodeA.id===nodeB.id) return;
   if(!category) category=getRelCategory(label);
 
-  // Reclassify: sibling label between non-structural-siblings where one is a spouse
-  // e.g. "Sister" between Sara (wife) and Maddy (sister) → should be "Sister-in-law" (bond)
+  // Reclassify: sibling label between non-structural-siblings where one is
+  // married to the other's actual sibling (e.g. Sara is married to Maddy's brother)
+  // Do NOT reclassify just because a node happens to be married.
   if(SIBLING_LABELS.has(label) && !label.includes('-in-law')){
     const pA=new Set(nodeA.parents||[]);
     const sharesParent=pA.size>0 && (nodeB.parents||[]).some(pid=>pA.has(pid));
-    if(!sharesParent){
-      const aIsSpouse=!!nodeA.spouseOf || !!(typeof people!=='undefined'&&people.find(x=>x.spouseOf===nodeA.id));
-      const bIsSpouse=!!nodeB.spouseOf || !!(typeof people!=='undefined'&&people.find(x=>x.spouseOf===nodeB.id));
-      if(aIsSpouse||bIsSpouse){
+    if(!sharesParent && typeof people!=='undefined'){
+      // Check if A is married to B's sibling, or B is married to A's sibling
+      const aSpouseId=nodeA.spouseOf;
+      const bSpouseId=nodeB.spouseOf;
+      const aSpouseIsBsSibling=aSpouseId && (nodeB.parents||[]).some(pid=>(peopleById[aSpouseId]?.parents||[]).includes(pid));
+      const bSpouseIsAsSibling=bSpouseId && (nodeA.parents||[]).some(pid=>(peopleById[bSpouseId]?.parents||[]).includes(pid));
+      if(aSpouseIsBsSibling||bSpouseIsAsSibling){
         label=label+'-in-law';
         category='bond';
       }

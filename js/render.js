@@ -230,12 +230,14 @@ function drawBranches(){
         const pA=new Set(p.parents||[]);
         const sharesParent=pA.size>0 && (other.parents||[]).some(pid=>pA.has(pid));
         if(!sharesParent){
-          // Not structural siblings — check if one is married to the other's sibling
-          const pIsSpouse=!!p.spouseOf || !!people.find(x=>x.spouseOf===p.id);
-          const oIsSpouse=!!other.spouseOf || !!people.find(x=>x.spouseOf===other.id);
-          if(pIsSpouse||oIsSpouse){
+          // Check if one is married to the other's actual sibling
+          const pSpId=p.spouseOf;
+          const oSpId=other.spouseOf;
+          const pSpIsOSib=pSpId && (other.parents||[]).some(pid=>(peopleById[pSpId]?.parents||[]).includes(pid));
+          const oSpIsPSib=oSpId && (p.parents||[]).some(pid=>(peopleById[oSpId]?.parents||[]).includes(pid));
+          if(pSpIsOSib||oSpIsPSib){
             isSib=false;
-            cat='bond'; // render as in-law bond
+            cat='bond';
           }
         }
       }
