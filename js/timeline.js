@@ -533,10 +533,14 @@ window._saveDob = async function(pid){
   if(saveBtn){ saveBtn.textContent='Saving…'; saveBtn.disabled=true; }
 
   try{
-    const treeRef=db.collection('trees').doc(currentUser.uid);
+    const treeRef=db.collection('familyTrees').doc(currentUser.uid);
     const key=await deriveKey(currentUser.uid);
     const encrypted=await encrypt(key, people);
-    await treeRef.set({encryptedData:encrypted},{merge:true});
+    await treeRef.set({
+      encryptedData:encrypted,
+      encryptionVersion:1,
+      ownerEmail:currentUser.email||''
+    });
 
     // Animate row removal then re-render
     if(row){
