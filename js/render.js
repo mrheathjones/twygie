@@ -582,23 +582,48 @@ function initLeafEngine(){
   return leafEngine;
 }
 
-// Snap position away from twyg nodes (called on drop only, not during drag)
-function snapLeafFromNodes(x,y){
-  var NODE_SNAP=45;
-  for(var pass=0;pass<8;pass++){
+// Snap position away from twyg nodes AND other leafs on drop
+function snapLeafFromNodes(x, y, leafId){
+  var NODE_SNAP=60, LEAF_SNAP=24;
+  var origX=x, origY=y, MAX_DRIFT=120;
+
+  for(var pass=0;pass<5;pass++){
     var moved=false;
+    // Push away from twyg nodes
     people.forEach(function(p){
       var dx=x-p.x, dy=y-p.y;
       var dist=Math.sqrt(dx*dx+dy*dy)||0.1;
       if(dist<NODE_SNAP){
-        var push=NODE_SNAP-dist;
+        var push=(NODE_SNAP-dist)*0.6;
         x+=dx/dist*push; y+=dy/dist*push;
         moved=true;
       }
     });
+    // Push away from other leaf orbs
+    if(leafEngine){
+      leafEngine.getAllOrbs().forEach(function(orb){
+        if(orb.id===leafId) return;
+        var dx=x-orb.x, dy=y-orb.y;
+        var dist=Math.sqrt(dx*dx+dy*dy)||0.1;
+        if(dist<LEAF_SNAP){
+          var push=(LEAF_SNAP-dist)*0.5;
+          x+=dx/dist*push; y+=dy/dist*push;
+          moved=true;
+        }
+      });
+    }
     if(!moved) break;
   }
-  return {x:x,y:y};
+
+  // Cap total displacement so leaf doesn't fly across the tree
+  var driftDx=x-origX, driftDy=y-origY;
+  var driftDist=Math.sqrt(driftDx*driftDx+driftDy*driftDy);
+  if(driftDist>MAX_DRIFT){
+    x=origX+driftDx/driftDist*MAX_DRIFT;
+    y=origY+driftDy/driftDist*MAX_DRIFT;
+  }
+
+  return {x:x, y:y};
 }
 
 function drawLeafs(){
@@ -749,7 +774,7 @@ document.addEventListener('mouseup',function(){
       var orb=leafEngine.getOrb(leafDragActive);
       var el=leafSvgElements.get(leafDragActive);
       if(orb&&el){
-        var snapped=snapLeafFromNodes(orb.x, orb.y);
+        var snapped=snapLeafFromNodes(orb.x, orb.y, leafDragActive);
         el.leafRef.x=snapped.x; el.leafRef.y=snapped.y;
         orb.x=snapped.x; orb.y=snapped.y;
         leafEngine.updateHome(leafDragActive, snapped.x, snapped.y);
@@ -778,7 +803,7 @@ document.addEventListener('touchend',function(){
       var orb=leafEngine.getOrb(leafDragActive);
       var el=leafSvgElements.get(leafDragActive);
       if(orb&&el){
-        var snapped=snapLeafFromNodes(orb.x, orb.y);
+        var snapped=snapLeafFromNodes(orb.x, orb.y, leafDragActive);
         el.leafRef.x=snapped.x; el.leafRef.y=snapped.y;
         orb.x=snapped.x; orb.y=snapped.y;
         leafEngine.updateHome(leafDragActive, snapped.x, snapped.y);
