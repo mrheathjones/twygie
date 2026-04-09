@@ -29,8 +29,8 @@ function enterImmersive(){
   const hdr=document.getElementById('hdr'); if(hdr) hdr.style.justifyContent='center';
 
   immScene=new THREE.Scene();
-  immScene.background=new THREE.Color(0x050508);
-  immScene.fog=new THREE.FogExp2(0x050508,0.0006);
+  immScene.background=new THREE.Color(0x04070c);
+  immScene.fog=new THREE.FogExp2(0x04070c,0.0006);
   immCamera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,1,2000);
   immLookAt=new THREE.Vector3(0,0,0);
   immTargetLookAt=new THREE.Vector3(0,0,0);
@@ -43,13 +43,14 @@ function enterImmersive(){
   // Lights
   immScene.add(new THREE.AmbientLight(0x334466,0.6));
   const L1=new THREE.PointLight(0xffffff,1.2,800); L1.position.set(0,100,200); immScene.add(L1);
-  const L2=new THREE.PointLight(0x4488ff,0.5,600); L2.position.set(-200,-100,-100); immScene.add(L2);
+  const L2=new THREE.PointLight(0x4488ff,0.4,600); L2.position.set(-200,-100,-100); immScene.add(L2);
+  const L3=new THREE.PointLight(0x341a06,1.5,500); L3.position.set(0,0,0); immScene.add(L3); // warm center glow
 
   // Stars
   const sg=new THREE.BufferGeometry(), sv=[];
   for(let i=0;i<800;i++) sv.push((Math.random()-.5)*1500,(Math.random()-.5)*1500,(Math.random()-.5)*1500);
   sg.setAttribute('position',new THREE.Float32BufferAttribute(sv,3));
-  immScene.add(new THREE.Points(sg,new THREE.PointsMaterial({color:0x555577,size:0.8,transparent:true,opacity:0.5})));
+  immScene.add(new THREE.Points(sg,new THREE.PointsMaterial({color:0x665544,size:0.8,transparent:true,opacity:0.5})));
 
   buildImmNodes(); buildImmLines();
   immExpandProgress=0; immExpanding=true;
