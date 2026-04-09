@@ -254,6 +254,26 @@ function immCK(e){
   const r=immRenderer.domElement.getBoundingClientRect();
   const m=new THREE.Vector2(((e.clientX-r.left)/r.width)*2-1,-((e.clientY-r.top)/r.height)*2+1);
   const rc=new THREE.Raycaster(); rc.setFromCamera(m,immCamera);
+
+  // Check leaf meshes first (smaller, harder to click)
+  if(immLeafNodes.length){
+    const leafHits=rc.intersectObjects(immLeafNodes.map(n=>n.mesh));
+    if(leafHits.length>0){
+      const lid=leafHits[0].object.userData.leafId;
+      if(lid&&typeof openLeafDetail==='function'){
+        // Zoom to leaf
+        const leafNode=immLeafNodes.find(n=>n.mesh.userData.leafId===lid);
+        if(leafNode){
+          immTargetLookAt=leafNode.mesh.position.clone();
+          immTargetRadius=40; immZooming=true;
+        }
+        setTimeout(()=>openLeafDetail(lid),600);
+        return;
+      }
+    }
+  }
+
+  // Then check node meshes
   const hits=rc.intersectObjects(immNodes.map(n=>n.mesh));
   if(hits.length>0){const pid=hits[0].object.userData.personId; if(pid)immZoomTo(pid);}
   else if(immSelectedId){ if(typeof closeCard==='function') closeCard(); }

@@ -425,7 +425,8 @@ function initEventListeners() {
     showLeafs=!showLeafs;
     if(!showLeafs) leafs.forEach(l=>{delete l._px;delete l._py;});
     document.getElementById('btn-leafs').classList.toggle('active',showLeafs);
-    render();
+    if(layoutMode==='immersive'&&typeof buildImmLeafs==='function') buildImmLeafs();
+    else render();
   });
 
   // --- Layout mode toggle ---

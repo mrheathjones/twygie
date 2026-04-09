@@ -17,23 +17,36 @@
 // ─── NODE DRAG ────────────────────────────────────────────────────────────────
 let nodeDragState=null;
 
-// Node collision avoidance during drag (skip Traditional + Immersive)
+// Store original positions on drag start, spring back when dragged node moves away
+function nodePhysicsStart(){
+  if(layoutMode==='traditional'||layoutMode==='immersive') return;
+  people.forEach(p=>{ p._origX=p.x; p._origY=p.y; });
+}
+
 function pushNodesFromDragged(draggedId){
   if(layoutMode==='traditional'||layoutMode==='immersive') return;
   const dragged=peopleById[draggedId]; if(!dragged) return;
-  const NODE_R=28, PUSH_DIST=NODE_R*3, PASSES=4;
-  for(let pass=0;pass<PASSES;pass++){
+  const PUSH_DIST=84, NODE_SEP=70;
+
+  // Reset to originals first, then apply push
+  people.forEach(p=>{
+    if(p.id===draggedId||p._origX==null) return;
+    p.x=p._origX; p.y=p._origY;
+  });
+
+  // Push from dragged node (2 passes for settling)
+  for(let pass=0;pass<2;pass++){
     people.forEach(p=>{
       if(p.id===draggedId) return;
       const dx=p.x-dragged.x, dy=p.y-dragged.y;
       const dist=Math.sqrt(dx*dx+dy*dy)||0.1;
       if(dist<PUSH_DIST){
-        const push=(PUSH_DIST-dist)*0.35;
+        const push=(PUSH_DIST-dist)*0.4;
         const nx=dx/dist, ny=dy/dist;
         p.x+=nx*push; p.y+=ny*push;
       }
     });
-    // Also push non-dragged nodes apart from each other
+    // Separate pushed nodes from each other
     for(let i=0;i<people.length;i++){
       if(people[i].id===draggedId) continue;
       for(let j=i+1;j<people.length;j++){
@@ -41,9 +54,8 @@ function pushNodesFromDragged(draggedId){
         const a=people[i], b=people[j];
         const dx=b.x-a.x, dy=b.y-a.y;
         const dist=Math.sqrt(dx*dx+dy*dy)||0.1;
-        const minDist=NODE_R*2.5;
-        if(dist<minDist){
-          const push=(minDist-dist)/2*0.2;
+        if(dist<NODE_SEP){
+          const push=(NODE_SEP-dist)/2*0.2;
           const nx=dx/dist, ny=dy/dist;
           a.x-=nx*push; a.y-=ny*push;
           b.x+=nx*push; b.y+=ny*push;
@@ -53,16 +65,23 @@ function pushNodesFromDragged(draggedId){
   }
 }
 
+function nodePhysicsEnd(){
+  // Clean up stored originals — final positions are saved
+  people.forEach(p=>{ delete p._origX; delete p._origY; });
+}
+
 function onNodeMouseDown(e,id){
   e.stopPropagation();
   const p=peopleById[id]; if(!p) return;
   nodeDragState={id,startX:e.clientX,startY:e.clientY,origX:p.x,origY:p.y,moved:false};
+  nodePhysicsStart();
 }
 
 function onNodeTouchStart(e,id){
   if(e.touches.length!==1) return;
   const p=peopleById[id]; if(!p) return;
   nodeDragState={id,startX:e.touches[0].clientX,startY:e.touches[0].clientY,origX:p.x,origY:p.y,moved:false,touch:true};
+  nodePhysicsStart();
 }
 
 function getLeafPosition(l){
@@ -100,6 +119,7 @@ document.addEventListener('mouseup',e=>{
   if(nodeDragState){
     if(!nodeDragState.moved) selectNode(nodeDragState.id);
     else scheduleSave();
+    nodePhysicsEnd();
     nodeDragState=null; return;
   }
   isDragging=false; document.getElementById('wrap').style.cursor='';
@@ -123,6 +143,7 @@ document.addEventListener('touchend',()=>{
   if(nodeDragState){
     if(!nodeDragState.moved) selectNode(nodeDragState.id);
     else scheduleSave();
+    nodePhysicsEnd();
     nodeDragState=null;
   }
   isTouchPanning=false;
