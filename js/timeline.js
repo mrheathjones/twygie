@@ -47,12 +47,40 @@ function renderTimeline(){
   const curYr=new Date().getFullYear();
   const you=people.find(p=>p.isYou);
   const entries=people.filter(p=>(parseInt(p.dob&&p.dob.year)||p.birth||0)>0);
-  const missingCount=people.filter(p=>!((parseInt(p.dob&&p.dob.year)||p.birth||0)>0)).length;
-  const warnEl=document.getElementById('tl-missing-warn');
+  const undated=people.filter(p=>!((parseInt(p.dob&&p.dob.year)||p.birth||0)>0));
+  const wrapEl=document.getElementById('tl-missing-wrap');
   const countEl=document.getElementById('tl-missing-count');
-  if(warnEl&&countEl){
-    if(missingCount>0){ warnEl.style.display=''; countEl.textContent=missingCount; }
-    else { warnEl.style.display='none'; }
+  const listEl=document.getElementById('tl-missing-list');
+  if(wrapEl&&countEl){
+    if(undated.length>0){
+      wrapEl.style.display='';
+      countEl.textContent=undated.length;
+      if(listEl){
+        listEl.innerHTML=undated.map(p=>{
+          const c=getNodeColor(p);
+          const nm=fullName(p);
+          const ini=initials(p);
+          return `<div class="tl-miss-row" id="miss-${p.id}" style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.06)">
+            <div style="width:28px;height:28px;border-radius:50%;background:${c};display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:600;color:#04070c;flex-shrink:0">${ini}</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:.82rem;font-weight:500;color:var(--text)">${nm}</div>
+              <div style="display:flex;gap:4px;margin-top:4px">
+                <input type="number" placeholder="Year" min="1800" max="2030" style="width:60px;padding:3px 6px;border-radius:6px;background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);font-family:Outfit,sans-serif;font-size:.72rem" data-pid="${p.id}" data-field="year"/>
+                <select style="padding:3px 4px;border-radius:6px;background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);font-family:Outfit,sans-serif;font-size:.72rem" data-pid="${p.id}" data-field="month">
+                  <option value="">Mo</option>${MONTHS.map((m,i)=>`<option value="${i+1}">${m}</option>`).join('')}
+                </select>
+                <input type="number" placeholder="Day" min="1" max="31" style="width:42px;padding:3px 6px;border-radius:6px;background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);font-family:Outfit,sans-serif;font-size:.72rem" data-pid="${p.id}" data-field="day"/>
+                <button onclick="saveMissingDob('${p.id}')" style="padding:3px 10px;border-radius:6px;background:var(--gold);border:none;color:#04070c;font-family:Outfit,sans-serif;font-size:.7rem;font-weight:600;cursor:pointer">✓</button>
+              </div>
+            </div>
+          </div>`;
+        }).join('');
+      }
+    } else {
+      wrapEl.style.display='none';
+      const panel=document.getElementById('tl-missing-panel');
+      if(panel) panel.style.display='none';
+    }
   }
   if(!entries.length){document.getElementById('empty').classList.add('show');return}
 
@@ -463,3 +491,54 @@ document.getElementById('btn-tl-reset')?.addEventListener('click', resetView);
 document.getElementById('detail-bg')?.addEventListener('click', e => {
   if (e.target === e.currentTarget) closeDetail();
 });
+
+// Missing Twygs panel toggle
+document.getElementById('tl-missing-btn')?.addEventListener('click', () => {
+  const panel=document.getElementById('tl-missing-panel');
+  if(panel) panel.style.display=panel.style.display==='none'?'':'none';
+});
+// Close panel on outside click
+document.addEventListener('click', e => {
+  const wrap=document.getElementById('tl-missing-wrap');
+  const panel=document.getElementById('tl-missing-panel');
+  if(wrap&&panel&&!wrap.contains(e.target)) panel.style.display='none';
+});
+
+// Save birthdate from Missing Twygs list
+async function saveMissingDob(pid){
+  const p=people.find(x=>x.id===pid); if(!p) return;
+  const yr=document.querySelector(`[data-pid="${pid}"][data-field="year"]`);
+  const mo=document.querySelector(`[data-pid="${pid}"][data-field="month"]`);
+  const dy=document.querySelector(`[data-pid="${pid}"][data-field="day"]`);
+  const year=parseInt(yr?.value); if(!year)return;
+  const month=parseInt(mo?.value)||0;
+  const day=parseInt(dy?.value)||0;
+
+  if(!p.dob) p.dob={};
+  p.dob.year=year;
+  if(month) p.dob.month=month;
+  if(day) p.dob.day=day;
+
+  // Save to Firestore
+  try{
+    const treeRef=db.collection('trees').doc(currentUser.uid);
+    const snap=await treeRef.get();
+    if(snap.exists){
+      const d=snap.data(), key=d.key;
+      let nodes=JSON.parse(decrypt(d.data,key));
+      const n=nodes.find(x=>x.id===pid);
+      if(n){
+        if(!n.dob) n.dob={};
+        n.dob.year=year;
+        if(month) n.dob.month=month;
+        if(day) n.dob.day=day;
+        await treeRef.update({data:encrypt(JSON.stringify(nodes),key)});
+      }
+    }
+    // Animate row removal then re-render
+    const row=document.getElementById('miss-'+pid);
+    if(row){ row.style.transition='all .3s'; row.style.opacity='0'; row.style.height='0'; row.style.padding='0'; row.style.overflow='hidden';
+      setTimeout(()=>renderTimeline(), 350);
+    } else renderTimeline();
+  }catch(e){console.error('Save DOB failed:',e)}
+}
