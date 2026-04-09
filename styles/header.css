@@ -23,7 +23,8 @@
 
 /* View toggle group */
 .view-toggle{display:flex;gap:0;border-radius:100px;overflow:hidden;border:1px solid var(--border);background:rgba(255,255,255,.04)}
-.view-toggle-btn{padding:5px 14px;border:none;font-family:'Outfit',sans-serif;font-size:.76rem;cursor:pointer;transition:all .2s;background:transparent;color:var(--muted)}
+.view-toggle-btn{padding:5px 14px;border:none;font-family:'Outfit',sans-serif;font-size:.76rem;cursor:pointer;transition:all .15s;background:transparent;color:var(--muted)}
+.view-toggle-btn:hover{color:var(--text);background:rgba(255,255,255,.06)}
 .view-toggle-btn.active{background:var(--gold);color:#04070c;font-weight:600}
 
 /* Export dropdown */
