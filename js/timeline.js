@@ -503,7 +503,7 @@ function openLeafOnTimeline(leafId){
     if(l.date.day) dateStr+=l.date.day+', ';
     dateStr+=l.date.year;
   }
-  const taggedNames=(l.twygs||[]).map(tid=>{const p=peopleById[tid];return p?fullName(p):null}).filter(Boolean);
+  const taggedNames=(l.twygs||[]).map(tid=>{const p=peopleById[tid];return p?(p.isYou?'You':fullName(p)):null}).filter(Boolean);
 
   const card=document.getElementById('detail-card');
   card.innerHTML=`
