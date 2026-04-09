@@ -317,24 +317,72 @@ function autoAssignToYou(newNodeId, anchorId, relToAnchor){
 
   if(isDirParent){
     // New node is a PARENT of anchor
-    // → anchor's children = new node's grandchildren
-    people.filter(x=>(x.parents||[]).includes(anchorId)).forEach(gc=>{
-      const gcLabel=genderedRel('Grandchild',gc.gender);
-      const gpLabel=genderedRel('Grandparent',newNode.gender);
-      linkNodes(newNode, gc, gcLabel, gpLabel);
-    });
-    // → anchor's spouse's children (shared) = new node's grandchildren
-    if(anchorSpouse){
-      people.filter(x=>(x.parents||[]).includes(anchorSpouseId)).forEach(gc=>{
+    // Find ALL children of the new parent (includes anchor + siblings from CASCADE B)
+    const allChildren=people.filter(x=>(x.parents||[]).includes(newNodeId));
+    allChildren.forEach(child=>{
+      // → each child's children = new node's grandchildren
+      people.filter(gc=>(gc.parents||[]).includes(child.id)).forEach(gc=>{
         const gcLabel=genderedRel('Grandchild',gc.gender);
         const gpLabel=genderedRel('Grandparent',newNode.gender);
         linkNodes(newNode, gc, gcLabel, gpLabel);
+        // → grandchild's spouse = new node's grandchild-in-law
+        const gcSpId=gc.spouseOf||(people.find(p=>p.spouseOf===gc.id)||{}).id;
+        if(gcSpId){
+          const gcSp=peopleById[gcSpId];
+          if(gcSp){
+            linkNodes(newNode, gcSp, genderedRel('Grandchild',gcSp.gender)+'-in-law', genderedRel('Grandparent',newNode.gender)+'-in-law');
+          }
+        }
       });
-      // → anchor's spouse = new node's child-in-law
-      const spouseLabel=genderedRel('Spouse',anchorSpouse.gender)+'-in-law';
-      const newLabel=genderedRel('Spouse',newNode.gender)+'-in-law';
-      linkNodes(newNode, anchorSpouse, genderedRel('Child',anchorSpouse.gender)+'-in-law', genderedRel('Parent',newNode.gender)+'-in-law');
-    }
+      // → each child's spouse = new node's child-in-law
+      const chSpId=child.spouseOf||(people.find(p=>p.spouseOf===child.id)||{}).id;
+      if(chSpId && chSpId!==newNodeId){
+        const chSp=peopleById[chSpId];
+        if(chSp){
+          linkNodes(newNode, chSp, genderedRel('Child',chSp.gender)+'-in-law', genderedRel('Parent',newNode.gender)+'-in-law');
+        }
+      }
+    });
+  }
+
+  if(isSibRel){
+    // New node is a SIBLING of anchor
+    // Collect ALL siblings of the new node (not just anchor — CASCADE A may have added more)
+    const allSibIds=new Set([anchorId]);
+    (newNode.relationships||[]).forEach(r=>{ if(SIBLING_LABELS.has(r.label)) allSibIds.add(r.targetId); });
+    Object.entries(newNode.customLinks||{}).forEach(([tid,v])=>{
+      const l=typeof v==='string'?v:v.label||'';
+      if(SIBLING_LABELS.has(l)) allSibIds.add(tid);
+    });
+
+    // For EACH sibling: their children = new node's nephews/nieces
+    allSibIds.forEach(sibId=>{
+      const sib=peopleById[sibId]; if(!sib) return;
+      people.filter(x=>(x.parents||[]).includes(sibId)).forEach(child=>{
+        // Skip if child is already a sibling of the new node
+        if(allSibIds.has(child.id)) return;
+        if(getRel(newNode, child)&&SIBLING_LABELS.has(getRel(newNode, child).label)) return;
+        const uaLabel=newNode.gender==='male'?'Uncle':newNode.gender==='female'?'Aunt':'Uncle/Aunt';
+        const npLabel=child.gender==='male'?'Nephew':child.gender==='female'?'Niece':'Nephew/Niece';
+        linkNodes(newNode, child, npLabel, uaLabel);
+        // grandchildren = grand-nephews/nieces
+        people.filter(gc=>(gc.parents||[]).includes(child.id)).forEach(gc=>{
+          const gnpLabel=gc.gender==='male'?'Grand-nephew':gc.gender==='female'?'Grand-niece':'Grand-nephew/niece';
+          const guaLabel=newNode.gender==='male'?'Great-uncle':newNode.gender==='female'?'Great-aunt':'Great-uncle/aunt';
+          linkNodes(newNode, gc, gnpLabel, guaLabel);
+        });
+      });
+      // sibling's spouse = new node's sibling-in-law
+      const sibSpouseId=sib.spouseOf||(people.find(p=>p.spouseOf===sibId)||{}).id;
+      if(sibSpouseId && sibSpouseId!==newNodeId){
+        const sibSpouse=peopleById[sibSpouseId]; 
+        if(sibSpouse){
+          const silLabel=genderedRel('Sibling',sibSpouse.gender)+'-in-law';
+          const rsilLabel=genderedRel('Sibling',newNode.gender)+'-in-law';
+          linkNodes(newNode, sibSpouse, silLabel, rsilLabel);
+        }
+      }
+    });
   }
 
   if(isSpouseRel){
@@ -755,7 +803,9 @@ function getRelToYou_for(targetId, fromId, _depth){
 // ── computeRelationship: the single source of truth for any two nodes ──
 // Returns {label, category} or null
 function computeRelationship(fromId, targetId){
-  const label=getRelToYou_for(fromId, targetId);
+  // getRelToYou_for(targetId, fromId) returns "how TARGET appears to FROM"
+  // That's what we want: from FROM's perspective, what is TARGET?
+  const label=getRelToYou_for(targetId, fromId);
   if(!label) return null;
   return {label, category:getRelCategory(label)};
 }
