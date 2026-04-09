@@ -335,7 +335,7 @@ async function loadLeafs(){
 }
 
 async function saveLeafs(){
-  if(!currentUser||!treeLoaded) return;
+  if(!currentUser||!treeLoaded) { console.warn('saveLeafs blocked: currentUser=',!!currentUser,'treeLoaded=',treeLoaded); return; }
   try{
     if(encryptionKey){
       const encrypted=await encryptPeople(encryptionKey, leafs);
@@ -343,31 +343,32 @@ async function saveLeafs(){
     } else {
       await leafsDoc().set({entries:leafs, count:leafs.length, updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
     }
+    flashSaved();
   }catch(e){ console.error('Save leafs failed:',e); }
 }
 
-function addLeaf(leaf){
+async function addLeaf(leaf){
   leaf.id='leaf_'+Date.now();
   leaf.createdBy=currentUser.uid;
   leaf.createdAt=Date.now();
   leafs.push(leaf);
-  saveLeafs();
+  await saveLeafs();
   return leaf;
 }
 
-function editLeaf(leafId, updates){
+async function editLeaf(leafId, updates){
   const l=leafs.find(x=>x.id===leafId);
   if(!l) return null;
   Object.assign(l, updates);
-  saveLeafs();
+  await saveLeafs();
   return l;
 }
 
-function deleteLeaf(leafId){
+async function deleteLeaf(leafId){
   const idx=leafs.findIndex(x=>x.id===leafId);
   if(idx<0) return false;
   leafs.splice(idx,1);
-  saveLeafs();
+  await saveLeafs();
   return true;
 }
 

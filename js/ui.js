@@ -926,10 +926,19 @@ function openLeafModal(personId, editId){
     tagsEl.innerHTML=`<div style="font-size:.7rem;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em">Tag other Twygs</div>
       <div style="display:flex;flex-wrap:wrap;gap:4px">${others.map(o=>{
         const nm=(o.isYou?'You':fullName(o)).split(' ')[0];
-        return `<label style="display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;background:rgba(255,255,255,.04);border:1px solid var(--border);font-size:.72rem;color:var(--muted);cursor:pointer;transition:all .15s">
-          <input type="checkbox" class="leaf-tag-cb" value="${o.id}" style="width:12px;height:12px;accent-color:var(--gold)"/> ${nm}
-        </label>`;
+        const c=getNodeColor(o);
+        return `<button type="button" class="leaf-tag-btn" data-tid="${o.id}" style="display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:100px;background:rgba(255,255,255,.04);border:1px solid var(--border);font-size:.74rem;color:var(--muted);cursor:pointer;font-family:'Outfit',sans-serif;transition:all .15s">
+          <span style="width:8px;height:8px;border-radius:50%;background:${c};display:inline-block"></span> ${nm}
+        </button>`;
       }).join('')}</div>`;
+    tagsEl.querySelectorAll('.leaf-tag-btn').forEach(btn=>{
+      btn.onclick=()=>{
+        const isActive=btn.classList.toggle('active');
+        btn.style.background=isActive?'rgba(100,180,100,.15)':'rgba(255,255,255,.04)';
+        btn.style.borderColor=isActive?'rgba(100,180,100,.35)':'var(--border)';
+        btn.style.color=isActive?'rgba(140,210,140,.9)':'var(--muted)';
+      };
+    });
   } else { tagsEl.innerHTML=''; }
 
   // Clear or populate for edit
@@ -946,10 +955,10 @@ function openLeafModal(personId, editId){
         const em=document.querySelector(`.leaf-emoji-pick[data-em="${l.emoji}"]`);
         if(em){em.classList.add('active');document.getElementById('leaf-emoji-val').value=l.emoji;}
       }
-      // Check tagged twygs
+      // Activate tagged twygs
       (l.twygs||[]).forEach(tid=>{
-        const cb=document.querySelector(`.leaf-tag-cb[value="${tid}"]`);
-        if(cb) cb.checked=true;
+        const btn=document.querySelector(`.leaf-tag-btn[data-tid="${tid}"]`);
+        if(btn){btn.classList.add('active');btn.style.background='rgba(100,180,100,.15)';btn.style.borderColor='rgba(100,180,100,.35)';btn.style.color='rgba(140,210,140,.9)';}
       });
       document.querySelector('.leaf-modal-title').textContent='Edit Leaf';
       document.getElementById('btn-submit-leaf').textContent='Save Changes';
@@ -974,7 +983,7 @@ function closeLeafModal(){
   leafEditId=null;
 }
 
-function submitLeaf(){
+async function submitLeaf(){
   const personId=document.getElementById('leaf-for-id').value;
   if(!personId) return;
 
@@ -996,14 +1005,14 @@ function submitLeaf(){
 
   // Collect tagged twygs
   const twygs=[personId];
-  document.querySelectorAll('.leaf-tag-cb:checked').forEach(cb=>{
-    if(!twygs.includes(cb.value)) twygs.push(cb.value);
+  document.querySelectorAll('.leaf-tag-btn.active').forEach(btn=>{
+    if(!twygs.includes(btn.dataset.tid)) twygs.push(btn.dataset.tid);
   });
 
   if(leafEditId){
-    editLeaf(leafEditId,{type,title,content,date,emoji,twygs});
+    await editLeaf(leafEditId,{type,title,content,date,emoji,twygs});
   } else {
-    addLeaf({type,title,content,date,emoji,twygs,media:[]});
+    await addLeaf({type,title,content,date,emoji,twygs,media:[]});
   }
 
   closeLeafModal();
