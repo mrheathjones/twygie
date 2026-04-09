@@ -139,6 +139,10 @@ function openDetail(leafId){
       ${created?'Created '+created+(l.createdByName?' by '+l.createdByName:''):''}
       ${l.modifiedAt?'<br>Modified '+new Date(l.modifiedAt).toLocaleDateString()+(l.modifiedByName?' by '+l.modifiedByName:''):''}
     </div>
+    <div style="display:flex;gap:8px;justify-content:center;margin-top:16px">
+      <button onclick="closeDetail();openEditLeaf('${l.id}')" style="padding:8px 20px;border-radius:100px;background:rgba(200,168,75,.1);border:1px solid rgba(200,168,75,.25);color:var(--gold);font-family:'Outfit',sans-serif;font-size:.8rem;cursor:pointer">✏️ Edit</button>
+      <button onclick="confirmDeleteLeaf('${l.id}')" style="padding:8px 20px;border-radius:100px;background:rgba(200,80,80,.08);border:1px solid rgba(200,80,80,.2);color:rgba(200,100,100,.7);font-family:'Outfit',sans-serif;font-size:.8rem;cursor:pointer">🗑 Delete</button>
+    </div>
   `;
   document.getElementById('detail-bg').classList.add('open');
 }
@@ -257,6 +261,7 @@ function openAddLeaf(){
 
 function closeAddLeaf(){
   document.getElementById('add-bg').classList.remove('open');
+  editingLeafId=null;
 }
 
 async function submitNewLeaf(){
@@ -276,30 +281,46 @@ async function submitNewLeaf(){
   const twygs=[];
   document.querySelectorAll('.add-twyg-btn.active').forEach(btn=>twygs.push(btn.dataset.tid));
   if(!twygs.length){
-    // Must tag at least one twyg
     document.getElementById('add-twyg-tags').style.outline='1px solid rgba(200,80,80,.4)';
     setTimeout(()=>{document.getElementById('add-twyg-tags').style.outline='';},2000);
     return;
   }
 
-  const leaf={
-    id:'leaf_'+Date.now(),
-    type:addLeafType,
-    title,
-    content,
-    date,
-    emoji:addLeafEmoji||null,
-    twygs,
-    media:[],
-    createdBy:currentUser.uid,
-    createdByName:currentUser.displayName||currentUser.email||'',
-    createdAt:Date.now(),
-    modifiedBy:null,
-    modifiedByName:null,
-    modifiedAt:null
-  };
-
-  leafs.push(leaf);
+  if(editingLeafId){
+    // Edit existing leaf
+    const l=leafs.find(x=>x.id===editingLeafId);
+    if(l){
+      l.type=addLeafType;
+      l.title=title;
+      l.content=content;
+      l.date=date;
+      l.emoji=addLeafEmoji||null;
+      l.twygs=twygs;
+      l.modifiedBy=currentUser.uid;
+      l.modifiedByName=currentUser.displayName||currentUser.email||'';
+      l.modifiedAt=Date.now();
+    }
+    editingLeafId=null;
+  } else {
+    // Create new leaf
+    const leaf={
+      id:'leaf_'+Date.now(),
+      type:addLeafType,
+      title,
+      content,
+      date,
+      emoji:addLeafEmoji||null,
+      twygs,
+      media:[],
+      createdBy:currentUser.uid,
+      createdByName:currentUser.displayName||currentUser.email||'',
+      createdAt:Date.now(),
+      modifiedBy:null,
+      modifiedByName:null,
+      modifiedAt:null
+    };
+    leafs.push(leaf);
+  }
 
   // Save to Firestore
   try{
@@ -313,8 +334,66 @@ async function submitNewLeaf(){
   renderLeafs();
 }
 
-document.getElementById('btn-new-leaf')?.addEventListener('click', openAddLeaf);
+document.getElementById('btn-new-leaf')?.addEventListener('click', ()=>openAddLeaf());
 document.getElementById('btn-submit-new-leaf')?.addEventListener('click', submitNewLeaf);
 document.getElementById('add-bg')?.addEventListener('click',e=>{
   if(e.target===e.currentTarget) closeAddLeaf();
 });
+
+// ─── EDIT LEAF ───────────────────────────────────────────────────────────────
+let editingLeafId=null;
+
+function openEditLeaf(leafId){
+  const l=leafs.find(x=>x.id===leafId);
+  if(!l) return;
+  editingLeafId=leafId;
+  openAddLeaf();
+
+  // Pre-populate after modal opens
+  setTimeout(()=>{
+    // Set type
+    const typeBtn=document.querySelector('.add-type-btn[data-type="'+l.type+'"]');
+    if(typeBtn) typeBtn.click();
+
+    // Set fields
+    document.getElementById('add-title').value=l.title||'';
+    document.getElementById('add-content').value=l.content||'';
+    document.getElementById('add-year').value=l.date&&l.date.year?l.date.year:'';
+    document.getElementById('add-month').value=l.date&&l.date.month?l.date.month:'';
+    document.getElementById('add-day').value=l.date&&l.date.day?l.date.day:'';
+
+    // Set emoji
+    if(l.emoji){
+      const em=document.querySelector('.add-emoji[data-em="'+l.emoji+'"]');
+      if(em) em.click();
+    }
+
+    // Set tagged twygs
+    (l.twygs||[]).forEach(tid=>{
+      const btn=document.querySelector('.add-twyg-btn[data-tid="'+tid+'"]');
+      if(btn&&!btn.classList.contains('active')) btn.click();
+    });
+
+    // Update modal title and button
+    document.querySelector('#add-card div:first-child div').textContent='Edit Leaf';
+    document.getElementById('btn-submit-new-leaf').textContent='Save Changes';
+  },50);
+}
+
+function confirmDeleteLeaf(leafId){
+  if(!confirm('Delete this Leaf? This can\'t be undone.')) return;
+  const idx=leafs.findIndex(x=>x.id===leafId);
+  if(idx<0) return;
+  leafs.splice(idx,1);
+
+  // Save to Firestore
+  deriveKey(currentUser.uid).then(key=>{
+    encrypt(key,leafs).then(encrypted=>{
+      db.collection('familyTrees').doc(currentUser.uid).update({encryptedLeafs:encrypted,leafCount:leafs.length});
+    });
+  });
+
+  closeDetail();
+  renderTwygFilters();
+  renderLeafs();
+}
