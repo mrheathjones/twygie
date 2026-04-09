@@ -327,8 +327,7 @@ async function loadLeafs(){
       const d=snap.data();
       if(d.encryptedLeafs&&encryptionKey){
         leafs=await decryptPeople(encryptionKey, d.encryptedLeafs);
-        console.log('[Leafs] Loaded', leafs.length, 'leafs from Firestore');
-      } else { leafs=[]; console.log('[Leafs] No encryptedLeafs field found'); }
+      } else { leafs=[]; }
     } else { leafs=[]; }
   }catch(e){ console.warn('Load leafs failed:',e); leafs=[]; }
 }

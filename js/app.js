@@ -423,7 +423,6 @@ function initEventListeners() {
   on('btn-bonds',    'click', () => setTreeMode('bonds'));
   on('btn-leafs',    'click', () => {
     showLeafs=!showLeafs;
-    console.log('[Leafs] toggle:', showLeafs, 'leafs in memory:', leafs.length);
     document.getElementById('btn-leafs').classList.toggle('active',showLeafs);
     render();
   });

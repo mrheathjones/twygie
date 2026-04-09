@@ -22,11 +22,33 @@ function onNodeMouseDown(e,id){
   const p=peopleById[id]; if(!p) return;
   nodeDragState={id,startX:e.clientX,startY:e.clientY,origX:p.x,origY:p.y,moved:false};
 }
+function onLeafMouseDown(e,leafId){
+  e.stopPropagation();
+  const l=leafs.find(x=>x.id===leafId); if(!l) return;
+  const pos=getLeafPosition(l);
+  nodeDragState={id:leafId,startX:e.clientX,startY:e.clientY,origX:pos.x,origY:pos.y,moved:false,isLeaf:true};
+}
 
 function onNodeTouchStart(e,id){
   if(e.touches.length!==1) return;
   const p=peopleById[id]; if(!p) return;
   nodeDragState={id,startX:e.touches[0].clientX,startY:e.touches[0].clientY,origX:p.x,origY:p.y,moved:false,touch:true};
+}
+function onLeafTouchStart(e,leafId){
+  if(e.touches.length!==1) return;
+  const l=leafs.find(x=>x.id===leafId); if(!l) return;
+  const pos=getLeafPosition(l);
+  nodeDragState={id:leafId,startX:e.touches[0].clientX,startY:e.touches[0].clientY,origX:pos.x,origY:pos.y,moved:false,touch:true,isLeaf:true};
+}
+
+function getLeafPosition(l){
+  if(l.x!=null&&l.y!=null) return {x:l.x,y:l.y};
+  const twygs=(l.twygs||[]).map(tid=>peopleById[tid]).filter(Boolean);
+  if(!twygs.length) return {x:0,y:0};
+  let cx=0,cy=0; twygs.forEach(t=>{cx+=t.x;cy+=t.y}); cx/=twygs.length; cy/=twygs.length;
+  const hash=(l.id||'').split('').reduce((a,c)=>a+c.charCodeAt(0),0);
+  const angle=((hash%360)*Math.PI)/180, dist=45+((hash*3)%30);
+  return {x:cx+Math.cos(angle)*dist, y:cy+Math.sin(angle)*dist};
 }
 
 document.addEventListener('mousemove',e=>{
@@ -35,11 +57,15 @@ document.addEventListener('mousemove',e=>{
     if(!nodeDragState.moved&&Math.hypot(dx,dy)>6) nodeDragState.moved=true;
     if(nodeDragState.moved){
       hideTooltip();
-      const p=peopleById[nodeDragState.id]; if(!p) return;
-      p.x=nodeDragState.origX+dx/scale; p.y=nodeDragState.origY+dy/scale;
-      render();
-      // Update branch dims if card open
-      if(selectedNodeId) highlightConnected(selectedNodeId);
+      if(nodeDragState.isLeaf){
+        const l=leafs.find(x=>x.id===nodeDragState.id);
+        if(l){ l.x=nodeDragState.origX+dx/scale; l.y=nodeDragState.origY+dy/scale; render(); }
+      } else {
+        const p=peopleById[nodeDragState.id]; if(!p) return;
+        p.x=nodeDragState.origX+dx/scale; p.y=nodeDragState.origY+dy/scale;
+        render();
+        if(selectedNodeId) highlightConnected(selectedNodeId);
+      }
     }
     return;
   }
@@ -48,8 +74,13 @@ document.addEventListener('mousemove',e=>{
 
 document.addEventListener('mouseup',e=>{
   if(nodeDragState){
-    if(!nodeDragState.moved) selectNode(nodeDragState.id);
-    else scheduleSave();
+    if(!nodeDragState.moved){
+      if(nodeDragState.isLeaf) openLeafDetail(nodeDragState.id);
+      else selectNode(nodeDragState.id);
+    } else {
+      if(nodeDragState.isLeaf) saveLeafs();
+      else scheduleSave();
+    }
     nodeDragState=null; return;
   }
   isDragging=false; document.getElementById('wrap').style.cursor='';
@@ -60,17 +91,27 @@ document.addEventListener('touchmove',e=>{
     const dx=e.touches[0].clientX-nodeDragState.startX, dy=e.touches[0].clientY-nodeDragState.startY;
     if(!nodeDragState.moved&&Math.hypot(dx,dy)>8) nodeDragState.moved=true;
     if(nodeDragState.moved){
-      const p=peopleById[nodeDragState.id]; if(!p) return;
-      p.x=nodeDragState.origX+dx/scale; p.y=nodeDragState.origY+dy/scale;
-      render();
+      if(nodeDragState.isLeaf){
+        const l=leafs.find(x=>x.id===nodeDragState.id);
+        if(l){ l.x=nodeDragState.origX+dx/scale; l.y=nodeDragState.origY+dy/scale; render(); }
+      } else {
+        const p=peopleById[nodeDragState.id]; if(!p) return;
+        p.x=nodeDragState.origX+dx/scale; p.y=nodeDragState.origY+dy/scale;
+        render();
+      }
     }
   }
 },{passive:true});
 
 document.addEventListener('touchend',()=>{
   if(nodeDragState){
-    if(!nodeDragState.moved) selectNode(nodeDragState.id);
-    else scheduleSave();
+    if(!nodeDragState.moved){
+      if(nodeDragState.isLeaf) openLeafDetail(nodeDragState.id);
+      else selectNode(nodeDragState.id);
+    } else {
+      if(nodeDragState.isLeaf) saveLeafs();
+      else scheduleSave();
+    }
     nodeDragState=null;
   }
   isTouchPanning=false;

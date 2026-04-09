@@ -563,28 +563,17 @@ function drawNodes(){
 
 // ─── DRAW LEAFS ON TREE ─────────────────────────────────────────────────────
 function drawLeafs(){
-  console.log('[Leafs] drawLeafs called, leafs.length=', leafs?leafs.length:0, 'showLeafs=', showLeafs);
   if(!leafs||!leafs.length) return;
   const nG=document.getElementById('nG');
   const bG=document.getElementById('bG');
   const LEAF_R=8;
-  const LEAF_COLOR='rgba(100,180,100,0.7)';
 
   leafs.forEach((l,idx)=>{
     const twygs=(l.twygs||[]).map(tid=>peopleById[tid]).filter(Boolean);
     if(!twygs.length) return;
 
-    // Position: centroid of tagged twygs + organic offset
-    const hash=(l.id||'').split('').reduce((a,c)=>a+c.charCodeAt(0),0);
-    let cx=0, cy=0;
-    twygs.forEach(t=>{cx+=t.x;cy+=t.y;});
-    cx/=twygs.length; cy/=twygs.length;
-
-    // Offset from centroid so leaf doesn't sit on top of nodes
-    const angle=((hash%360)*Math.PI)/180;
-    const dist=45+((hash*3)%30);
-    const lx=cx+Math.cos(angle)*dist;
-    const ly=cy+Math.sin(angle)*dist;
+    const pos=getLeafPosition(l);
+    const lx=pos.x, ly=pos.y;
 
     // Draw connection lines from leaf to each tagged twyg
     twygs.forEach(t=>{
@@ -604,13 +593,17 @@ function drawLeafs(){
     G.dataset.leafId=l.id;
     G.style.cursor='pointer';
 
+    // Drag handlers
+    G.addEventListener('mousedown',e=>onLeafMouseDown(e,l.id));
+    G.addEventListener('touchstart',e=>onLeafTouchStart(e,l.id),{passive:true});
+
     // Soft glow
     const glow=createSvgElement('circle');
     glow.setAttribute('r',String(LEAF_R*2.5));
     glow.setAttribute('fill','rgba(100,180,100,0.06)');
     G.appendChild(glow);
 
-    // Main dot — filled green so it's visible even without emoji
+    // Main dot
     const dot=createSvgElement('circle');
     dot.setAttribute('r',String(LEAF_R));
     dot.setAttribute('fill','rgba(100,180,100,0.25)');
@@ -618,7 +611,7 @@ function drawLeafs(){
     dot.setAttribute('stroke-width','1.5');
     G.appendChild(dot);
 
-    // Emoji via foreignObject (SVG text doesn't render emoji reliably)
+    // Emoji via foreignObject
     const fo=createSvgElement('foreignObject');
     fo.setAttribute('x',String(-LEAF_R));
     fo.setAttribute('y',String(-LEAF_R));
@@ -639,9 +632,6 @@ function drawLeafs(){
       label.textContent=title;
       G.appendChild(label);
     }
-
-    // Click handler
-    G.addEventListener('click',()=>openLeafDetail(l.id));
 
     nG.appendChild(G);
   });
