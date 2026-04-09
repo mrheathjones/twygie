@@ -562,115 +562,111 @@ function drawNodes(){
 }
 
 
-// ─── DRAW LEAFS ON TREE ─────────────────────────────────────────────────────
+// ─── LEAF ENGINE INTEGRATION ─────────────────────────────────────────────────
+let leafEngine=null;
+let leafSvgElements=new Map(); // leafId → {group, lines:[]}
+
+function initLeafEngine(){
+  if(leafEngine){ leafEngine.stop(); }
+  leafEngine=new OrbEngine({
+    repulsionRadius: 80,
+    minimumSeparation: 40,
+    springStrength: 0.05,
+    damping: 0.78,
+    pushStrength: 1.0,
+    maxVelocity: 10,
+    returnBias: 0.04,
+    dragInfluenceFalloff: 1.8,
+    onUpdate: updateLeafPositions
+  });
+  return leafEngine;
+}
+
 function drawLeafs(){
   if(!leafs||!leafs.length) return;
   const lG=document.getElementById('lG');
   const LEAF_R=8;
-  const LEAF_MIN_DIST=LEAF_R*6;  // min distance between leaf centers
-  const NODE_MIN_DIST=65;         // min distance from any twyg node center
+  const NODE_MIN_DIST=70;
 
-  // Calculate positions — use physics position if available (bubble effect)
-  const positions=leafs.map(l=>{
+  const engine=initLeafEngine();
+  leafSvgElements.clear();
+
+  leafs.forEach(l=>{
     const twygs=(l.twygs||[]).map(tid=>peopleById[tid]).filter(Boolean);
-    if(!twygs.length) return null;
-    // Priority: dragged position → physics position → calculated
-    let x,y;
-    if(l.x!=null&&l.y!=null){ x=l.x; y=l.y; }
-    else if(l._px!=null&&l._py!=null){ x=l._px; y=l._py; }
-    else { const pos=getLeafPosition(l); x=pos.x; y=pos.y; }
-    return {leaf:l, x, y, twygs, pinned:l.x!=null&&l.y!=null};
-  }).filter(Boolean);
+    if(!twygs.length) return;
 
-  // Collision avoidance — 10 passes for smooth convergence
-  for(let pass=0;pass<10;pass++){
-    // Push leaves apart from each other
-    for(let i=0;i<positions.length;i++){
-      for(let j=i+1;j<positions.length;j++){
-        const a=positions[i], b=positions[j];
-        if(a.pinned&&b.pinned) continue;
-        const dx=b.x-a.x, dy=b.y-a.y;
-        const dist=Math.sqrt(dx*dx+dy*dy)||0.1;
-        if(dist<LEAF_MIN_DIST){
-          const push=(LEAF_MIN_DIST-dist)/2*0.7;
-          const nx=dx/dist, ny=dy/dist;
-          if(!a.pinned){ a.x-=nx*push; a.y-=ny*push; }
-          if(!b.pinned){ b.x+=nx*push; b.y+=ny*push; }
-        }
-      }
-    }
-    // Push leaves away from twyg nodes
-    positions.forEach(a=>{
-      if(a.pinned) return;
+    // Calculate home position
+    const pos=getLeafPosition(l);
+    let hx=pos.x, hy=pos.y;
+
+    // Push home away from nodes (static, one-time)
+    for(let pass=0;pass<3;pass++){
       people.forEach(p=>{
-        const dx=a.x-p.x, dy=a.y-p.y;
+        const dx=hx-p.x, dy=hy-p.y;
         const dist=Math.sqrt(dx*dx+dy*dy)||0.1;
         if(dist<NODE_MIN_DIST){
-          const push=(NODE_MIN_DIST-dist)*0.6;
-          const nx=dx/dist, ny=dy/dist;
-          a.x+=nx*push; a.y+=ny*push;
+          hx+=dx/dist*(NODE_MIN_DIST-dist);
+          hy+=dy/dist*(NODE_MIN_DIST-dist);
         }
       });
-    });
-  }
+    }
 
-  // Store physics positions for next frame (bubble memory)
-  positions.forEach(({leaf:l, x, y, pinned})=>{
-    if(!pinned){ l._px=x; l._py=y; }
-  });
+    // Register orb in engine
+    engine.addOrb({id:l.id, x:hx, y:hy, radius:LEAF_R+12});
 
-  // Draw everything into lG (behind branches and nodes)
-  positions.forEach(({leaf:l, x:lx, y:ly, twygs})=>{
-    // Connection lines to tagged twygs
-    twygs.forEach(t=>{
-      const line=createSvgElement('path');
-      line.setAttribute('d',`M ${lx} ${ly} L ${t.x} ${t.y}`);
-      line.setAttribute('stroke','rgba(100,180,100,0.12)');
-      line.setAttribute('stroke-width','1');
-      line.setAttribute('stroke-dasharray','3,4');
-      line.setAttribute('fill','none');
-      lG.appendChild(line);
-    });
-
-    // Leaf node group
+    // Create SVG group
     const G=createSvgElement('g');
-    G.setAttribute('transform',`translate(${lx},${ly})`);
+    G.setAttribute('transform','translate('+hx+','+hy+')');
     G.setAttribute('class','nd leaf-nd');
-    G.dataset.leafId=l.id;
     G.style.cursor='pointer';
 
-    // Drag handlers
-    G.addEventListener('mousedown',e=>onLeafMouseDown(e,l.id));
-    G.addEventListener('touchstart',e=>onLeafTouchStart(e,l.id),{passive:true});
+    // Drag handlers → engine
+    G.addEventListener('mousedown',function(e){
+      e.stopPropagation();
+      engine.dragStart(l.id);
+      leafDragActive=l.id;
+      leafDragStartX=e.clientX; leafDragStartY=e.clientY;
+      leafDragOrigX=hx; leafDragOrigY=hy;
+      leafDragMoved=false;
+    });
+    G.addEventListener('touchstart',function(e){
+      if(e.touches.length!==1) return;
+      e.stopPropagation();
+      engine.dragStart(l.id);
+      leafDragActive=l.id;
+      leafDragStartX=e.touches[0].clientX; leafDragStartY=e.touches[0].clientY;
+      leafDragOrigX=hx; leafDragOrigY=hy;
+      leafDragMoved=false;
+    },{passive:true});
 
-    // Soft glow
-    const glow=createSvgElement('circle');
+    // Glow
+    var glow=createSvgElement('circle');
     glow.setAttribute('r',String(LEAF_R*2));
     glow.setAttribute('fill','rgba(100,180,100,0.04)');
     G.appendChild(glow);
 
-    // Main dot
-    const dot=createSvgElement('circle');
+    // Dot
+    var dot=createSvgElement('circle');
     dot.setAttribute('r',String(LEAF_R));
     dot.setAttribute('fill','rgba(100,180,100,0.12)');
     dot.setAttribute('stroke','rgba(100,180,100,0.25)');
     dot.setAttribute('stroke-width','1');
     G.appendChild(dot);
 
-    // Emoji via foreignObject
-    const fo=createSvgElement('foreignObject');
+    // Emoji
+    var fo=createSvgElement('foreignObject');
     fo.setAttribute('x',String(-LEAF_R));
     fo.setAttribute('y',String(-LEAF_R));
     fo.setAttribute('width',String(LEAF_R*2));
     fo.setAttribute('height',String(LEAF_R*2));
     fo.setAttribute('style','pointer-events:none');
-    fo.innerHTML=`<div xmlns="http://www.w3.org/1999/xhtml" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:10px;line-height:1;pointer-events:none">🍃</div>`;
+    fo.innerHTML='<div xmlns="http://www.w3.org/1999/xhtml" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:10px;line-height:1;pointer-events:none">🍃</div>';
     G.appendChild(fo);
 
-    // Title label below
-    const title=(l.title||'').slice(0,20);
+    // Title
+    var title=(l.title||'').slice(0,20);
     if(title){
-      const label=createSvgElement('text');
+      var label=createSvgElement('text');
       label.setAttribute('y',String(LEAF_R+12));
       label.setAttribute('text-anchor','middle');
       label.setAttribute('font-family','Outfit, sans-serif');
@@ -682,5 +678,91 @@ function drawLeafs(){
     }
 
     lG.appendChild(G);
+
+    // Connection lines
+    var svgLines=[];
+    twygs.forEach(function(t){
+      var line=createSvgElement('path');
+      line.setAttribute('d','M '+hx+' '+hy+' L '+t.x+' '+t.y);
+      line.setAttribute('stroke','rgba(100,180,100,0.12)');
+      line.setAttribute('stroke-width','1');
+      line.setAttribute('stroke-dasharray','3,4');
+      line.setAttribute('fill','none');
+      lG.insertBefore(line, lG.firstChild);
+      svgLines.push({el:line, tx:t.x, ty:t.y});
+    });
+
+    leafSvgElements.set(l.id, {group:G, lines:svgLines, leafRef:l, homeX:hx, homeY:hy});
   });
 }
+
+// Called by engine onUpdate — moves SVG without full re-render
+function updateLeafPositions(orbs){
+  orbs.forEach(function(orb){
+    var el=leafSvgElements.get(orb.id);
+    if(!el) return;
+    el.group.setAttribute('transform','translate('+orb.x+','+orb.y+')');
+    el.lines.forEach(function(ln){
+      ln.el.setAttribute('d','M '+orb.x+' '+orb.y+' L '+ln.tx+' '+ln.ty);
+    });
+  });
+}
+
+// ─── LEAF DRAG (engine-driven) ───────────────────────────────────────────────
+var leafDragActive=null, leafDragStartX=0, leafDragStartY=0;
+var leafDragOrigX=0, leafDragOrigY=0, leafDragMoved=false;
+
+document.addEventListener('mousemove',function(e){
+  if(leafDragActive&&leafEngine){
+    var dx=e.clientX-leafDragStartX, dy=e.clientY-leafDragStartY;
+    if(!leafDragMoved&&Math.hypot(dx,dy)>6) leafDragMoved=true;
+    if(leafDragMoved){
+      leafEngine.dragMove(leafDragOrigX+dx/scale, leafDragOrigY+dy/scale);
+    }
+  }
+},{capture:true});
+
+document.addEventListener('mouseup',function(){
+  if(leafDragActive&&leafEngine){
+    if(!leafDragMoved){
+      openLeafDetail(leafDragActive);
+    } else {
+      var orb=leafEngine.getOrb(leafDragActive);
+      var el=leafSvgElements.get(leafDragActive);
+      if(orb&&el){
+        el.leafRef.x=orb.x; el.leafRef.y=orb.y;
+        leafEngine.updateHome(leafDragActive, orb.x, orb.y);
+        saveLeafs();
+      }
+    }
+    leafEngine.dragEnd();
+    leafDragActive=null;
+  }
+},{capture:true});
+
+document.addEventListener('touchmove',function(e){
+  if(leafDragActive&&leafEngine&&e.touches.length===1){
+    var dx=e.touches[0].clientX-leafDragStartX, dy=e.touches[0].clientY-leafDragStartY;
+    if(!leafDragMoved&&Math.hypot(dx,dy)>8) leafDragMoved=true;
+    if(leafDragMoved){
+      leafEngine.dragMove(leafDragOrigX+dx/scale, leafDragOrigY+dy/scale);
+    }
+  }
+},{capture:true,passive:true});
+
+document.addEventListener('touchend',function(){
+  if(leafDragActive&&leafEngine){
+    if(!leafDragMoved) openLeafDetail(leafDragActive);
+    else {
+      var orb=leafEngine.getOrb(leafDragActive);
+      var el=leafSvgElements.get(leafDragActive);
+      if(orb&&el){
+        el.leafRef.x=orb.x; el.leafRef.y=orb.y;
+        leafEngine.updateHome(leafDragActive, orb.x, orb.y);
+        saveLeafs();
+      }
+    }
+    leafEngine.dragEnd();
+    leafDragActive=null;
+  }
+},{capture:true});

@@ -22,142 +22,69 @@ function onNodeMouseDown(e,id){
   const p=peopleById[id]; if(!p) return;
   nodeDragState={id,startX:e.clientX,startY:e.clientY,origX:p.x,origY:p.y,moved:false};
 }
-function onLeafMouseDown(e,leafId){
-  e.stopPropagation();
-  const l=leafs.find(x=>x.id===leafId); if(!l) return;
-  const pos=getLeafPosition(l);
-  nodeDragState={id:leafId,startX:e.clientX,startY:e.clientY,origX:pos.x,origY:pos.y,moved:false,isLeaf:true};
-}
 
 function onNodeTouchStart(e,id){
   if(e.touches.length!==1) return;
   const p=peopleById[id]; if(!p) return;
   nodeDragState={id,startX:e.touches[0].clientX,startY:e.touches[0].clientY,origX:p.x,origY:p.y,moved:false,touch:true};
 }
-function onLeafTouchStart(e,leafId){
-  if(e.touches.length!==1) return;
-  const l=leafs.find(x=>x.id===leafId); if(!l) return;
-  const pos=getLeafPosition(l);
-  nodeDragState={id:leafId,startX:e.touches[0].clientX,startY:e.touches[0].clientY,origX:pos.x,origY:pos.y,moved:false,touch:true,isLeaf:true};
-}
 
 function getLeafPosition(l){
   if(l.x!=null&&l.y!=null) return {x:l.x,y:l.y};
-  // Orbit around the primary (first) tagged twyg
   const primary=peopleById[(l.twygs||[])[0]];
   if(!primary) return {x:0,y:0};
-  // Spread leafs around the node in a circle
   const hash=(l.id||'').split('').reduce((a,c)=>a+c.charCodeAt(0),0);
-  // Count how many leafs share this primary twyg (for even distribution)
   const sibs=leafs.filter(x=>(x.twygs||[])[0]===(l.twygs||[])[0]);
   const idx=sibs.indexOf(l);
   const count=sibs.length||1;
-  const angle=((idx/count)*Math.PI*2)+(hash%60)*0.01; // even spread + slight jitter
-  const dist=70+(hash%20); // orbit: 70-90px from node (clears glow + node min)
+  const angle=((idx/count)*Math.PI*2)+(hash%60)*0.01;
+  const dist=70+(hash%20);
   return {x:primary.x+Math.cos(angle)*dist, y:primary.y+Math.sin(angle)*dist};
 }
 
 document.addEventListener('mousemove',e=>{
+  if(leafDragActive) return; // engine handles leaf drag
   if(nodeDragState){
     const dx=e.clientX-nodeDragState.startX, dy=e.clientY-nodeDragState.startY;
     if(!nodeDragState.moved&&Math.hypot(dx,dy)>6) nodeDragState.moved=true;
     if(nodeDragState.moved){
       hideTooltip();
-      if(nodeDragState.isLeaf){
-        const l=leafs.find(x=>x.id===nodeDragState.id);
-        if(l){ l.x=nodeDragState.origX+dx/scale; l.y=nodeDragState.origY+dy/scale; render(); }
-      } else {
-        const p=peopleById[nodeDragState.id]; if(!p) return;
-        p.x=nodeDragState.origX+dx/scale; p.y=nodeDragState.origY+dy/scale;
-        render();
-        if(selectedNodeId) highlightConnected(selectedNodeId);
-      }
+      const p=peopleById[nodeDragState.id]; if(!p) return;
+      p.x=nodeDragState.origX+dx/scale; p.y=nodeDragState.origY+dy/scale;
+      render();
+      if(selectedNodeId) highlightConnected(selectedNodeId);
     }
     return;
   }
   if(isDragging){ panX=e.clientX-dragStartX; panY=e.clientY-dragStartY; applyTransform(); }
 });
 
-function snapLeafAwayFromNodes(l){
-  if(l.x==null||l.y==null) return;
-  const NODE_MIN=65, LEAF_MIN=48;
-  let moved=true, passes=0;
-  while(moved&&passes<10){
-    moved=false; passes++;
-    // Push away from twyg nodes
-    people.forEach(p=>{
-      const dx=l.x-p.x, dy=l.y-p.y;
-      const dist=Math.sqrt(dx*dx+dy*dy)||0.1;
-      if(dist<NODE_MIN){
-        const push=NODE_MIN-dist;
-        l.x+=dx/dist*push; l.y+=dy/dist*push;
-        moved=true;
-      }
-    });
-    // Push away from other leafs
-    leafs.forEach(other=>{
-      if(other.id===l.id||other.x==null) return;
-      const dx=l.x-other.x, dy=l.y-other.y;
-      const dist=Math.sqrt(dx*dx+dy*dy)||0.1;
-      if(dist<LEAF_MIN){
-        const push=LEAF_MIN-dist;
-        l.x+=dx/dist*push; l.y+=dy/dist*push;
-        moved=true;
-      }
-    });
-  }
-}
-
 document.addEventListener('mouseup',e=>{
   if(nodeDragState){
-    if(!nodeDragState.moved){
-      if(nodeDragState.isLeaf) openLeafDetail(nodeDragState.id);
-      else selectNode(nodeDragState.id);
-    } else {
-      if(nodeDragState.isLeaf){
-        const l=leafs.find(x=>x.id===nodeDragState.id);
-        if(l) snapLeafAwayFromNodes(l);
-        saveLeafs();
-        render();
-      }
-      else scheduleSave();
-    }
+    if(!nodeDragState.moved) selectNode(nodeDragState.id);
+    else scheduleSave();
     nodeDragState=null; return;
   }
   isDragging=false; document.getElementById('wrap').style.cursor='';
 });
 
 document.addEventListener('touchmove',e=>{
+  if(leafDragActive) return; // engine handles leaf drag
   if(nodeDragState&&nodeDragState.touch&&e.touches.length===1){
     const dx=e.touches[0].clientX-nodeDragState.startX, dy=e.touches[0].clientY-nodeDragState.startY;
     if(!nodeDragState.moved&&Math.hypot(dx,dy)>8) nodeDragState.moved=true;
     if(nodeDragState.moved){
-      if(nodeDragState.isLeaf){
-        const l=leafs.find(x=>x.id===nodeDragState.id);
-        if(l){ l.x=nodeDragState.origX+dx/scale; l.y=nodeDragState.origY+dy/scale; render(); }
-      } else {
-        const p=peopleById[nodeDragState.id]; if(!p) return;
-        p.x=nodeDragState.origX+dx/scale; p.y=nodeDragState.origY+dy/scale;
-        render();
-      }
+      const p=peopleById[nodeDragState.id]; if(!p) return;
+      p.x=nodeDragState.origX+dx/scale; p.y=nodeDragState.origY+dy/scale;
+      render();
     }
   }
 },{passive:true});
 
 document.addEventListener('touchend',()=>{
   if(nodeDragState){
-    if(!nodeDragState.moved){
-      if(nodeDragState.isLeaf) openLeafDetail(nodeDragState.id);
-      else selectNode(nodeDragState.id);
-    } else {
-      if(nodeDragState.isLeaf){
-        const l=leafs.find(x=>x.id===nodeDragState.id);
-        if(l) snapLeafAwayFromNodes(l);
-        saveLeafs();
-        render();
-      }
-      else scheduleSave();
-    }
+    if(!nodeDragState.moved) selectNode(nodeDragState.id);
+    else scheduleSave();
     nodeDragState=null;
   }
   isTouchPanning=false;
