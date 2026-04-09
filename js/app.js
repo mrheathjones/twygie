@@ -403,6 +403,47 @@ function initEventListeners() {
   on('btn-all',      'click', () => setTreeMode('complex'));
   on('btn-blood',    'click', () => setTreeMode('bloodline'));
   on('btn-bonds',    'click', () => setTreeMode('bonds'));
+
+  // --- Layout mode toggle ---
+  function requestLayoutChange(mode){
+    if(mode===layoutMode) return;
+    if(layoutWarnDismissed){
+      setLayoutMode(mode);
+      persistLayoutMode();
+      return;
+    }
+    // Show warning modal
+    const scrim=document.getElementById('layout-warn-scrim');
+    const cb=document.getElementById('layout-warn-dismiss');
+    if(cb) cb.checked=false;
+    scrim.style.display='flex';
+    // Store pending mode
+    scrim.dataset.pendingMode=mode;
+  }
+  on('btn-compact',     'click', () => requestLayoutChange('compact'));
+  on('btn-relaxed',     'click', () => requestLayoutChange('relaxed'));
+  on('btn-expanded',    'click', () => requestLayoutChange('expanded'));
+  on('btn-traditional', 'click', () => requestLayoutChange('traditional'));
+  on('btn-immersive',   'click', () => requestLayoutChange('immersive'));
+
+  on('layout-warn-cancel', 'click', () => {
+    document.getElementById('layout-warn-scrim').style.display='none';
+  });
+  on('layout-warn-confirm', 'click', () => {
+    const scrim=document.getElementById('layout-warn-scrim');
+    const mode=scrim.dataset.pendingMode;
+    const cb=document.getElementById('layout-warn-dismiss');
+    if(cb&&cb.checked) layoutWarnDismissed=true;
+    scrim.style.display='none';
+    if(mode){
+      setLayoutMode(mode);
+      persistLayoutMode();
+    }
+  });
+  on('btn-exit-immersive', 'click', () => {
+    setLayoutMode('relaxed');
+    persistLayoutMode();
+  });
   on('btn-fit',      'click', resetView);
   on('export-btn',   'click', toggleExportMenu);
   on('btn-export-png','click', () => exportTree('png'));
@@ -467,6 +508,12 @@ function initEventListeners() {
   on('btn-reset-node-colors','click', resetNodeColors);
   on('btn-reset-line-colors','click', resetLineColors);
   on('btn-burn-twygs',      'click', burnTwygs);
+  on('btn-reset-layout-warn','click', () => {
+    layoutWarnDismissed=false;
+    persistLayoutMode();
+    const btn=document.getElementById('btn-reset-layout-warn');
+    if(btn){ btn.textContent='✓ Reset'; setTimeout(()=>{ btn.textContent='Reset'; },1500); }
+  });
 
   // --- Settings: color pickers (node colors) ---
   ['you','spouse','parent','child','sibling','grandparent','extended','deceased','young'].forEach(key => {

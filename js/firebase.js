@@ -280,7 +280,7 @@ async function loadTree(){
       setTimeout(()=>appAlert('Could not load your tree. You may be offline. Your saved data is safe. Please refresh to try again.'),500);
     }
   }
-  rebuild(); render(); setTimeout(()=>{setTreeMode(treeMode||'simple'); resetView();},90);
+  rebuild(); render(); setTimeout(()=>{setTreeMode(treeMode||'simple'); setLayoutMode(layoutMode||'relaxed',false); resetView();},90);
 }
 async function saveTree(ind=true){
   if(!currentUser) return;
@@ -354,6 +354,8 @@ let treeMode='complex'; // 'simple' | 'complex'
 let youngAge=17; // 'young' if age <= this
 let demoMode=false; // when true, creates fresh tree on every reload
 let autoConnections=true; // auto-infer relationships to isYou
+let layoutMode='relaxed'; // 'compact' | 'relaxed' | 'expanded' | 'traditional' | 'immersive'
+let layoutWarnDismissed=false; // "don't warn me again" for layout changes
 function setTreeMode(mode){
   treeMode=mode;
   ['btn-tree','btn-all','btn-blood','btn-bonds'].forEach(id=>{
@@ -364,13 +366,59 @@ function setTreeMode(mode){
   });
   render();
 }
+
+function setLayoutMode(mode, force){
+  const prev=layoutMode;
+  layoutMode=mode;
+  // Update toggle buttons
+  ['btn-compact','btn-relaxed','btn-expanded','btn-traditional','btn-immersive'].forEach(id=>{
+    const btn=document.getElementById(id);
+    if(btn) btn.classList.toggle('active',
+      (id==='btn-compact'&&mode==='compact')||(id==='btn-relaxed'&&mode==='relaxed')||
+      (id==='btn-expanded'&&mode==='expanded')||(id==='btn-traditional'&&mode==='traditional')||
+      (id==='btn-immersive'&&mode==='immersive'));
+  });
+  // Handle immersive mode toggle
+  if(mode==='immersive'){
+    if(typeof enterImmersive==='function') enterImmersive();
+    return;
+  } else if(prev==='immersive'){
+    if(typeof exitImmersive==='function') exitImmersive();
+  }
+  // Re-layout all nodes
+  if(force!==false) relayoutAll();
+  render();
+  scheduleSave();
+}
+
+function relayoutAll(){
+  const allIds=people.map(p=>p.id);
+  autoLayoutNew(allIds);
+}
+
+function persistLayoutMode(){
+  if(!currentUser) return;
+  settingsDoc().update({layoutMode, layoutWarnDismissed}).catch(()=>{
+    // If doc doesn't exist yet, set it
+    settingsDoc().set({layoutMode, layoutWarnDismissed},{merge:true}).catch(e=>console.warn('Layout save failed:',e));
+  });
+}
 function updateCount(){ document.getElementById('mcnum').textContent=people.length; }
 function fullName(p){ return p.name||[(p.firstName||''),(p.lastName||'')].filter(Boolean).join(' ')||'Unknown'; }
 
 // ─── AUTO LAYOUT ──────────────────────────────────────────────────────────────
 // CONVENTION: parents ABOVE (smaller y), children BELOW (larger y)
+const LAYOUT_PARAMS={
+  compact:     {genH:100, spacing:80,  centerX:600, baseY:400},
+  relaxed:     {genH:170, spacing:165, centerX:600, baseY:400},
+  expanded:    {genH:280, spacing:300, centerX:600, baseY:400},
+  traditional: {genH:200, spacing:140, centerX:600, baseY:400},
+};
+
 function autoLayoutNew(newIds=[]){
   if(!people.length) return;
+  if(layoutMode==='immersive') return; // 3D handles its own layout
+
   const youNode=people.find(p=>p.isYou)||people[0];
   const gen={};
   const visited=new Set();
@@ -380,11 +428,8 @@ function autoLayoutNew(newIds=[]){
     if(visited.has(id)) continue;
     visited.add(id); gen[id]=gv;
     const p=peopleById[id]; if(!p) continue;
-    // Parents are ABOVE = negative gen (smaller y)
     (p.parents||[]).forEach(pid=>{ if(!visited.has(pid)) queue.push({id:pid,gv:gv-1}); });
-    // Children are BELOW = positive gen (larger y)
     people.filter(x=>(x.parents||[]).includes(id)).forEach(c=>{ if(!visited.has(c.id)) queue.push({id:c.id,gv:gv+1}); });
-    // Spouse: same generation
     if(p.spouseOf){ const sp=peopleById[p.spouseOf]; if(sp&&!visited.has(p.spouseOf)) queue.push({id:p.spouseOf,gv}); }
     const spNode=people.find(x=>x.spouseOf===id);
     if(spNode&&!visited.has(spNode.id)) queue.push({id:spNode.id,gv});
@@ -394,32 +439,112 @@ function autoLayoutNew(newIds=[]){
   const byGen={};
   people.forEach(p=>{ const gv=gen[p.id]; if(!byGen[gv]) byGen[gv]=[]; byGen[gv].push(p); });
 
-  const centerX=600, baseY=400, genH=170, spacing=165;
+  const params=LAYOUT_PARAMS[layoutMode]||LAYOUT_PARAMS.relaxed;
+  const {genH, spacing, centerX, baseY}=params;
 
-  Object.entries(byGen).forEach(([gStr,people])=>{
-    const gNum=parseInt(gStr);
-    // gNum negative (parents) → y = baseY - |gNum|*genH (ABOVE you)
-    // gNum positive (children) → y = baseY + gNum*genH (BELOW you)
-    const y = baseY + gNum * genH;
+  if(layoutMode==='traditional'){
+    // Traditional: family-unit centered layout
+    // Parents centered above their children, spouses side by side
+    layoutTraditional(byGen, gen, newIds, params);
+  } else {
+    // Compact / Relaxed / Expanded: generation rows with variable spacing
+    Object.entries(byGen).forEach(([gStr,genPeople])=>{
+      const gNum=parseInt(gStr);
+      const y=baseY+gNum*genH;
 
-    // Put you first, then spouses next to you
-    people.sort((a,b)=>{
-      if(a.isYou) return -1; if(b.isYou) return 1;
-      const you=people.find(x=>x.isYou);
-      if(you){
-        const aIsSpouse=a.spouseOf===you.id||you.spouseOf===a.id;
-        const bIsSpouse=b.spouseOf===you.id||you.spouseOf===b.id;
-        if(aIsSpouse&&!bIsSpouse) return 1;
-        if(bIsSpouse&&!aIsSpouse) return -1;
+      // Sort: isYou first, then spouses adjacent, then alphabetical
+      genPeople.sort((a,b)=>{
+        if(a.isYou) return -1; if(b.isYou) return 1;
+        const you=genPeople.find(x=>x.isYou);
+        if(you){
+          const aIsSpouse=a.spouseOf===you.id||you.spouseOf===a.id;
+          const bIsSpouse=b.spouseOf===you.id||you.spouseOf===b.id;
+          if(aIsSpouse&&!bIsSpouse) return 1;
+          if(bIsSpouse&&!aIsSpouse) return -1;
+        }
+        return fullName(a).localeCompare(fullName(b));
+      });
+
+      const n=genPeople.length, totalW=(n-1)*spacing, startX=centerX-totalW/2;
+      genPeople.forEach((p,i)=>{
+        if(newIds.includes(p.id)||p.x===undefined||p.x===null){
+          p.x=startX+i*spacing; p.y=y;
+        }
+      });
+    });
+  }
+}
+
+function layoutTraditional(byGen, gen, newIds, params){
+  const {genH, spacing, centerX, baseY}=params;
+
+  // Build family units: group children under their parents
+  const parentChildren={}; // parentKey → [childIds]
+  people.forEach(p=>{
+    const pids=(p.parents||[]).sort().join(',');
+    if(!pids) return;
+    if(!parentChildren[pids]) parentChildren[pids]=[];
+    parentChildren[pids].push(p.id);
+  });
+
+  // Assign x positions generation by generation, top to bottom
+  const genNums=Object.keys(byGen).map(Number).sort((a,b)=>a-b);
+  const xPos={}; // nodeId → x
+
+  // First pass: position each generation
+  genNums.forEach(gNum=>{
+    const genPeople=byGen[gNum];
+    const y=baseY+gNum*genH;
+
+    // Group by parent set for alignment
+    const units=[];
+    const placed=new Set();
+
+    // Find family units in this generation
+    genPeople.forEach(p=>{
+      if(placed.has(p.id)) return;
+      // Find spouse
+      const spouseId=p.spouseOf||(people.find(x=>x.spouseOf===p.id)||{}).id;
+      const unit=[p.id];
+      placed.add(p.id);
+      if(spouseId&&genPeople.find(x=>x.id===spouseId)&&!placed.has(spouseId)){
+        unit.push(spouseId);
+        placed.add(spouseId);
       }
-      return fullName(a).localeCompare(fullName(b));
+      units.push(unit);
     });
 
-    const n=people.length, totalW=(n-1)*spacing, startX=centerX-totalW/2;
-    people.forEach((p,i)=>{
-      // Only set position if node is new or has no position yet
-      if(newIds.includes(p.id)||p.x===undefined||p.x===null){
-        p.x=startX+i*spacing; p.y=y;
+    // Position units centered
+    let totalWidth=0;
+    units.forEach(u=>{ totalWidth+=u.length*spacing; });
+    totalWidth-=spacing; // no trailing gap
+
+    let x=centerX-totalWidth/2;
+    units.forEach(unit=>{
+      unit.forEach(id=>{
+        const p=peopleById[id];
+        if(p&&(newIds.includes(id)||p.x===undefined||p.x===null)){
+          p.x=x; p.y=y;
+        }
+        xPos[id]=x;
+        x+=spacing;
+      });
+    });
+  });
+
+  // Second pass: center parents above their children
+  genNums.forEach(gNum=>{
+    const genPeople=byGen[gNum];
+    genPeople.forEach(p=>{
+      const children=people.filter(c=>(c.parents||[]).includes(p.id));
+      if(children.length>0){
+        const childXs=children.map(c=>xPos[c.id]||c.x||0);
+        const avgX=childXs.reduce((a,b)=>a+b,0)/childXs.length;
+        // Only adjust if this node was auto-positioned
+        if(newIds.includes(p.id)||p.x===undefined||p.x===null){
+          p.x=avgX;
+          xPos[p.id]=avgX;
+        }
       }
     });
   });

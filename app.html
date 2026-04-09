@@ -42,6 +42,13 @@
     <button id="btn-blood" class="view-toggle-btn">Roots</button>
     <button id="btn-bonds" class="view-toggle-btn">Bonds</button>
   </div>
+  <div class="layout-toggle">
+    <button id="btn-compact" class="layout-toggle-btn">Compact</button>
+    <button id="btn-relaxed" class="layout-toggle-btn active">Relaxed</button>
+    <button id="btn-expanded" class="layout-toggle-btn">Expanded</button>
+    <button id="btn-traditional" class="layout-toggle-btn">Traditional</button>
+    <button id="btn-immersive" class="layout-toggle-btn">✦ Immersive</button>
+  </div>
     <div id="save-ind">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg>
       Saved
@@ -347,6 +354,11 @@
         </div>
         <div class="sp-spacer-sm"></div>
         <div class="sp-spacer-md"></div>
+        <div class="sp-option" id="sp-reset-layout-warn" style="cursor:pointer;margin-bottom:8px">
+          <div><div class="sp-option-label">Layout Change Warnings</div><div class="sp-option-sub">Show confirmation when switching layout modes. Re-enable if you dismissed it.</div></div>
+          <button class="sp-color-reset" id="btn-reset-layout-warn" style="font-size:.7rem;padding:4px 10px">Reset</button>
+        </div>
+        <div class="sp-spacer-md"></div>
         <div class="sp-helper" style="color:rgba(200,100,100,.7)">Danger zone</div>
         <button class="sp-burn-btn" id="btn-burn-twygs">🔥 Burn Twygs</button>
         <div class="sp-helper" style="font-size:.68rem;color:rgba(200,100,100,.4);margin-top:4px">Permanently deletes all members and starts a blank tree.</div>
@@ -570,10 +582,33 @@
 </div>
 
 
+<!-- Immersive 3D container (hidden until activated) -->
+<div id="immersive-wrap" style="display:none;position:fixed;inset:0;z-index:50;background:#000">
+  <canvas id="immersive-canvas"></canvas>
+  <button id="btn-exit-immersive" style="position:fixed;top:16px;right:16px;z-index:60;padding:8px 16px;border-radius:100px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;font-family:'Outfit',sans-serif;font-size:.8rem;cursor:pointer;backdrop-filter:blur(8px)">✕ Exit Immersive</button>
+</div>
+
+<!-- Layout warning modal -->
+<div id="layout-warn-scrim" class="scrim" style="display:none">
+  <div class="branded-modal" style="max-width:380px">
+    <div style="font-size:1.1rem;font-weight:600;margin-bottom:8px">Change Layout?</div>
+    <div style="font-size:.85rem;color:var(--muted);margin-bottom:16px">This will reposition all nodes to fit the new layout. Any manual positioning will be reset.</div>
+    <label style="display:flex;align-items:center;gap:8px;font-size:.78rem;color:var(--muted);margin-bottom:16px;cursor:pointer">
+      <input type="checkbox" id="layout-warn-dismiss"/> Don't warn me again
+    </label>
+    <div style="display:flex;gap:8px">
+      <button id="layout-warn-cancel" class="modal-btn" style="flex:1;background:rgba(255,255,255,.06)">Cancel</button>
+      <button id="layout-warn-confirm" class="modal-btn modal-btn-primary" style="flex:1">Change Layout</button>
+    </div>
+  </div>
+</div>
+
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <!-- Three.js for Immersive mode -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
   <!-- Twygie modules (load order matters — globals are shared) -->
   <script src="js/constants.js"></script>
@@ -586,5 +621,6 @@
   <script src="js/panels.js"></script>
   <script src="js/export.js"></script>
   <script src="js/app.js"></script>
+  <script src="js/immersive.js"></script>
 </body>
 </html>
