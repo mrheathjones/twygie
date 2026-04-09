@@ -339,6 +339,24 @@ function submitMember(){
     selectNode(id);
     // Prompt for wedding date if spouse connection was just created
     if(baseRel==='Spouse') promptWeddingDate(id);
+    // Warn about missing birthdate (affects timeline)
+    const newP=peopleById[id];
+    const hasDob=newP&&((parseInt(newP.dob&&newP.dob.year)||newP.birth||0)>0);
+    if(!hasDob&&!dobWarnDismissed){
+      setTimeout(async ()=>{
+        const confirmed=await appConfirm(
+          'This member has no birthdate. They won\'t appear on the Timeline until a birthdate is added.<br><br><label style="display:flex;align-items:center;gap:8px;font-size:.78rem;color:var(--muted);cursor:pointer"><input type="checkbox" id="dob-warn-dismiss-cb"/> Don\'t remind me again</label>',
+          'Got it','Edit now'
+        );
+        const cb=document.getElementById('dob-warn-dismiss-cb');
+        if(cb&&cb.checked){ dobWarnDismissed=true; persistDobWarn(); }
+        if(!confirmed){
+          // User chose "Edit now" — open edit mode
+          const editBtn=document.querySelector('#card .cbtn-edit');
+          if(editBtn) editBtn.click();
+        }
+      },400);
+    }
   },90);
   } catch(e) { console.error('submitMember error:', e); appAlert('Error adding member: ' + e.message); }
 }
@@ -495,6 +513,12 @@ function initEventListeners() {
     layoutWarnDismissed=false;
     persistLayoutMode();
     const btn=document.getElementById('btn-reset-layout-warn');
+    if(btn){ btn.textContent='✓ Reset'; setTimeout(()=>{ btn.textContent='Reset'; },1500); }
+  });
+  on('btn-reset-dob-warn','click', () => {
+    dobWarnDismissed=false;
+    persistDobWarn();
+    const btn=document.getElementById('btn-reset-dob-warn');
     if(btn){ btn.textContent='✓ Reset'; setTimeout(()=>{ btn.textContent='Reset'; },1500); }
   });
 

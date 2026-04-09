@@ -172,6 +172,7 @@ async function loadSettings(){
       if(d.demoMode!=null) demoMode=!!d.demoMode;
       if(d.layoutMode) layoutMode=d.layoutMode;
       if(d.layoutWarnDismissed!=null) layoutWarnDismissed=!!d.layoutWarnDismissed;
+      if(d.dobWarnDismissed!=null) dobWarnDismissed=!!d.dobWarnDismissed;
     }
   }catch(e){}
 }
@@ -208,7 +209,7 @@ function saveSettings(){
     settingsDoc().set({
       defaultView:settingsMode, lineColors, nodeColors,
       customLineTypes, youngAge, autoConnections, demoMode,
-      layoutMode, layoutWarnDismissed,
+      layoutMode, layoutWarnDismissed, dobWarnDismissed,
       updatedAt:firebase.firestore.FieldValue.serverTimestamp()
     }).catch(e=>console.warn('Settings save failed:',e));
   }

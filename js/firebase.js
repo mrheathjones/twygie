@@ -356,6 +356,7 @@ let demoMode=false; // when true, creates fresh tree on every reload
 let autoConnections=true; // auto-infer relationships to isYou
 let layoutMode='relaxed'; // 'compact' | 'relaxed' | 'expanded' | 'traditional' | 'immersive'
 let layoutWarnDismissed=false; // "don't warn me again" for layout changes
+let dobWarnDismissed=false; // "don't warn me again" for missing birthdate
 function setTreeMode(mode){
   treeMode=mode;
   ['btn-tree','btn-all','btn-blood','btn-bonds'].forEach(id=>{
@@ -404,6 +405,10 @@ function persistLayoutMode(){
     // If doc doesn't exist yet, set it
     settingsDoc().set({layoutMode, layoutWarnDismissed},{merge:true}).catch(e=>console.warn('Layout save failed:',e));
   });
+}
+function persistDobWarn(){
+  if(!currentUser) return;
+  settingsDoc().set({dobWarnDismissed},{merge:true}).catch(e=>console.warn('DOB warn save failed:',e));
 }
 function updateCount(){ document.getElementById('mcnum').textContent=people.length; }
 function fullName(p){ return p.name||[(p.firstName||''),(p.lastName||'')].filter(Boolean).join(' ')||'Unknown'; }

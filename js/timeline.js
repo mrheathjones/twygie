@@ -47,6 +47,13 @@ function renderTimeline(){
   const curYr=new Date().getFullYear();
   const you=people.find(p=>p.isYou);
   const entries=people.filter(p=>(parseInt(p.dob&&p.dob.year)||p.birth||0)>0);
+  const missingCount=people.filter(p=>!((parseInt(p.dob&&p.dob.year)||p.birth||0)>0)).length;
+  const warnEl=document.getElementById('tl-missing-warn');
+  const countEl=document.getElementById('tl-missing-count');
+  if(warnEl&&countEl){
+    if(missingCount>0){ warnEl.style.display=''; countEl.textContent=missingCount; }
+    else { warnEl.style.display='none'; }
+  }
   if(!entries.length){document.getElementById('empty').classList.add('show');return}
 
   const bys=entries.map(p=>parseInt(p.dob&&p.dob.year)||p.birth);
