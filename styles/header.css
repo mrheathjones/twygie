@@ -44,3 +44,7 @@
 
 /* Stack view + layout toggles vertically */
 .toggle-stack{display:flex;flex-direction:column;align-items:center;gap:2px}
+
+/* Exit Immersive button hover */
+#btn-exit-immersive:hover{background:#e0c060;transform:scale(1.03)}
+#btn-exit-immersive{transition:all .15s}
