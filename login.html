@@ -70,10 +70,10 @@
     <div class="err-msg" id="err-msg"></div>
 
     <div class="field">
-      <input class="fi" id="email" type="email" placeholder="Email address" autocomplete="email"/>
+      <input class="fi" id="email" type="text" placeholder="Email or @username" autocomplete="email"/>
     </div>
     <div class="field">
-      <input class="fi" id="pass" type="password" placeholder="Password" autocomplete="current-password"/>
+      <input class="fi" id="pass" type="password" placeholder="Password or PIN" autocomplete="current-password"/>
     </div>
     <a class="forgot" id="forgot-link" >Forgot password?</a>
 
@@ -106,30 +106,6 @@
     <p class="card-footer">
       By continuing you agree to our <a href="#">Terms</a> and <a href="#">Privacy Policy</a>
     </p>
-
-    <div class="family-login-divider">
-      <button class="family-login-toggle" id="family-toggle">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
-        Log in with family username
-      </button>
-    </div>
-
-    <div id="family-view" style="display:none">
-      <div class="err-msg" id="family-err"></div>
-      <div class="field">
-        <div class="family-input-wrap">
-          <span class="family-at">@</span>
-          <input class="fi family-fi" id="family-user" type="text" placeholder="username" autocomplete="off" spellcheck="false"/>
-        </div>
-      </div>
-      <div class="field">
-        <input class="fi" id="family-pin" type="password" placeholder="PIN" inputmode="numeric" maxlength="8" autocomplete="off"/>
-      </div>
-      <button class="cta family-cta" id="family-btn">
-        <span class="btn-label">Sign in</span>
-        <div class="spin"></div>
-      </button>
-    </div>
   </div>
 
   <!-- RESET PASSWORD VIEW -->
