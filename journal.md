@@ -866,3 +866,34 @@ Full architecture designed for supervised family member accounts with three-tier
 - Encryption key derived from parent's UID (seedling) or own UID (sprouted+)
 - isYou swap: all nodes set `isYou:false`, child's node set `isYou:true`
 - Save blocked for seedling accounts (treeLoaded stays false)
+
+### Phase 3 — Managed Account Creation UI
+
+#### Phase 3A — Settings Panel Section
+- New collapsible "Managed Accounts" section in Settings between Linked Trees and Connections
+- Managed account list with avatar initial, display name, username/email, tier badge (Seedling/Sprouted/Full Bloom)
+- Paused indicator in meta line
+- Click any card to open detail modal
+- "Create Managed Account" button opens creation wizard
+
+#### Phase 3B — Creation Flow (5-Step Wizard)
+- **Step 1**: Node picker dropdown (excludes isYou and nodes with existing accounts), shows age + DOB requirement
+- **Step 2**: Auth method selection — Email (13+ only) or Username & PIN. COPPA age gate: under 13 → email option hidden, forced to PIN
+- **Step 3**: Credential entry — PIN path: username with availability check + PIN with confirmation. Email path: email validation
+- **Step 4**: Permission toggles (10 permissions, defaults match DEFAULT_SEEDLING_PERMISSIONS)
+- **Step 5**: Confirmation screen showing credentials (PIN shown once, warning to save)
+- Username claimed in universal usernames system during creation
+
+#### Phase 3C — Management UI (Detail Modal)
+- Account info: tier, sign-in method, username, email, last active, created date
+- Status: paused toggle (Seedling/Sprouted only)
+- Permissions: checkbox list with lock icons for Sprouted locked perms
+- Actions: Save Changes, Trigger Blossom (Seedling only), Reset PIN (PIN accounts), Delete Account
+- Blossom: confirmation modal, calls triggerBlossom(), refreshes list
+- Reset PIN: generates random 4-digit PIN, shows once
+- Delete: two-step confirmation, removes username + allowedReaders + doc
+
+#### New Module
+- `js/managed.js` (310 lines) — self-contained UI module
+- Loaded after settings.js, before linking.js
+- Reads from firebase.js globals (people[], managedAccounts[], utility functions)

@@ -263,6 +263,7 @@ function openSettings(){
   syncAutoConnToggle();
   syncDemoToggle();
   loadLinkedTrees();
+  if(typeof loadAndRenderManaged==='function') loadAndRenderManaged();
   document.getElementById('settings-panel').classList.add('open');
   document.getElementById('scrim').classList.add('on');
 }

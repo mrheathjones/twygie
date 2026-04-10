@@ -509,6 +509,7 @@ function initEventListeners() {
   // --- Settings: collapse headers ---
   on('hdr-sec-view',   'click', () => toggleSection('sec-view'));
   on('hdr-sec-links',  'click', () => toggleSection('sec-links'));
+  on('hdr-sec-managed','click', () => toggleSection('sec-managed'));
   on('hdr-sec-conn',   'click', () => toggleSection('sec-conn'));
   on('hdr-sec-appear', 'click', () => toggleSection('sec-appear'));
   on('hdr-sec-export', 'click', () => toggleSection('sec-export'));

@@ -217,3 +217,49 @@
 #username-claim-btn{width:100%;padding:11px;background:var(--gold);border:none;border-radius:100px;color:#04070c;font-family:Outfit,sans-serif;font-size:.85rem;font-weight:600;cursor:pointer;transition:opacity .2s}
 #username-claim-btn:disabled{opacity:.35;cursor:not-allowed}
 #username-claim-btn:not(:disabled):hover{opacity:.9}
+
+/* ─── MANAGED ACCOUNT MODALS ─────────────────────────────────────────────── */
+#managed-create-bg,#managed-detail-bg{position:fixed;inset:0;z-index:9998;background:rgba(4,7,12,.85);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .3s}
+#managed-create-bg.open,#managed-detail-bg.open{opacity:1;pointer-events:auto}
+#managed-create-modal,#managed-detail-modal{background:rgba(20,24,32,.95);border:1px solid rgba(200,168,75,.15);border-radius:18px;padding:24px;max-width:420px;width:92vw;max-height:85vh;overflow-y:auto;transform:scale(.92);transition:transform .3s}
+#managed-create-bg.open #managed-create-modal,#managed-detail-bg.open #managed-detail-modal{transform:scale(1)}
+.managed-modal-title{font-family:'Cormorant Garamond',serif;font-size:1.2rem;color:var(--text);font-weight:600}
+.managed-step-label{font-size:.82rem;color:var(--text);font-weight:500;margin-bottom:10px}
+.managed-select{width:100%;padding:10px 12px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:Outfit,sans-serif;font-size:.82rem;appearance:none;cursor:pointer;margin-bottom:8px}
+.managed-select:focus{border-color:var(--gold);outline:none}
+.managed-select option{background:#141820;color:var(--text)}
+.managed-node-info{padding:10px 12px;background:rgba(200,168,75,.06);border:1px solid rgba(200,168,75,.12);border-radius:10px;font-size:.78rem;color:var(--muted);margin-bottom:8px}
+.managed-step-actions{display:flex;gap:8px;margin-top:16px}
+.managed-btn{flex:1;padding:10px;border-radius:100px;font-family:Outfit,sans-serif;font-size:.82rem;font-weight:600;cursor:pointer;border:none;transition:opacity .15s}
+.managed-btn.primary{background:var(--gold);color:#04070c}
+.managed-btn.primary:disabled{opacity:.35;cursor:not-allowed}
+.managed-btn.secondary{background:rgba(255,255,255,.04);color:var(--muted);border:1px solid var(--border)}
+.managed-btn.danger{background:rgba(224,107,107,.15);color:#e06b6b;border:1px solid rgba(224,107,107,.2)}
+.managed-field-group{margin-bottom:12px}
+.managed-field-label{display:block;font-size:.72rem;color:var(--muted);margin-bottom:4px;font-weight:500}
+.managed-input{width:100%;padding:10px 12px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:Outfit,sans-serif;font-size:.85rem;box-sizing:border-box}
+.managed-input:focus{border-color:var(--gold);outline:none}
+.managed-coppa-note{padding:10px 12px;background:rgba(224,107,107,.08);border:1px solid rgba(224,107,107,.15);border-radius:10px;font-size:.72rem;color:#e8a87c;margin-top:10px;line-height:1.4}
+.managed-perms{display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
+.managed-perm-row{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;background:rgba(255,255,255,.02);cursor:pointer;font-size:.78rem;color:var(--text);transition:background .15s}
+.managed-perm-row:hover{background:rgba(255,255,255,.04)}
+.managed-perm-row input[type="checkbox"]{accent-color:var(--gold);width:15px;height:15px;cursor:pointer}
+.managed-confirm-info{font-size:.82rem;color:var(--muted);line-height:1.5}
+
+/* ─── MANAGED ACCOUNTS LIST (settings panel) ─────────────────────────────── */
+.managed-card{display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;cursor:pointer;transition:border-color .15s}
+.managed-card:hover{border-color:rgba(200,168,75,.25)}
+.managed-card-avatar{width:32px;height:32px;border-radius:50%;background:rgba(200,168,75,.12);display:flex;align-items:center;justify-content:center;font-size:.7rem;color:var(--gold);font-weight:600;flex-shrink:0}
+.managed-card-info{flex:1;min-width:0}
+.managed-card-name{font-size:.8rem;color:var(--text);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.managed-card-meta{font-size:.68rem;color:var(--muted)}
+.managed-tier-badge{font-size:.62rem;padding:2px 8px;border-radius:100px;font-weight:600;flex-shrink:0}
+.managed-tier-badge.seedling{background:rgba(100,180,100,.12);color:#7bc67b}
+.managed-tier-badge.sprouted{background:rgba(200,168,75,.12);color:var(--gold)}
+.managed-tier-badge.full{background:rgba(120,160,220,.12);color:#8cb4e0}
+/* ─── MANAGED DETAIL SECTIONS ────────────────────────────────────────────── */
+.managed-detail-section{margin-bottom:16px}
+.managed-detail-section-title{font-size:.72rem;color:var(--gold);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
+.managed-detail-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;font-size:.78rem}
+.managed-detail-row .label{color:var(--muted)}
+.managed-detail-row .value{color:var(--text);font-weight:500}

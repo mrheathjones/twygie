@@ -209,6 +209,130 @@
   </div>
 </div>
 
+<!-- MANAGED ACCOUNT CREATION MODAL -->
+<div id="managed-create-bg">
+  <div id="managed-create-modal">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div class="managed-modal-title">Create Managed Account</div>
+      <button class="sp-close" id="managed-create-close">✕</button>
+    </div>
+
+    <!-- STEP 1: Pick a node -->
+    <div id="managed-step-1" class="managed-step">
+      <div class="managed-step-label">Who is this account for?</div>
+      <select id="managed-node-picker" class="managed-select">
+        <option value="">Select a Twyg…</option>
+      </select>
+      <div id="managed-node-info" class="managed-node-info" style="display:none"></div>
+      <div class="managed-step-actions">
+        <button id="managed-next-1" class="managed-btn primary" disabled>Next</button>
+      </div>
+    </div>
+
+    <!-- STEP 2: Auth method -->
+    <div id="managed-step-2" class="managed-step" style="display:none">
+      <div class="managed-step-label">How will they sign in?</div>
+      <div id="managed-auth-email-opt" class="sp-option" style="margin-bottom:8px;cursor:pointer">
+        <div><div class="sp-option-label">Email address</div><div class="sp-option-sub">They sign in with their own email</div></div>
+        <div class="sp-option-check"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#04070c" stroke-width="3" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+      </div>
+      <div id="managed-auth-pin-opt" class="sp-option active" style="cursor:pointer">
+        <div><div class="sp-option-label">Username & PIN</div><div class="sp-option-sub">You create login credentials for them</div></div>
+        <div class="sp-option-check"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#04070c" stroke-width="3" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+      </div>
+      <div id="managed-coppa-note" class="managed-coppa-note" style="display:none">
+        🔒 Email sign-in requires age 13+. Username & PIN is required for this Twyg.
+      </div>
+      <div class="managed-step-actions">
+        <button id="managed-back-2" class="managed-btn secondary">Back</button>
+        <button id="managed-next-2" class="managed-btn primary">Next</button>
+      </div>
+    </div>
+
+    <!-- STEP 3: Credentials -->
+    <div id="managed-step-3" class="managed-step" style="display:none">
+      <div class="managed-step-label" id="managed-cred-label">Create their credentials</div>
+
+      <!-- PIN fields -->
+      <div id="managed-pin-fields">
+        <div class="managed-field-group">
+          <label class="managed-field-label">Username</label>
+          <div class="username-input-wrap">
+            <span class="username-at">@</span>
+            <input type="text" id="managed-username" maxlength="20" placeholder="their_username" autocomplete="off" spellcheck="false" />
+          </div>
+          <div id="managed-username-feedback" class="username-feedback"></div>
+        </div>
+        <div class="managed-field-group">
+          <label class="managed-field-label">PIN (4–8 digits)</label>
+          <input type="password" id="managed-pin" maxlength="8" placeholder="••••" class="managed-input" inputmode="numeric" />
+        </div>
+        <div class="managed-field-group">
+          <label class="managed-field-label">Confirm PIN</label>
+          <input type="password" id="managed-pin-confirm" maxlength="8" placeholder="••••" class="managed-input" inputmode="numeric" />
+          <div id="managed-pin-feedback" class="username-feedback"></div>
+        </div>
+      </div>
+
+      <!-- Email field -->
+      <div id="managed-email-fields" style="display:none">
+        <div class="managed-field-group">
+          <label class="managed-field-label">Their email address</label>
+          <input type="email" id="managed-email" placeholder="child@example.com" class="managed-input" />
+          <div id="managed-email-feedback" class="username-feedback"></div>
+        </div>
+      </div>
+
+      <div class="managed-step-actions">
+        <button id="managed-back-3" class="managed-btn secondary">Back</button>
+        <button id="managed-next-3" class="managed-btn primary" disabled>Next</button>
+      </div>
+    </div>
+
+    <!-- STEP 4: Permissions -->
+    <div id="managed-step-4" class="managed-step" style="display:none">
+      <div class="managed-step-label">Permissions</div>
+      <div class="managed-perms">
+        <label class="managed-perm-row"><input type="checkbox" id="mp-viewPhotos" checked /><span>View photos</span></label>
+        <label class="managed-perm-row"><input type="checkbox" id="mp-viewStories" checked /><span>View stories</span></label>
+        <label class="managed-perm-row"><input type="checkbox" id="mp-viewTimeline" checked /><span>View timeline</span></label>
+        <label class="managed-perm-row"><input type="checkbox" id="mp-viewLinkedTrees" /><span>View linked trees</span></label>
+        <label class="managed-perm-row"><input type="checkbox" id="mp-exportTree" /><span>Export tree</span></label>
+        <label class="managed-perm-row"><input type="checkbox" id="mp-editOwnNode" checked /><span>Edit their own Twyg</span></label>
+        <label class="managed-perm-row"><input type="checkbox" id="mp-addRemoveTwygs" /><span>Add / remove Twygs</span></label>
+        <label class="managed-perm-row"><input type="checkbox" id="mp-deleteTwygs" /><span>Delete Twygs</span></label>
+        <label class="managed-perm-row"><input type="checkbox" id="mp-linkTrees" /><span>Link trees</span></label>
+        <label class="managed-perm-row"><input type="checkbox" id="mp-shareTrees" /><span>Share trees</span></label>
+      </div>
+      <div class="managed-step-actions">
+        <button id="managed-back-4" class="managed-btn secondary">Back</button>
+        <button id="managed-create-btn" class="managed-btn primary">Create Account</button>
+      </div>
+    </div>
+
+    <!-- STEP 5: Confirmation -->
+    <div id="managed-step-5" class="managed-step" style="display:none">
+      <div style="text-align:center;padding:20px 0">
+        <div style="font-size:2rem;margin-bottom:12px">🌱</div>
+        <div class="managed-modal-title" style="margin-bottom:8px">Account Created!</div>
+        <div id="managed-confirm-info" class="managed-confirm-info"></div>
+        <button id="managed-done-btn" class="managed-btn primary" style="margin-top:16px;width:100%">Done</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MANAGED ACCOUNT DETAIL MODAL -->
+<div id="managed-detail-bg">
+  <div id="managed-detail-modal">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div class="managed-modal-title" id="managed-detail-title"></div>
+      <button class="sp-close" id="managed-detail-close">✕</button>
+    </div>
+    <div id="managed-detail-body"></div>
+  </div>
+</div>
+
 <!-- ADD LEAF MODAL -->
 <div id="leaf-bg">
   <div id="leaf-modal">
@@ -325,6 +449,25 @@
         <button id="btn-manage-links" class="sp-link-btn">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
           Manage Linked Trees
+        </button>
+        <div class="sp-spacer-md"></div>
+      </div>
+    </div>
+
+    <!-- MANAGED ACCOUNTS -->
+    <div>
+      <div class="sp-collapse-hdr" id="hdr-sec-managed">
+        <span class="sp-collapse-title">Managed Accounts</span>
+        <span class="sp-collapse-icon" id="icon-sec-managed">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+        </span>
+      </div>
+      <div class="sp-collapse-body" id="sec-managed">
+        <div class="sp-helper" style="margin-bottom:10px">Create supervised accounts for family members. They see your tree from their perspective.</div>
+        <div id="managed-list"></div>
+        <button id="btn-create-managed" class="sp-link-btn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+          Create Managed Account
         </button>
         <div class="sp-spacer-md"></div>
       </div>
@@ -700,6 +843,7 @@
   <script src="js/render.js"></script>
   <script src="js/kinship.js"></script>
   <script src="js/settings.js"></script>
+  <script src="js/managed.js"></script>
   <script src="js/linking.js"></script>
   <script src="js/ui.js"></script>
   <script src="js/panels.js"></script>
