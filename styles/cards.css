@@ -263,3 +263,9 @@
 .managed-detail-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;font-size:.78rem}
 .managed-detail-row .label{color:var(--muted)}
 .managed-detail-row .value{color:var(--text);font-weight:500}
+
+/* ─── MANAGED ACCOUNT BADGE (node card) ──────────────────────────────────── */
+.managed-badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:100px;font-size:.68rem;font-weight:500;margin-top:6px}
+.managed-badge.seedling{background:rgba(100,180,100,.1);color:#7bc67b;border:1px solid rgba(100,180,100,.2)}
+.managed-badge.sprouted{background:rgba(200,168,75,.1);color:var(--gold);border:1px solid rgba(200,168,75,.2)}
+.managed-badge.full{background:rgba(120,160,220,.1);color:#8cb4e0;border:1px solid rgba(120,160,220,.2)}

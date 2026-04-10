@@ -284,6 +284,18 @@ function fillCard(p){
     </div>`;
   }
 
+  // Managed account badge
+  if(typeof managedAccounts!=='undefined' && managedAccounts.length){
+    const ma=managedAccounts.find(a=>a.childNodeId===p.id);
+    if(ma){
+      const tierIcon={seedling:'🌱',sprouted:'🌿',full:'🌳'}[ma.tier]||'🌱';
+      const tierLabel={seedling:'Seedling',sprouted:'Sprouted',full:'Full Bloom'}[ma.tier]||ma.tier;
+      const tierClass=ma.tier||'seedling';
+      const paused=ma.paused?' · Paused':'';
+      relBadge.innerHTML+=`<div class="managed-badge ${tierClass}">${tierIcon} Managed Account · ${tierLabel}${paused}</div>`;
+    }
+  }
+
   // Connections
   const parentsArr=(p.parents||[]).map(pid=>{
     const par=peopleById[pid]; if(!par) return null;

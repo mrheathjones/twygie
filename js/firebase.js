@@ -619,6 +619,7 @@ auth.onAuthStateChanged(async user => {
 
   await loadTree();
   await loadLeafs();
+  if (!isManagedSession) await loadManagedAccounts();
   await loadActiveLinks();
   await loadSharedNodes();
   subscribeActiveLinks();
