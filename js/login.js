@@ -30,8 +30,9 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 
 // If already signed in, go straight to the app
+let pinVerifying = false; // gate: don't redirect during PIN check
 auth.onAuthStateChanged(user => {
-  if (user) goToApp();
+  if (user && !pinVerifying) goToApp();
 });
 
 // ── Mode (sign-in vs sign-up) ────────────────────────────────────────────────
@@ -103,6 +104,10 @@ async function submitEmail() {
     // USERNAME + PIN PATH
     const username = rawInput.replace(/^@/, '').toLowerCase();
     try {
+      // Must authenticate first — Firestore rules require auth to read managedAccounts
+      pinVerifying = true;
+      const userCred = await auth.signInAnonymously();
+
       const snap = await db.collection('managedAccounts')
         .where('username', '==', username)
         .where('authType', '==', 'pin')
@@ -110,6 +115,9 @@ async function submitEmail() {
         .get();
 
       if (snap.empty) {
+        pinVerifying = false;
+        await auth.currentUser.delete().catch(() => {});
+        await auth.signOut().catch(() => {});
         showErr('Username not found.');
         setLoading('email-btn', false);
         setSocialLoading(false);
@@ -120,6 +128,9 @@ async function submitEmail() {
       const acctId = snap.docs[0].id;
 
       if (acct.paused) {
+        pinVerifying = false;
+        await auth.currentUser.delete().catch(() => {});
+        await auth.signOut().catch(() => {});
         showErr('This account has been paused. Contact your parent or guardian.');
         setLoading('email-btn', false);
         setSocialLoading(false);
@@ -130,13 +141,16 @@ async function submitEmail() {
       const pinBuf = await crypto.subtle.digest('SHA-256', pinData);
       const pinHash = Array.from(new Uint8Array(pinBuf), b => b.toString(16).padStart(2, '0')).join('');
       if (pinHash !== acct.pinHash) {
+        pinVerifying = false;
+        await auth.currentUser.delete().catch(() => {});
+        await auth.signOut().catch(() => {});
         showErr('Incorrect PIN.');
         setLoading('email-btn', false);
         setSocialLoading(false);
         return;
       }
 
-      const userCred = await auth.signInAnonymously();
+      // PIN verified — keep this anonymous session
       if (userCred.user.uid !== acct.anonUid) {
         if (acct.anonUid && acct.parentUid) {
           await db.collection('familyTrees').doc(acct.parentUid).update({
@@ -152,9 +166,12 @@ async function submitEmail() {
           }).catch(() => {});
         }
       }
+      pinVerifying = false;
       goToApp();
     } catch (e) {
       console.error('Username login error:', e);
+      pinVerifying = false;
+      await auth.signOut().catch(() => {});
       showErr('Something went wrong. Please try again.');
       setLoading('email-btn', false);
       setSocialLoading(false);
