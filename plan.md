@@ -123,6 +123,12 @@ An interactive, beautiful family tree web app. Each family member is a "Twyg" �
 - [x] **Phase 2 — Client-Side Encryption** ✅ DONE (Session 10)
 - [x] Timeline view (by birth year) ✅ DONE (Session 10)
 - [x] Export tree as image/PDF ✅ DONE (Session 10)
+- [ ] **Nicknames** — add nickname field to Twygs
+  - New field: `nickname` (string, optional) on person object
+  - Display: shown on node card below name, tooltip, and members panel
+  - Node label: option to display nickname instead of first name on tree
+  - Edit: inline field in node card edit mode + Add a Twyg form
+  - Complexity: Low (~30 min)
 - [ ] GEDCOM import (Ancestry/FamilySearch)
 
 - [ ] **Twyg Map** — interactive world map showing family locations
