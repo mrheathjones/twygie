@@ -492,6 +492,14 @@ async function saveManagedDetail(accountId) {
 async function blossomManagedAccount(accountId) {
   const acct = managedAccounts.find(a => a.id === accountId);
   if (!acct) return;
+
+  // Check if child has logged in at least once
+  const childUid = acct.childUid || acct.anonUid;
+  if (!childUid) {
+    await appAlert(`${acct.displayName} hasn't logged in yet.<br><br>They need to sign in at least once before their account can blossom.`);
+    return;
+  }
+
   const ok = await appConfirm(
     `🌿 Blossom ${acct.displayName}'s account?<br><br>This will create their own copy of your tree and promote them to Sprouted tier. This cannot be undone.`,
     'Blossom', 'Cancel'
@@ -506,21 +514,20 @@ async function blossomManagedAccount(accountId) {
     await appAlert(`${acct.displayName}'s account has blossomed! 🌿`);
   } catch (e) {
     console.error('Blossom failed:', e);
-    await appAlert('Blossom failed. The account may not have logged in yet (no UID assigned).');
+    await appAlert('Blossom failed: ' + (e.message || 'Unknown error'));
   }
 }
 
 async function resetManagedPinPrompt(accountId) {
-  // Use a simple prompt approach via branded modal
-  const ok = await appConfirm('Enter a new PIN for this account.', 'Reset', 'Cancel');
+  const ok = await appConfirm('Reset PIN for this account?<br><br>A new random PIN will be generated.', 'Reset PIN', 'Cancel');
   if (!ok) return;
-  // For now, generate a random 4-digit PIN and show it
   const newPin = String(Math.floor(1000 + Math.random() * 9000));
   try {
     await resetManagedPin(accountId, newPin);
     await appAlert(`PIN has been reset.<br><br>New PIN: <strong>${newPin}</strong><br><br><span style="font-size:.72rem;color:#e8a87c">Save this — it cannot be viewed again.</span>`);
   } catch (e) {
-    await appAlert('Failed to reset PIN.');
+    console.error('Reset PIN failed:', e);
+    await appAlert('Failed to reset PIN: ' + (e.message || 'Unknown error'));
   }
 }
 
