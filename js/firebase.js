@@ -647,10 +647,15 @@ auth.onAuthStateChanged(async user => {
 
   if (!isManagedSession) await loadManagedAccounts();
   await loadTree();
-  await loadLeafs();
-  await loadActiveLinks();
-  await loadSharedNodes();
-  subscribeActiveLinks();
+
+  // Skip leafs/links for managed seedlings — they read from parent's tree, not their own collections
+  if (!isManagedSession || (managedAccountDoc && managedAccountDoc.tier !== 'seedling')) {
+    await loadLeafs();
+    await loadActiveLinks();
+    await loadSharedNodes();
+    subscribeActiveLinks();
+  }
+
   window._appReady=true; // enable auto-adopt only after initial load
 
   // Apply managed mode UI restrictions
