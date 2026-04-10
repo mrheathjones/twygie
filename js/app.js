@@ -120,13 +120,15 @@ function openModal(forId){
   const fp=forId?peopleById[forId]:null;
   document.getElementById('msub').textContent=fp?`Connected to ${fullName(fp)}`:'Add someone to your tree';
   document.getElementById('rel-to-label').textContent=fp?(fp.firstName||fullName(fp)):'the tree';
-  ['fn-first','fn-last','fn-nickname','fdob-day','fdob-year','fcity','fcountry','fstory','fdod-day','fdod-year'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
-  ['fdob-month','fgender','fr','fstate','fdod-month'].forEach(id=>{const e=document.getElementById(id);if(e)e.selectedIndex=0;});
+  ['fn-first','fn-last','fn-nickname','fdob-day','fdob-year','fcity','fstory','fdod-day','fdod-year'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  ['fdob-month','fgender','fr','fstate','fcountry','fdod-month'].forEach(id=>{const e=document.getElementById(id);if(e)e.selectedIndex=0;});
   const dec=document.getElementById('f-deceased'); if(dec){dec.checked=false; toggleDeathDate();}
   modalPhotoData=null;
   const prev=document.getElementById('modal-photo-preview'); if(prev) prev.innerHTML='<span>+</span>';
   const fi=document.getElementById('modal-photo-file'); if(fi) fi.value='';
   refreshModalRelOptions();
+  const fcountry=document.getElementById('fcountry');
+  if(fcountry) fcountry.innerHTML=countrySelectOpts('');
   document.getElementById('mbg').classList.add('open');
 }
 function closeModal(){ document.getElementById('mbg').classList.remove('open'); }
@@ -151,7 +153,7 @@ function submitMember(){
   const death=dod?parseInt(dod.year)||null:null;
   const city=document.getElementById('fcity').value.trim();
   const state=document.getElementById('fstate').value||'';
-  const country=(document.getElementById('fcountry')?.value||'').trim()||null;
+  const country=document.getElementById('fcountry')?.value||null;
   const note=document.getElementById('fstory').value.trim();
   const rel=document.getElementById('fr').value;
 

@@ -454,7 +454,7 @@ function editCard(id){
       <div><label class="el">City</label><input class="ei" id="ei-city" value="${(p.city||'').replace(/"/g,'&quot;')}" placeholder="City"/></div>
       <div><label class="el">State</label><select class="ei" id="ei-state" style="appearance:none">${stateSelectOpts(p.state||"")}</select></div>
     </div>
-    <div class="ef"><label class="el">Country</label><input class="ei" id="ei-country" value="${(p.country||'').replace(/"/g,'&quot;')}" placeholder="Country"/></div>
+    <div class="ef"><label class="el">Country</label><select class="ei" id="ei-country" style="appearance:none">${countrySelectOpts(p.country||'')}</select></div>
     <div class="ef"><label class="el">Photo</label>
       <div class="photo-upload">
         <div class="photo-preview" id="edit-photo-preview">${photoPreview}</div>
@@ -546,7 +546,7 @@ function saveCard(id){
   }
   p.city=document.getElementById('ei-city').value.trim();
   p.state=document.getElementById('ei-state').value||'';
-  p.country=(document.getElementById('ei-country')?.value||'').trim()||null;
+  p.country=document.getElementById('ei-country')?.value||null;
   p.note=document.getElementById('ei-note').value.trim();
   // Save wedding date if fields exist
   const wdMonth=document.getElementById('ei-wd-month');
