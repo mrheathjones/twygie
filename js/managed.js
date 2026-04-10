@@ -358,6 +358,7 @@ async function submitManagedAccount() {
     const accountId = await createManagedAccount(opts);
     await loadManagedAccounts();
     renderManagedList();
+    render(); // redraw tree — show rings on new managed node
 
     // Show confirmation
     const confirmInfo = document.getElementById('managed-confirm-info');
@@ -482,6 +483,7 @@ async function saveManagedDetail(accountId) {
     await updateManagedPermissions(accountId, perms);
     await pauseManagedAccount(accountId, paused);
     renderManagedList();
+    render(); // redraw tree
     closeManagedDetail();
     await appAlert('Changes saved.');
   } catch (e) {
@@ -510,6 +512,7 @@ async function blossomManagedAccount(accountId) {
     await triggerBlossom(accountId);
     await loadManagedAccounts();
     renderManagedList();
+    render(); // redraw tree — update rings
     closeManagedDetail();
     await appAlert(`${acct.displayName}'s account has blossomed! 🌿`);
   } catch (e) {
@@ -543,6 +546,7 @@ async function deleteManagedPrompt(accountId) {
   try {
     await deleteManagedAccount(accountId);
     renderManagedList();
+    render(); // redraw tree — remove rings
     closeManagedDetail();
     await appAlert('Account deleted.');
   } catch (e) {
