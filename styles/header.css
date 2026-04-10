@@ -50,3 +50,4 @@
 #btn-exit-immersive:hover{background:#e0c060;transform:scale(1.03)}
 #btn-exit-immersive{transition:all .15s}
 a.hbtn,a.hbtn:visited,a.hbtn:hover,a.hbtn:active{text-decoration:none}
+.view-toggle-btn.leafs-toggle.active{background:rgba(100,180,100,.18);color:rgba(140,210,140,.95)}
