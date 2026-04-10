@@ -107,9 +107,43 @@ function makeDefaultTree(user) {
 let currentUsername = null;
 
 const USERNAME_RESERVED = new Set([
-  'admin','twygie','support','help','system','null','undefined',
-  'root','moderator','mod','staff','official','bot','api',
-  'login','signup','settings','app','timeline','leafs','map'
+  // ── Brand & app identity ──
+  'twygie','twyg','twygs','twygies','twygie_app','twygie_team',
+  'twygie_admin','twygie_support','twygie_help','twygie_official',
+  'twygie_bot','twygie_system','twygie_dev','twygie_api',
+  // ── Admin & authority ──
+  'admin','administrator','sysadmin','superadmin','root','owner',
+  'master','webmaster','postmaster',
+  // ── Support & contact ──
+  'support','help','helpdesk','customer_support','contact','feedback',
+  'abuse','report','complaints',
+  // ── Staff & roles ──
+  'staff','team','moderator','mod','mods','employee','official',
+  'founder','ceo','cfo','cto','manager','editor','viewer','guest',
+  // ── System & technical ──
+  'system','bot','robot','api','server','database','cloud',
+  'firebase','firestore','vercel','github','localhost','dev',
+  'debug','test','testing','staging','production','demo',
+  // ── Auth & account routes ──
+  'login','signin','sign_in','signup','sign_up','register',
+  'logout','signout','sign_out','account','profile','password',
+  'reset','auth','oauth','token','session','verify','confirm',
+  // ── App routes & pages ──
+  'app','timeline','leafs','map','settings','home','index',
+  'about','privacy','terms','tos','legal','cookie','cookies',
+  'family_tree','seed','seed_maddy',
+  // ── Feature names ──
+  'tree','family','members','connections','export','import',
+  'share','link','invite','blossom','seedling','sprouted',
+  // ── Communication & ops ──
+  'info','noreply','no_reply','mailer','notification','notifications',
+  'alert','alerts','news','updates','announcement','announcements',
+  'billing','sales','marketing','security','compliance','trust',
+  'safety',
+  // ── Special values ──
+  'null','undefined','true','false','none','unknown','anonymous',
+  'deleted','removed','banned','suspended','blocked','everyone',
+  'all','public','private','default'
 ]);
 
 function validateUsername(name) {
@@ -120,6 +154,8 @@ function validateUsername(name) {
   if (/^_|_$/.test(name)) return 'Cannot start or end with underscore';
   if (/__/.test(name)) return 'Cannot have consecutive underscores';
   if (USERNAME_RESERVED.has(name)) return 'This username is reserved';
+  const blockedPrefixes = ['twygie_','admin_','support_','staff_','official_','mod_','system_','bot_'];
+  if (blockedPrefixes.some(p => name.startsWith(p))) return 'This username is reserved';
   return null; // valid
 }
 
