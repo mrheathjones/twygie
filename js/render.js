@@ -411,19 +411,43 @@ function drawNodes(){
       G.appendChild(innerA);
     }
 
-    // Managed account indicator — green dashed ring (same style as bridge ring)
+    // Managed account indicator — tiered rings
+    // Seedling: 2 green rings, Sprouted: 1 green ring, Full Bloom: gold ring (like linked)
     if(typeof managedAccounts!=='undefined'){
       const ma=managedAccounts.find(a=>a.childNodeId===p.id);
       if(ma){
-        const tierStroke={seedling:'rgba(100,180,100,0.5)',sprouted:'rgba(200,168,75,0.5)',full:'rgba(120,160,220,0.5)'}[ma.tier]||'rgba(100,180,100,0.5)';
-        const mRing=createSvgElement('circle');
-        mRing.setAttribute('r',String(R+8));
-        mRing.setAttribute('fill','none');
-        mRing.setAttribute('stroke',tierStroke);
-        mRing.setAttribute('stroke-width','1.5');
-        mRing.setAttribute('stroke-dasharray','4,3');
-        mRing.setAttribute('class','managed-ring');
-        G.appendChild(mRing);
+        if(ma.tier==='seedling'){
+          const r1=createSvgElement('circle');
+          r1.setAttribute('r',String(R+8));
+          r1.setAttribute('fill','none');
+          r1.setAttribute('stroke','rgba(100,180,100,0.5)');
+          r1.setAttribute('stroke-width','1.5');
+          r1.setAttribute('stroke-dasharray','4,3');
+          G.appendChild(r1);
+          const r2=createSvgElement('circle');
+          r2.setAttribute('r',String(R+12));
+          r2.setAttribute('fill','none');
+          r2.setAttribute('stroke','rgba(100,180,100,0.35)');
+          r2.setAttribute('stroke-width','1.5');
+          r2.setAttribute('stroke-dasharray','4,3');
+          G.appendChild(r2);
+        } else if(ma.tier==='sprouted'){
+          const r1=createSvgElement('circle');
+          r1.setAttribute('r',String(R+8));
+          r1.setAttribute('fill','none');
+          r1.setAttribute('stroke','rgba(100,180,100,0.5)');
+          r1.setAttribute('stroke-width','1.5');
+          r1.setAttribute('stroke-dasharray','4,3');
+          G.appendChild(r1);
+        } else if(ma.tier==='full'){
+          const r1=createSvgElement('circle');
+          r1.setAttribute('r',String(R+8));
+          r1.setAttribute('fill','none');
+          r1.setAttribute('stroke','rgba(200,168,75,0.5)');
+          r1.setAttribute('stroke-width','1.5');
+          r1.setAttribute('stroke-dasharray','4,3');
+          G.appendChild(r1);
+        }
       }
     }
 
