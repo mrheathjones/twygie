@@ -716,3 +716,31 @@ Built as a separate HTML page (timeline.html) with:
 - Expand animation synced with nodes
 - Respects showLeafs toggle
 - Rebuilt on view mode changes
+
+### Session 14 Final Wrap-up
+
+**Critical Fixes:**
+- saveTree() was wiping encryptedLeafs — all .set() calls now use {merge:true}
+- showLeafs toggle persists to Firestore userSettings, restores on load
+- Leafs toggle button: soft green active state (not solid gold)
+
+**Node Physics (velocity-based spring system):**
+- nodePhysicsStart(): snapshots _homeX/_homeY on drag start
+- pushNodesFromDragged(): repulsion (100px), spring return (0.06), damping (0.75)
+- nodePhysicsEnd(): rAF settle loop springs nodes back after drop
+- Skipped for Traditional + Immersive modes
+
+**Immersive Leafs:**
+- Toggle on/off with 🍃 button (calls buildImmLeafs)
+- Green spheres orbit primary twyg (25-37 units, push from all nodes)
+- Dashed green lines to ALL tagged twygs (not just primary)
+- Tag-based brightness + glow scaling
+- Click → zoom (radius 40) → openLeafDetail() after 600ms
+- Gentle Y-axis float animation
+
+**Leafs Page Polish:**
+- Edit leaf modal: green tint matching Leafs page
+- Leaf detail modal (tree view): green tint via .leaf-modal class
+- Loading text: "Gathering Leafs...."
+- Branded delete confirmation modal
+- Green-tinted cards (bg + border)
