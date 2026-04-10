@@ -825,3 +825,44 @@ Full architecture designed for supervised family member accounts with three-tier
 #### Phase 1D — Display Integration
 - Settings → Account shows @username (editable with availability check)
 - Linked tree data uses username instead of email
+
+### Phase 2 — Managed Account Infrastructure
+
+#### Phase 2A — Schema & Utility Functions
+- `managedAccounts/{id}` Firestore collection with full schema (authType, email/pin paths, tier, permissions, blossom timestamps)
+- `getAgeFromDob(dob)` — precise age calculator (accounts for month/day)
+- `canUseEmailAuth(dob)` — COPPA gate returns true only for 13+
+- `hashPin(pin, salt)` — SHA-256 with per-account salt via Web Crypto API
+- `generateSalt()` — cryptographically random 16-byte hex salt
+- `DEFAULT_SEEDLING_PERMISSIONS` — default permission set for new managed accounts
+- `createManagedAccount(opts)` — creates managed account doc, hashes PIN if provided
+- `loadManagedAccounts()` — queries all managed accounts where parentUid matches current user
+- `updateManagedPermissions(accountId, permissions)` — updates permission toggles
+- `pauseManagedAccount(accountId, paused)` — soft disable/enable
+- `resetManagedPin(accountId, newPin)` — generates new salt + hash
+- `deleteManagedAccount(accountId)` — removes from allowedReaders, deletes username, deletes doc
+- `addAllowedReader(uid)` — adds UID to familyTrees allowedReaders array
+- `checkManagedAccountByEmail(email)` — finds managed account by email (email auth path)
+- `checkManagedAccountByUid(uid)` — finds managed account by anonUid (PIN auth path)
+- `triggerBlossom(accountId)` — Seedling→Sprouted: deep-copies tree, locks permissions, removes from allowedReaders
+- Globals: `managedAccounts[]`, `isManagedSession`, `managedAccountDoc`
+
+#### Phase 2B — Firestore Security Rules
+- `familyTrees/{userId}`: read now allows owner OR uid in `allowedReaders` array
+- Handles missing `allowedReaders` field gracefully via `keys().hasAny()` check
+- `managedAccounts/{id}`: parent can CRUD, child/anonUid can read own doc
+- Username deletion scoped to owner UID only
+
+#### Auth Handler Updates
+- Managed account detection: checks email path (by email) and PIN path (by anonUid)
+- Paused account blocking: shows alert and signs out
+- Auto-blossom: Sprouted→Full Bloom when age >= 18 (checked on every login)
+- Full Bloom accounts treated as normal (exit managed mode)
+- Email path: auto-claims childUid on first login, adds to allowedReaders
+- lastActiveAt updated on every managed login
+
+#### loadTree Updates
+- Seedling managed accounts load from parent's `familyTrees/{parentUid}` instead of own
+- Encryption key derived from parent's UID (seedling) or own UID (sprouted+)
+- isYou swap: all nodes set `isYou:false`, child's node set `isYou:true`
+- Save blocked for seedling accounts (treeLoaded stays false)

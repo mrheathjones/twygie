@@ -302,6 +302,248 @@ function showUsernameModal() {
 }
 
 
+// ─── MANAGED ACCOUNTS ────────────────────────────────────────────────────────
+let managedAccounts = []; // loaded for current user (parent)
+let isManagedSession = false; // true if current login is a managed account
+let managedAccountDoc = null; // the managed account doc if in managed session
+
+function getAgeFromDob(dob) {
+  if (!dob || !dob.year) return null;
+  const now = new Date();
+  const birthYear = parseInt(dob.year);
+  const birthMonth = parseInt(dob.month) || 1;
+  const birthDay = parseInt(dob.day) || 1;
+  let age = now.getFullYear() - birthYear;
+  const monthDiff = (now.getMonth() + 1) - birthMonth;
+  if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < birthDay)) age--;
+  return age;
+}
+
+function canUseEmailAuth(dob) {
+  const age = getAgeFromDob(dob);
+  return age !== null && age >= 13;
+}
+
+async function generateSalt() {
+  const arr = new Uint8Array(16);
+  crypto.getRandomValues(arr);
+  return Array.from(arr, b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function hashPin(pin, salt) {
+  const data = new TextEncoder().encode(salt + ':' + pin);
+  const hash = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(hash), b => b.toString(16).padStart(2, '0')).join('');
+}
+
+const DEFAULT_SEEDLING_PERMISSIONS = {
+  viewPhotos: true,
+  viewStories: true,
+  viewTimeline: true,
+  viewLinkedTrees: false,
+  exportTree: false,
+  editOwnNode: true,
+  addRemoveTwygs: false,
+  deleteTwygs: false,
+  linkTrees: false,
+  shareTrees: false
+};
+
+async function createManagedAccount(opts) {
+  // opts: { authType, email, username, pin, childNodeId, childDob, displayName, permissions }
+  const parentUid = currentUser.uid;
+  const doc = {
+    authType: opts.authType, // 'email' | 'pin'
+    email: opts.email || null,
+    childUid: null,
+    username: opts.username || null,
+    pinHash: null,
+    pinSalt: null,
+    anonUid: null,
+    parentUid,
+    childNodeId: opts.childNodeId,
+    childDob: opts.childDob,
+    displayName: opts.displayName,
+    tier: 'seedling',
+    permissions: opts.permissions || { ...DEFAULT_SEEDLING_PERMISSIONS },
+    paused: false,
+    blossomRequestedAt: null,
+    blossomApprovedAt: null,
+    autoBlossomAt: null,
+    lastActiveAt: null,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+
+  // Hash PIN if provided
+  if (opts.authType === 'pin' && opts.pin) {
+    doc.pinSalt = await generateSalt();
+    doc.pinHash = await hashPin(opts.pin, doc.pinSalt);
+  }
+
+  // Write managed account doc
+  const ref = await db.collection('managedAccounts').add(doc);
+
+  // Add username to universal usernames system if PIN path
+  if (opts.authType === 'pin' && opts.username) {
+    // Username was already validated/claimed during creation flow
+    // The managed account's username is in usernames/{name} with a placeholder UID
+    // It will be updated to the real anonUid on first login
+  }
+
+  // Add placeholder to allowedReaders on parent's tree
+  // (real UID added on first login when we know the anonUid or childUid)
+  return ref.id;
+}
+
+async function loadManagedAccounts() {
+  if (!currentUser) return [];
+  try {
+    const snap = await db.collection('managedAccounts')
+      .where('parentUid', '==', currentUser.uid)
+      .get();
+    managedAccounts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    return managedAccounts;
+  } catch (e) {
+    console.warn('Failed to load managed accounts:', e);
+    return [];
+  }
+}
+
+async function updateManagedPermissions(accountId, permissions) {
+  await db.collection('managedAccounts').doc(accountId).update({ permissions });
+  const acct = managedAccounts.find(a => a.id === accountId);
+  if (acct) acct.permissions = permissions;
+}
+
+async function pauseManagedAccount(accountId, paused) {
+  await db.collection('managedAccounts').doc(accountId).update({ paused });
+  const acct = managedAccounts.find(a => a.id === accountId);
+  if (acct) acct.paused = paused;
+}
+
+async function resetManagedPin(accountId, newPin) {
+  const salt = await generateSalt();
+  const hash = await hashPin(newPin, salt);
+  await db.collection('managedAccounts').doc(accountId).update({
+    pinHash: hash, pinSalt: salt
+  });
+}
+
+async function deleteManagedAccount(accountId) {
+  const acct = managedAccounts.find(a => a.id === accountId);
+  if (!acct) return;
+
+  // Remove from allowedReaders
+  const readerUid = acct.childUid || acct.anonUid;
+  if (readerUid) {
+    await db.collection('familyTrees').doc(currentUser.uid).update({
+      allowedReaders: firebase.firestore.FieldValue.arrayRemove(readerUid)
+    });
+  }
+
+  // Delete username if PIN account
+  if (acct.authType === 'pin' && acct.username) {
+    try { await db.collection('usernames').doc(acct.username).delete(); } catch (e) {}
+  }
+
+  // Delete the managed account doc
+  await db.collection('managedAccounts').doc(accountId).delete();
+  managedAccounts = managedAccounts.filter(a => a.id !== accountId);
+}
+
+async function addAllowedReader(uid) {
+  await db.collection('familyTrees').doc(currentUser.uid).update({
+    allowedReaders: firebase.firestore.FieldValue.arrayUnion(uid)
+  });
+}
+
+// Check if current user is logging in as a managed account (email path)
+async function checkManagedAccountByEmail(email) {
+  try {
+    const snap = await db.collection('managedAccounts')
+      .where('authType', '==', 'email')
+      .where('email', '==', email)
+      .where('tier', '!=', 'full')
+      .limit(1)
+      .get();
+    if (!snap.empty) return { id: snap.docs[0].id, ...snap.docs[0].data() };
+  } catch (e) {}
+  return null;
+}
+
+// Check if current user is logging in as a managed account (PIN path — by anonUid)
+async function checkManagedAccountByUid(uid) {
+  try {
+    const snap = await db.collection('managedAccounts')
+      .where('anonUid', '==', uid)
+      .where('tier', '!=', 'full')
+      .limit(1)
+      .get();
+    if (!snap.empty) return { id: snap.docs[0].id, ...snap.docs[0].data() };
+  } catch (e) {}
+  return null;
+}
+
+// Trigger blossom: Seedling → Sprouted
+async function triggerBlossom(accountId) {
+  const acct = managedAccounts.find(a => a.id === accountId);
+  if (!acct || acct.tier !== 'seedling') return;
+
+  // 1. Deep-copy parent's tree into child's own familyTrees doc
+  const childUid = acct.childUid || acct.anonUid;
+  if (!childUid) { console.warn('Cannot blossom — no child UID yet'); return; }
+
+  const parentTree = await db.collection('familyTrees').doc(currentUser.uid).get();
+  if (!parentTree.exists) return;
+  const treeData = parentTree.data();
+
+  // Swap isYou to the child's node
+  let peopleCopy;
+  if (treeData.encryptedData) {
+    // Encrypted tree — need to decrypt, swap, re-encrypt
+    // This will be handled by the child's first load
+    peopleCopy = treeData;
+  } else {
+    peopleCopy = { ...treeData };
+  }
+
+  // Write child's tree
+  await db.collection('familyTrees').doc(childUid).set({
+    ...peopleCopy,
+    ownerEmail: acct.email || '',
+    allowedReaders: [],
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  }, { merge: true });
+
+  // 2. Update managed account to sprouted
+  const lockedPermissions = {
+    ...acct.permissions,
+    viewPhotos: true,
+    viewStories: true,
+    viewTimeline: true,
+    exportTree: true,
+    editOwnNode: true
+  };
+  await db.collection('managedAccounts').doc(accountId).update({
+    tier: 'sprouted',
+    permissions: lockedPermissions,
+    blossomApprovedAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+
+  // 3. Remove from parent's allowedReaders (child now has own tree)
+  await db.collection('familyTrees').doc(currentUser.uid).update({
+    allowedReaders: firebase.firestore.FieldValue.arrayRemove(childUid)
+  });
+
+  // Refresh local
+  const idx = managedAccounts.findIndex(a => a.id === accountId);
+  if (idx >= 0) {
+    managedAccounts[idx].tier = 'sprouted';
+    managedAccounts[idx].permissions = lockedPermissions;
+  }
+}
+
+
 // ─── AUTH ─────────────────────────────────────────────────────────────────────
 let currentUser=null, saveTimer=null, treeLoaded=false;
 auth.onAuthStateChanged(async user => {
@@ -312,14 +554,68 @@ auth.onAuthStateChanged(async user => {
   if(avatarEl&&user.photoURL){ if(initEl) initEl.style.display='none'; const img=document.createElement('img'); img.src=user.photoURL; avatarEl.appendChild(img); }
   else if(initEl) initEl.textContent=(user.displayName||user.email||'?')[0].toUpperCase();
 
-  // Check for username — required before tree access
-  const hasProfile = await loadUserProfile();
-  if (!hasProfile) {
-    await showUsernameModal();
+  // Check for username — required before tree access (skip for anonymous/managed)
+  if (!user.isAnonymous) {
+    const hasProfile = await loadUserProfile();
+    if (!hasProfile) {
+      await showUsernameModal();
+    }
   }
   // Show username in header if available
   const unameEl = document.getElementById('sp-username');
   if (unameEl && currentUsername) unameEl.textContent = '@' + currentUsername;
+
+  // Check if this login is a managed account
+  let managed = null;
+  if (user.isAnonymous) {
+    managed = await checkManagedAccountByUid(user.uid);
+  } else if (user.email) {
+    managed = await checkManagedAccountByEmail(user.email);
+  }
+
+  if (managed) {
+    // Check for paused account
+    if (managed.paused) {
+      await appAlert('Your account has been paused. Please contact your parent or guardian.');
+      await auth.signOut();
+      window.location.href = '/login';
+      return;
+    }
+
+    // Auto-blossom check: Sprouted → Full Bloom at 18
+    if (managed.tier === 'sprouted') {
+      const age = getAgeFromDob(managed.childDob);
+      if (age !== null && age >= 18) {
+        await db.collection('managedAccounts').doc(managed.id).update({
+          tier: 'full',
+          autoBlossomAt: firebase.firestore.FieldValue.serverTimestamp(),
+          permissions: {} // ignored at full tier
+        });
+        managed.tier = 'full';
+        // Show celebration on first full-bloom login
+        setTimeout(() => appAlert('🌳 Your account has fully blossomed!<br><br>You now have full access to all Twygie features.'), 500);
+      }
+    }
+
+    // If fully blossomed, treat as normal account
+    if (managed.tier === 'full') {
+      managed = null; // exit managed mode
+    } else {
+      isManagedSession = true;
+      managedAccountDoc = managed;
+      // Update last active
+      db.collection('managedAccounts').doc(managed.id).update({
+        lastActiveAt: firebase.firestore.FieldValue.serverTimestamp()
+      }).catch(() => {});
+      // Claim childUid if email path and not yet set
+      if (managed.authType === 'email' && !managed.childUid) {
+        await db.collection('managedAccounts').doc(managed.id).update({
+          childUid: user.uid
+        });
+        await addAllowedReader(user.uid);
+      }
+    }
+  }
 
   await loadTree();
   await loadLeafs();
@@ -429,8 +725,17 @@ async function loadTree(){
   // Load settings FIRST so we know if demoMode is on
   await loadSettings();
 
-  // Derive encryption key from user's UID
-  try{ encryptionKey=await deriveEncryptionKey(currentUser.uid); }
+  // Determine which tree doc to load
+  const treeDocRef = (isManagedSession && managedAccountDoc && managedAccountDoc.tier === 'seedling')
+    ? db.collection('familyTrees').doc(managedAccountDoc.parentUid)
+    : userDoc();
+  const managedChildNodeId = isManagedSession && managedAccountDoc ? managedAccountDoc.childNodeId : null;
+
+  // Derive encryption key — use parent's UID for seedling, own UID otherwise
+  const keyUid = (isManagedSession && managedAccountDoc && managedAccountDoc.tier === 'seedling')
+    ? managedAccountDoc.parentUid
+    : currentUser.uid;
+  try{ encryptionKey=await deriveEncryptionKey(keyUid); }
   catch(e){ console.warn('Web Crypto unavailable — encryption disabled',e); encryptionKey=null; }
 
   if(demoMode){
@@ -439,7 +744,7 @@ async function loadTree(){
     debug('Demo Mode: fresh tree created. Saves are disabled.');
   } else {
     try{
-      const snap=await userDoc().get();
+      const snap=await treeDocRef.get();
       if(snap.exists){
         const d=snap.data();
         if(d.encryptedData && encryptionKey){
@@ -489,6 +794,18 @@ async function loadTree(){
       setTimeout(()=>appAlert('Could not load your tree. You may be offline. Your saved data is safe. Please refresh to try again.'),500);
     }
   }
+  // Swap isYou for managed accounts
+  if (managedChildNodeId && people.length) {
+    people.forEach(p => p.isYou = false);
+    const childNode = people.find(p => p.id === managedChildNodeId);
+    if (childNode) childNode.isYou = true;
+  }
+
+  // Block saves for seedling managed accounts
+  if (isManagedSession && managedAccountDoc && managedAccountDoc.tier === 'seedling') {
+    treeLoaded = false; // prevents saveTree from running
+  }
+
   rebuild(); render(); setTimeout(()=>{setTreeMode(treeMode||'simple'); setLayoutMode(layoutMode||'relaxed',false); resetView();},90);
 }
 async function saveTree(ind=true){
