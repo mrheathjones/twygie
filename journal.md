@@ -744,3 +744,29 @@ Built as a separate HTML page (timeline.html) with:
 - Loading text: "Gathering Leafs...."
 - Branded delete confirmation modal
 - Green-tinted cards (bg + border)
+
+### Session 14 — Final Additions
+
+**Nicknames:**
+- New `nickname` field on person object
+- Shown on: node card (italic below name), tooltip, members panel
+- Input on: Add a Twyg form, Edit card form
+
+**Country Field:**
+- Dropdown with 195 sovereign states (COUNTRIES array in constants.js)
+- countrySelectOpts() helper for generating <option> tags
+- On both Add a Twyg and Edit card forms
+- placeDisplay: "City, State, Country"
+
+**Deceased Toggle Fix:**
+- Bug: label wrapping checkbox caused double-toggle (click label → toggle, click track → toggle again = cancel out)
+- Fix: onclick="event.preventDefault()" on label, wrapper click handler with stopPropagation
+- Applied to both Add a Twyg and Edit card forms
+
+**Twyg Map (roadmap):**
+- Interactive world map showing family locations
+- Dark theme tiles, clustering, dual search (twyg name + location)
+- Complexity: Medium-High (~4-5 hours)
+
+**Leafs Page Left-Align:**
+- Grid margin changed from `0 auto` to `0 auto 0 24px`

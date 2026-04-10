@@ -526,3 +526,51 @@ treeLinks/{linkId}
 - Drag: `leafDragActive` (var in render.js, checked in ui.js mousemove)
 - Drag origin reads `orb.x/orb.y` at mousedown (not stale home position)
 - `snapLeafFromNodes(x, y, leafId)`: 2-phase drop resolution
+
+### Session 14 Complete — Key State for Next Session
+
+**Files Changed This Session:**
+- js/orb-engine.js — NEW: reusable collision avoidance engine
+- js/leafs-page.js — NEW: self-contained Leafs page
+- leafs.html — NEW: Leafs page shell
+- styles/leafs.css — NEW: Leafs page styles
+- js/render.js — drawLeafs + leaf engine integration + updateLeafPositions
+- js/ui.js — node physics (spring-back), getLeafPosition, leaf drag removed (engine handles)
+- js/immersive.js — 3D leafs (buildImmLeafs, click-to-zoom, connection lines)
+- js/firebase.js — .set() → {merge:true}, editLeaf metadata, placeDisplay with country
+- js/constants.js — COUNTRIES array + countrySelectOpts()
+- js/app.js — showLeafs persist, country field, deceased toggle fix, nickname
+- js/settings.js — loads showLeafs from Firestore
+- js/panels.js — nickname in tooltip + members panel
+- styles/cards.css — .cnick, .leaf-modal green tint, #leaf-modal green tint
+- styles/header.css — .leafs-toggle.active soft green
+- app.html — lG SVG group, cnick element, country dropdown, nickname field
+
+**Critical Architecture Notes:**
+- saveTree() uses {merge:true} — NEVER change back to plain .set() or leafs get wiped
+- Leaf data stored as encryptedLeafs field in familyTrees/{uid} document (NOT separate collection)
+- showLeafs persisted in userSettings/{uid}, loaded in loadSettings()
+- OrbEngine (orb-engine.js) loaded before render.js in script order
+- Leaf drag handled entirely in render.js (leafDragActive var), NOT in ui.js
+- Node drag in ui.js, leaf drag in render.js — separate systems
+- Node physics: velocity-based with spring-back (nodePhysicsStart/pushNodesFromDragged/nodePhysicsEnd)
+- Node physics skipped for Traditional + Immersive modes
+
+**Script Load Order:**
+constants.js → firebase.js → orb-engine.js → render.js → kinship.js → settings.js → linking.js → ui.js → panels.js → export.js → app.js → immersive.js
+
+**Styling Conventions:**
+- Dark theme: --bg:#04070c, --text:#ddd8cc, --gold:#c8a84b, --border:rgba(255,255,255,0.09)
+- Leaf green: rgba(100,180,100,X) for all leaf-related elements
+- Green tinted modals: bg rgba(10,20,14,.97), border rgba(100,180,100,.25)
+- Gold hover: rgba(200,168,75,.12) on buttons
+- Font: Outfit for UI, Cormorant Garamond for titles/names
+- Glassmorphism modals: backdrop-filter:blur, dark bg, subtle border
+- No browser confirm/alert — always branded modals (appAlert, appConfirm, appChoice)
+- Leafs toggle: soft green active state (not solid gold like other toggles)
+
+**Pending Items (prioritized):**
+1. Near-term polish: twygie.com domain, mobile layout, connection lines, Traditional layout, customLinks cleanup
+2. Medium-term: Nicknames ✅, Country ✅, GEDCOM import, Twyg Map, Leafs Phase 2 (photos), Leafs Phase 5 (sharing), Timeline enhancement
+3. Long-term: Link tree enhancement, child accounts, mobile app, AI features
+4. ⚠️ REVOKE GITHUB TOKEN used in sessions
