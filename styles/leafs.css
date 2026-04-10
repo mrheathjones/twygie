@@ -33,7 +33,7 @@ html,body{width:100%;height:100%;overflow-y:auto;overflow-x:hidden;background:va
 .twyg-dot{width:8px;height:8px;border-radius:50%;display:inline-block}
 
 /* Leaf Grid */
-#leaf-grid{padding:160px 24px 40px;columns:3;column-gap:16px;max-width:1200px;margin:0 auto}
+#leaf-grid{padding:160px 24px 40px;columns:3;column-gap:16px;max-width:1200px;margin:0 auto 0 24px}
 @media(max-width:900px){#leaf-grid{columns:2}}
 @media(max-width:560px){#leaf-grid{columns:1}}
 
