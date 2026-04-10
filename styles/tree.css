@@ -49,3 +49,7 @@
 
 .nlbl{font-family:'Outfit',sans-serif;font-size:10.5px;font-weight:400;letter-spacing:.03em;fill:rgba(221,216,204,.52);pointer-events:none}
 .nlbl.you{font-weight:600;fill:rgba(240,239,235,.85);font-size:11.5px}
+
+/* Managed account ring — slow spin */
+.managed-ring{animation:managed-spin 15s linear infinite;transform-origin:center}
+@keyframes managed-spin{to{transform:rotate(360deg)}}

@@ -234,6 +234,18 @@ function fillCard(p){
   av.style.borderColor=c;
   av.innerHTML=p.photo?`<img src="${p.photo}"/>`:`<span style="color:${c}">${initials(p)}</span>`;
   document.getElementById('cname').textContent=p.isYou?'You':fullName(p);
+  // Inline managed badge next to name
+  const cmInline=document.getElementById('cmanaged-inline');
+  if(cmInline){
+    const ma=(typeof managedAccounts!=='undefined')&&managedAccounts.find(a=>a.childNodeId===p.id);
+    if(ma){
+      const icon={seedling:'🌱',sprouted:'🌿',full:'🌳'}[ma.tier]||'🌱';
+      const label={seedling:'Seedling',sprouted:'Sprouted',full:'Full Bloom'}[ma.tier]||ma.tier;
+      cmInline.textContent=icon+' '+label;
+      cmInline.className='cmanaged-inline '+ma.tier;
+      cmInline.style.display='';
+    } else { cmInline.style.display='none'; cmInline.textContent=''; }
+  }
   const nickEl=document.getElementById('cnick');
   if(nickEl){ nickEl.textContent=p.nickname?'"'+p.nickname+'"':''; nickEl.style.display=p.nickname?'':'none'; }
   // Show birth + death dates
@@ -284,17 +296,7 @@ function fillCard(p){
     </div>`;
   }
 
-  // Managed account badge
-  if(typeof managedAccounts!=='undefined' && managedAccounts.length){
-    const ma=managedAccounts.find(a=>a.childNodeId===p.id);
-    if(ma){
-      const tierIcon={seedling:'🌱',sprouted:'🌿',full:'🌳'}[ma.tier]||'🌱';
-      const tierLabel={seedling:'Seedling',sprouted:'Sprouted',full:'Full Bloom'}[ma.tier]||ma.tier;
-      const tierClass=ma.tier||'seedling';
-      const paused=ma.paused?' · Paused':'';
-      relBadge.innerHTML+=`<div class="managed-badge ${tierClass}">${tierIcon} Managed Account · ${tierLabel}${paused}</div>`;
-    }
-  }
+  // Managed account badge (now shown inline next to name — see above)
 
   // Connections
   const parentsArr=(p.parents||[]).map(pid=>{

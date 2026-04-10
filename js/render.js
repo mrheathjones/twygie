@@ -411,6 +411,37 @@ function drawNodes(){
       G.appendChild(innerA);
     }
 
+    // Managed account indicator — small icon below node
+    if(typeof managedAccounts!=='undefined'){
+      const ma=managedAccounts.find(a=>a.childNodeId===p.id);
+      if(ma){
+        const tierColor={seedling:'rgba(100,180,100,0.6)',sprouted:'rgba(200,168,75,0.6)',full:'rgba(120,160,220,0.6)'}[ma.tier]||'rgba(100,180,100,0.6)';
+        // Small ring indicator
+        const mRing=createSvgElement('circle');
+        mRing.setAttribute('r',String(R+7));
+        mRing.setAttribute('fill','none');
+        mRing.setAttribute('stroke',tierColor);
+        mRing.setAttribute('stroke-width','1.5');
+        mRing.setAttribute('stroke-dasharray','3,2');
+        mRing.setAttribute('class','managed-ring');
+        G.appendChild(mRing);
+        // Small seedling dot
+        const mDot=createSvgElement('circle');
+        mDot.setAttribute('cx',String(R+4));
+        mDot.setAttribute('cy',String(-(R+4)));
+        mDot.setAttribute('r','4');
+        mDot.setAttribute('fill',tierColor);
+        G.appendChild(mDot);
+        const mIcon=createSvgElement('text');
+        mIcon.setAttribute('x',String(R+4));
+        mIcon.setAttribute('y',String(-(R+1)));
+        mIcon.setAttribute('text-anchor','middle');
+        mIcon.setAttribute('font-size','6');
+        mIcon.textContent={seedling:'🌱',sprouted:'🌿',full:'🌳'}[ma.tier]||'🌱';
+        G.appendChild(mIcon);
+      }
+    }
+
     // Events
     G.addEventListener('mousedown',e=>onNodeMouseDown(e,p.id));
     G.addEventListener('touchstart',e=>onNodeTouchStart(e,p.id),{passive:true});

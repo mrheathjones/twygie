@@ -269,3 +269,9 @@
 .managed-badge.seedling{background:rgba(100,180,100,.1);color:#7bc67b;border:1px solid rgba(100,180,100,.2)}
 .managed-badge.sprouted{background:rgba(200,168,75,.1);color:var(--gold);border:1px solid rgba(200,168,75,.2)}
 .managed-badge.full{background:rgba(120,160,220,.1);color:#8cb4e0;border:1px solid rgba(120,160,220,.2)}
+
+/* ─── MANAGED INLINE BADGE (next to name) ────────────────────────────────── */
+.cmanaged-inline{font-size:.62rem;padding:3px 8px;border-radius:100px;font-weight:600;white-space:nowrap}
+.cmanaged-inline.seedling{background:rgba(100,180,100,.12);color:#7bc67b}
+.cmanaged-inline.sprouted{background:rgba(200,168,75,.12);color:var(--gold)}
+.cmanaged-inline.full{background:rgba(120,160,220,.12);color:#8cb4e0}
