@@ -411,38 +411,45 @@ function drawNodes(){
       G.appendChild(innerA);
     }
 
-    // Managed account indicator — visible ring + badge outside glow
+    // Managed account indicator — ring + badge well outside glow blur
     if(typeof managedAccounts!=='undefined'){
       const ma=managedAccounts.find(a=>a.childNodeId===p.id);
       if(ma){
-        const tierColor={seedling:'rgba(100,180,100,0.8)',sprouted:'rgba(200,168,75,0.8)',full:'rgba(120,160,220,0.8)'}[ma.tier]||'rgba(100,180,100,0.8)';
-        const tierFill={seedling:'rgba(100,180,100,0.2)',sprouted:'rgba(200,168,75,0.2)',full:'rgba(120,160,220,0.2)'}[ma.tier]||'rgba(100,180,100,0.2)';
-        // Dashed ring outside the glow
+        const tierColor={seedling:'#7bc67b',sprouted:'#c8a84b',full:'#8cb4e0'}[ma.tier]||'#7bc67b';
+        const tierFill={seedling:'rgba(100,180,100,0.15)',sprouted:'rgba(200,168,75,0.15)',full:'rgba(120,160,220,0.15)'}[ma.tier]||'rgba(100,180,100,0.15)';
+        // Dashed ring far outside glow (blur extends ~33px beyond GR)
+        const ringR=GR+35;
         const mRing=createSvgElement('circle');
-        mRing.setAttribute('r',String(GR+6));
+        mRing.setAttribute('r',String(ringR));
         mRing.setAttribute('fill','none');
         mRing.setAttribute('stroke',tierColor);
-        mRing.setAttribute('stroke-width','2');
-        mRing.setAttribute('stroke-dasharray','5,3');
+        mRing.setAttribute('stroke-width','1.5');
+        mRing.setAttribute('stroke-opacity','0.5');
+        mRing.setAttribute('stroke-dasharray','6,4');
         mRing.setAttribute('class','managed-ring');
         G.appendChild(mRing);
-        // Badge circle with tier icon text at top-right
-        const badgeX=Math.round((GR+2)*0.7);
-        const badgeY=-Math.round((GR+2)*0.7);
-        const mBg=createSvgElement('circle');
-        mBg.setAttribute('cx',String(badgeX));
-        mBg.setAttribute('cy',String(badgeY));
-        mBg.setAttribute('r','8');
+        // Badge below name label
+        const badgeY=R+30;
+        const mBg=createSvgElement('rect');
+        mBg.setAttribute('x','-20');
+        mBg.setAttribute('y',String(badgeY-6));
+        mBg.setAttribute('width','40');
+        mBg.setAttribute('height','14');
+        mBg.setAttribute('rx','7');
         mBg.setAttribute('fill',tierFill);
         mBg.setAttribute('stroke',tierColor);
-        mBg.setAttribute('stroke-width','1.5');
+        mBg.setAttribute('stroke-width','1');
+        mBg.setAttribute('stroke-opacity','0.6');
         G.appendChild(mBg);
         const mTxt=createSvgElement('text');
-        mTxt.setAttribute('x',String(badgeX));
-        mTxt.setAttribute('y',String(badgeY+3.5));
+        mTxt.setAttribute('x','0');
+        mTxt.setAttribute('y',String(badgeY+4));
         mTxt.setAttribute('text-anchor','middle');
-        mTxt.setAttribute('font-size','9');
-        mTxt.textContent={seedling:'🌱',sprouted:'🌿',full:'🌳'}[ma.tier]||'🌱';
+        mTxt.setAttribute('fill',tierColor);
+        mTxt.setAttribute('font-size','8');
+        mTxt.setAttribute('font-family','Outfit, sans-serif');
+        mTxt.setAttribute('font-weight','600');
+        mTxt.textContent={seedling:'🌱 Seedling',sprouted:'🌿 Sprouted',full:'🌳 Full Bloom'}[ma.tier]||'🌱 Seedling';
         G.appendChild(mTxt);
       }
     }
