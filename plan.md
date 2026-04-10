@@ -123,7 +123,7 @@ An interactive, beautiful family tree web app. Each family member is a "Twyg" �
 - [x] **Phase 2 — Client-Side Encryption** ✅ DONE (Session 10)
 - [x] Timeline view (by birth year) ✅ DONE (Session 10)
 - [x] Export tree as image/PDF ✅ DONE (Session 10)
-- [ ] **Nicknames** — add nickname field to Twygs
+- [x] **Nicknames** ✅ (Session 14) — add nickname field to Twygs
   - New field: `nickname` (string, optional) on person object
   - Display: shown on node card below name, tooltip, and members panel
   - Node label: option to display nickname instead of first name on tree
