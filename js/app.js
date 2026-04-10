@@ -120,7 +120,7 @@ function openModal(forId){
   const fp=forId?peopleById[forId]:null;
   document.getElementById('msub').textContent=fp?`Connected to ${fullName(fp)}`:'Add someone to your tree';
   document.getElementById('rel-to-label').textContent=fp?(fp.firstName||fullName(fp)):'the tree';
-  ['fn-first','fn-last','fn-nickname','fdob-day','fdob-year','fcity','fstory','fdod-day','fdod-year'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  ['fn-first','fn-last','fn-nickname','fdob-day','fdob-year','fcity','fcountry','fstory','fdod-day','fdod-year'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
   ['fdob-month','fgender','fr','fstate','fdod-month'].forEach(id=>{const e=document.getElementById(id);if(e)e.selectedIndex=0;});
   const dec=document.getElementById('f-deceased'); if(dec){dec.checked=false; toggleDeathDate();}
   modalPhotoData=null;
@@ -151,12 +151,13 @@ function submitMember(){
   const death=dod?parseInt(dod.year)||null:null;
   const city=document.getElementById('fcity').value.trim();
   const state=document.getElementById('fstate').value||'';
+  const country=(document.getElementById('fcountry')?.value||'').trim()||null;
   const note=document.getElementById('fstory').value.trim();
   const rel=document.getElementById('fr').value;
 
   // Infer base rel category
   if(!rel){ // No relationship — just add as standalone node
-    people.push({id:`u${nextNodeId++}`,name,firstName:first,lastName:last,nickname,gender,dob,birth,dod,death,city,state,note,parents:[],customLinks:{},relationships:[],x:600+Math.random()*100-50,y:400+Math.random()*100-50});
+    people.push({id:`u${nextNodeId++}`,name,firstName:first,lastName:last,nickname,gender,dob,birth,dod,death,city,state,country,note,parents:[],customLinks:{},relationships:[],x:600+Math.random()*100-50,y:400+Math.random()*100-50});
     if(modalPhotoData){ people[people.length-1].photo=modalPhotoData; }
     rebuild([]); closeModal(); render(); scheduleSave();
     setTimeout(()=>selectNode(people[people.length-1].id),90); return;
@@ -164,7 +165,7 @@ function submitMember(){
   const baseRel=CHILD_RELS.includes(rel)?'Child':PARENT_RELS.includes(rel)?'Parent':SPOUSE_RELS.includes(rel)?'Spouse':SIBLING_RELS.includes(rel)?'Sibling':'Other';
 
   const id=`u${nextNodeId++}`;
-  const np={id,name,firstName:first,lastName:last,nickname,gender,dob,birth,dod,death,city,state,note,parents:[],relationships:[],relLabel:baseRel,x:600,y:400};
+  const np={id,name,firstName:first,lastName:last,nickname,gender,dob,birth,dod,death,city,state,country,note,parents:[],relationships:[],relLabel:baseRel,x:600,y:400};
   if(modalPhotoData) np.photo=modalPhotoData;
 
   // Infer gender from relationship label
@@ -550,10 +551,17 @@ function initEventListeners() {
   on('f-deceased',       'change', toggleDeathDate);
   on('modal-photo-file', 'change', handleModalPhoto);
 
-  // --- Deceased toggle track (clicks the hidden checkbox) ---
-  document.getElementById('f-deceased-track')?.addEventListener('click', () => {
-    document.getElementById('f-deceased').click();
-  });
+  // --- Deceased toggle — direct click on wrapper area ---
+  const decWrap=document.querySelector('#f-deceased')?.closest('.toggle-wrap-sm');
+  if(decWrap){
+    decWrap.style.cursor='pointer';
+    decWrap.addEventListener('click', (e)=>{
+      e.preventDefault(); e.stopPropagation();
+      const cb=document.getElementById('f-deceased');
+      cb.checked=!cb.checked;
+      toggleDeathDate();
+    });
+  }
 
   // --- Leaf modal ---
   on('btn-submit-leaf', 'click', submitLeaf);

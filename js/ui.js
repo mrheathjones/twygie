@@ -432,7 +432,7 @@ function editCard(id){
         <input class="ei" id="ei-dob-year" type="number" value="${p.dob&&p.dob.year||p.birth||''}" placeholder="Year"/>
       </div>
     </div>
-    <div class="ef"><label class="el" style="display:flex;align-items:center;gap:8px;cursor:pointer">
+    <div class="ef"><label class="el" style="display:flex;align-items:center;gap:8px;cursor:pointer" onclick="event.preventDefault()">
       <span>Deceased</span>
       <span class="toggle-wrap-sm">
         <input type="checkbox" id="ei-deceased" class="toggle-hidden" ${(p.death||(p.dod&&p.dod.year))?'checked':''}/>
@@ -454,6 +454,7 @@ function editCard(id){
       <div><label class="el">City</label><input class="ei" id="ei-city" value="${(p.city||'').replace(/"/g,'&quot;')}" placeholder="City"/></div>
       <div><label class="el">State</label><select class="ei" id="ei-state" style="appearance:none">${stateSelectOpts(p.state||"")}</select></div>
     </div>
+    <div class="ef"><label class="el">Country</label><input class="ei" id="ei-country" value="${(p.country||'').replace(/"/g,'&quot;')}" placeholder="Country"/></div>
     <div class="ef"><label class="el">Photo</label>
       <div class="photo-upload">
         <div class="photo-preview" id="edit-photo-preview">${photoPreview}</div>
@@ -484,8 +485,15 @@ function editCard(id){
   const decTrack=document.getElementById('ei-deceased-track');
   const decThumb=document.getElementById('ei-deceased-thumb');
   const decFields=document.getElementById('ei-death-fields');
-  if(decTrack) decTrack.addEventListener('click',()=>{ decCb.checked=!decCb.checked; syncDeceasedToggle(); });
-  if(decCb) decCb.addEventListener('change', syncDeceasedToggle);
+  const decWrap=decCb?.closest('.toggle-wrap-sm');
+  if(decWrap){
+    decWrap.style.cursor='pointer';
+    decWrap.addEventListener('click',(e)=>{
+      e.preventDefault(); e.stopPropagation();
+      decCb.checked=!decCb.checked;
+      syncDeceasedToggle();
+    });
+  }
   function syncDeceasedToggle(){
     if(decTrack) decTrack.classList.toggle('toggle-track-on',decCb.checked);
     if(decThumb) decThumb.classList.toggle('on',decCb.checked);
@@ -538,6 +546,7 @@ function saveCard(id){
   }
   p.city=document.getElementById('ei-city').value.trim();
   p.state=document.getElementById('ei-state').value||'';
+  p.country=(document.getElementById('ei-country')?.value||'').trim()||null;
   p.note=document.getElementById('ei-note').value.trim();
   // Save wedding date if fields exist
   const wdMonth=document.getElementById('ei-wd-month');

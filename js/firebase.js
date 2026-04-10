@@ -706,7 +706,7 @@ function dobDisplay(p){
 }
 
 function placeDisplay(p){
-  if(p.city||p.state) return [p.city,p.state].filter(Boolean).join(', ');
+  if(p.city||p.state||p.country) return [p.city,p.state,p.country].filter(Boolean).join(', ');
   return p.place||'';
 }
 
