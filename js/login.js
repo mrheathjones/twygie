@@ -30,9 +30,9 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 
 // If already signed in, go straight to the app
-let pinVerifying = false; // gate: don't redirect during PIN check
+// (skip auto-redirect for @twygie.app — PIN verification happens in submitEmail)
 auth.onAuthStateChanged(user => {
-  if (user && !pinVerifying) goToApp();
+  if (user && !(user.email && user.email.endsWith('@twygie.app'))) goToApp();
 });
 
 // ── Mode (sign-in vs sign-up) ────────────────────────────────────────────────
@@ -85,7 +85,10 @@ function friendlyError(err) {
   return map[err.code] || err.message || 'Something went wrong. Please try again.';
 }
 
-// ── Email auth ───────────────────────────────────────────────────────────────
+// ── Unified auth (email or username) ─────────────────────────────────────────
+const MANAGED_EMAIL_DOMAIN = 'twygie.app';
+const MANAGED_AUTH_PASSWORD = 'twygie-managed-access-v1';
+
 async function submitEmail() {
   clearErr();
   const rawInput = document.getElementById('email').value.trim();
@@ -101,13 +104,12 @@ async function submitEmail() {
   const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawInput);
 
   if (!isEmail && mode === 'in') {
-    // USERNAME + PIN PATH
+    // USERNAME + PIN PATH — sign in with synthetic email
     const username = rawInput.replace(/^@/, '').toLowerCase();
+    const syntheticEmail = username + '@' + MANAGED_EMAIL_DOMAIN;
     try {
-      // Must authenticate first — Firestore rules require auth to read managedAccounts
-      pinVerifying = true;
-      const userCred = await auth.signInAnonymously();
-
+      await auth.signInWithEmailAndPassword(syntheticEmail, MANAGED_AUTH_PASSWORD);
+      // Auth succeeded — verify PIN against Firestore before redirecting
       const snap = await db.collection('managedAccounts')
         .where('username', '==', username)
         .where('authType', '==', 'pin')
@@ -115,9 +117,7 @@ async function submitEmail() {
         .get();
 
       if (snap.empty) {
-        pinVerifying = false;
-        await auth.currentUser.delete().catch(() => {});
-        await auth.signOut().catch(() => {});
+        await auth.signOut();
         showErr('Username not found.');
         setLoading('email-btn', false);
         setSocialLoading(false);
@@ -125,12 +125,8 @@ async function submitEmail() {
       }
 
       const acct = snap.docs[0].data();
-      const acctId = snap.docs[0].id;
-
       if (acct.paused) {
-        pinVerifying = false;
-        await auth.currentUser.delete().catch(() => {});
-        await auth.signOut().catch(() => {});
+        await auth.signOut();
         showErr('This account has been paused. Contact your parent or guardian.');
         setLoading('email-btn', false);
         setSocialLoading(false);
@@ -141,38 +137,24 @@ async function submitEmail() {
       const pinBuf = await crypto.subtle.digest('SHA-256', pinData);
       const pinHash = Array.from(new Uint8Array(pinBuf), b => b.toString(16).padStart(2, '0')).join('');
       if (pinHash !== acct.pinHash) {
-        pinVerifying = false;
-        await auth.currentUser.delete().catch(() => {});
-        await auth.signOut().catch(() => {});
+        await auth.signOut();
         showErr('Incorrect PIN.');
         setLoading('email-btn', false);
         setSocialLoading(false);
         return;
       }
 
-      // PIN verified — keep this anonymous session
-      if (userCred.user.uid !== acct.anonUid) {
-        if (acct.anonUid && acct.parentUid) {
-          await db.collection('familyTrees').doc(acct.parentUid).update({
-            allowedReaders: firebase.firestore.FieldValue.arrayRemove(acct.anonUid)
-          }).catch(() => {});
-        }
-        await db.collection('managedAccounts').doc(acctId).update({
-          anonUid: userCred.user.uid
-        });
-        if (acct.parentUid && acct.tier === 'seedling') {
-          await db.collection('familyTrees').doc(acct.parentUid).update({
-            allowedReaders: firebase.firestore.FieldValue.arrayUnion(userCred.user.uid)
-          }).catch(() => {});
-        }
-      }
-      pinVerifying = false;
+      // PIN verified — go to app
       goToApp();
-    } catch (e) {
-      console.error('Username login error:', e);
-      pinVerifying = false;
-      await auth.signOut().catch(() => {});
-      showErr('Something went wrong. Please try again.');
+    } catch (err) {
+      const code = err.code;
+      if (code === 'auth/user-not-found') {
+        showErr('Username not found.');
+      } else if (code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
+        showErr('Username not found.');
+      } else {
+        showErr('Something went wrong. Please try again.');
+      }
       setLoading('email-btn', false);
       setSocialLoading(false);
     }

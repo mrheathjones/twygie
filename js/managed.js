@@ -494,7 +494,7 @@ async function blossomManagedAccount(accountId) {
   if (!acct) return;
 
   // Check if child has logged in at least once
-  const childUid = acct.childUid || acct.anonUid;
+  const childUid = acct.childUid;
   if (!childUid) {
     await appAlert(`${acct.displayName} hasn't logged in yet.<br><br>They need to sign in at least once before their account can blossom.`);
     return;

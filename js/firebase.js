@@ -307,6 +307,11 @@ let managedAccounts = []; // loaded for current user (parent)
 let isManagedSession = false; // true if current login is a managed account
 let managedAccountDoc = null; // the managed account doc if in managed session
 
+const MANAGED_EMAIL_DOMAIN = 'twygie.app';
+const MANAGED_AUTH_PASSWORD = 'twygie-managed-access-v1';
+
+function managedEmail(username) { return username + '@' + MANAGED_EMAIL_DOMAIN; }
+
 function getAgeFromDob(dob) {
   if (!dob || !dob.year) return null;
   const now = new Date();
@@ -359,7 +364,6 @@ async function createManagedAccount(opts) {
     username: opts.username || null,
     pinHash: null,
     pinSalt: null,
-    anonUid: null,
     parentUid,
     childNodeId: opts.childNodeId,
     childDob: opts.childDob,
@@ -380,18 +384,37 @@ async function createManagedAccount(opts) {
     doc.pinHash = await hashPin(opts.pin, doc.pinSalt);
   }
 
+  // Create Firebase Auth account for PIN-based managed accounts
+  if (opts.authType === 'pin' && opts.username) {
+    const email = managedEmail(opts.username);
+    // Use secondary app so parent stays signed in
+    let secondaryApp;
+    try {
+      secondaryApp = firebase.app('managed-create');
+    } catch (e) {
+      secondaryApp = firebase.initializeApp(firebaseConfig, 'managed-create');
+    }
+    const secondaryAuth = secondaryApp.auth();
+    try {
+      const cred = await secondaryAuth.createUserWithEmailAndPassword(email, MANAGED_AUTH_PASSWORD);
+      doc.childUid = cred.user.uid;
+      await secondaryAuth.signOut();
+    } catch (e) {
+      await secondaryAuth.signOut();
+      throw new Error('Failed to create auth account: ' + e.message);
+    }
+  }
+
   // Write managed account doc
   const ref = await db.collection('managedAccounts').add(doc);
 
-  // Add username to universal usernames system if PIN path
-  if (opts.authType === 'pin' && opts.username) {
-    // Username was already validated/claimed during creation flow
-    // The managed account's username is in usernames/{name} with a placeholder UID
-    // It will be updated to the real anonUid on first login
+  // Add to allowedReaders on parent's tree if we have a UID
+  if (doc.childUid) {
+    await db.collection('familyTrees').doc(parentUid).update({
+      allowedReaders: firebase.firestore.FieldValue.arrayUnion(doc.childUid)
+    }).catch(() => {});
   }
 
-  // Add placeholder to allowedReaders on parent's tree
-  // (real UID added on first login when we know the anonUid or childUid)
   return ref.id;
 }
 
@@ -427,6 +450,7 @@ async function resetManagedPin(accountId, newPin) {
   await db.collection('managedAccounts').doc(accountId).update({
     pinHash: hash, pinSalt: salt
   });
+  // Firebase Auth password stays the same (fixed constant) — only Firestore hash changes
 }
 
 async function deleteManagedAccount(accountId) {
@@ -434,11 +458,10 @@ async function deleteManagedAccount(accountId) {
   if (!acct) return;
 
   // Remove from allowedReaders
-  const readerUid = acct.childUid || acct.anonUid;
-  if (readerUid) {
+  if (acct.childUid) {
     await db.collection('familyTrees').doc(currentUser.uid).update({
-      allowedReaders: firebase.firestore.FieldValue.arrayRemove(readerUid)
-    });
+      allowedReaders: firebase.firestore.FieldValue.arrayRemove(acct.childUid)
+    }).catch(() => {});
   }
 
   // Delete username if PIN account
@@ -451,31 +474,11 @@ async function deleteManagedAccount(accountId) {
   managedAccounts = managedAccounts.filter(a => a.id !== accountId);
 }
 
-async function addAllowedReader(uid) {
-  await db.collection('familyTrees').doc(currentUser.uid).update({
-    allowedReaders: firebase.firestore.FieldValue.arrayUnion(uid)
-  });
-}
-
-// Check if current user is logging in as a managed account (email path)
-async function checkManagedAccountByEmail(email) {
+// Check if current user is a managed account (by UID)
+async function checkManagedAccount(uid) {
   try {
     const snap = await db.collection('managedAccounts')
-      .where('authType', '==', 'email')
-      .where('email', '==', email)
-      .where('tier', '!=', 'full')
-      .limit(1)
-      .get();
-    if (!snap.empty) return { id: snap.docs[0].id, ...snap.docs[0].data() };
-  } catch (e) {}
-  return null;
-}
-
-// Check if current user is logging in as a managed account (PIN path — by anonUid)
-async function checkManagedAccountByUid(uid) {
-  try {
-    const snap = await db.collection('managedAccounts')
-      .where('anonUid', '==', uid)
+      .where('childUid', '==', uid)
       .where('tier', '!=', 'full')
       .limit(1)
       .get();
@@ -489,40 +492,26 @@ async function triggerBlossom(accountId) {
   const acct = managedAccounts.find(a => a.id === accountId);
   if (!acct || acct.tier !== 'seedling') return;
 
-  // 1. Deep-copy parent's tree into child's own familyTrees doc
-  const childUid = acct.childUid || acct.anonUid;
-  if (!childUid) { console.warn('Cannot blossom — no child UID yet'); return; }
+  const childUid = acct.childUid;
+  if (!childUid) throw new Error('No child UID — account may not be fully set up');
 
   const parentTree = await db.collection('familyTrees').doc(currentUser.uid).get();
   if (!parentTree.exists) return;
   const treeData = parentTree.data();
 
-  // Swap isYou to the child's node
-  let peopleCopy;
-  if (treeData.encryptedData) {
-    // Encrypted tree — need to decrypt, swap, re-encrypt
-    // This will be handled by the child's first load
-    peopleCopy = treeData;
-  } else {
-    peopleCopy = { ...treeData };
-  }
-
-  // Write child's tree
+  // Write child's tree (copy of parent's)
   await db.collection('familyTrees').doc(childUid).set({
-    ...peopleCopy,
-    ownerEmail: acct.email || '',
+    ...treeData,
+    ownerEmail: acct.email || managedEmail(acct.username || ''),
     allowedReaders: [],
     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
   }, { merge: true });
 
-  // 2. Update managed account to sprouted
+  // Update managed account to sprouted
   const lockedPermissions = {
     ...acct.permissions,
-    viewPhotos: true,
-    viewStories: true,
-    viewTimeline: true,
-    exportTree: true,
-    editOwnNode: true
+    viewPhotos: true, viewStories: true, viewTimeline: true,
+    exportTree: true, editOwnNode: true
   };
   await db.collection('managedAccounts').doc(accountId).update({
     tier: 'sprouted',
@@ -530,12 +519,11 @@ async function triggerBlossom(accountId) {
     blossomApprovedAt: firebase.firestore.FieldValue.serverTimestamp()
   });
 
-  // 3. Remove from parent's allowedReaders (child now has own tree)
+  // Remove from parent's allowedReaders (child now has own tree)
   await db.collection('familyTrees').doc(currentUser.uid).update({
     allowedReaders: firebase.firestore.FieldValue.arrayRemove(childUid)
-  });
+  }).catch(() => {});
 
-  // Refresh local
   const idx = managedAccounts.findIndex(a => a.id === accountId);
   if (idx >= 0) {
     managedAccounts[idx].tier = 'sprouted';
@@ -606,8 +594,9 @@ auth.onAuthStateChanged(async user => {
   if(avatarEl&&user.photoURL){ if(initEl) initEl.style.display='none'; const img=document.createElement('img'); img.src=user.photoURL; avatarEl.appendChild(img); }
   else if(initEl) initEl.textContent=(user.displayName||user.email||'?')[0].toUpperCase();
 
-  // Check for username — required before tree access (skip for anonymous/managed)
-  if (!user.isAnonymous) {
+  // Check for username — required before tree access (skip for managed @twygie.app accounts)
+  const isSyntheticEmail = user.email && user.email.endsWith('@' + MANAGED_EMAIL_DOMAIN);
+  if (!isSyntheticEmail) {
     const hasProfile = await loadUserProfile();
     if (!hasProfile) {
       await showUsernameModal();
@@ -617,13 +606,8 @@ auth.onAuthStateChanged(async user => {
   const unameEl = document.getElementById('sp-username');
   if (unameEl && currentUsername) unameEl.textContent = '@' + currentUsername;
 
-  // Check if this login is a managed account
-  let managed = null;
-  if (user.isAnonymous) {
-    managed = await checkManagedAccountByUid(user.uid);
-  } else if (user.email) {
-    managed = await checkManagedAccountByEmail(user.email);
-  }
+  // Check if this login is a managed account (by UID)
+  let managed = await checkManagedAccount(user.uid);
 
   if (managed) {
     // Check for paused account
@@ -641,17 +625,16 @@ auth.onAuthStateChanged(async user => {
         await db.collection('managedAccounts').doc(managed.id).update({
           tier: 'full',
           autoBlossomAt: firebase.firestore.FieldValue.serverTimestamp(),
-          permissions: {} // ignored at full tier
+          permissions: {}
         });
         managed.tier = 'full';
-        // Show celebration on first full-bloom login
         setTimeout(() => appAlert('🌳 Your account has fully blossomed!<br><br>You now have full access to all Twygie features.'), 500);
       }
     }
 
     // If fully blossomed, treat as normal account
     if (managed.tier === 'full') {
-      managed = null; // exit managed mode
+      managed = null;
     } else {
       isManagedSession = true;
       managedAccountDoc = managed;
@@ -659,13 +642,6 @@ auth.onAuthStateChanged(async user => {
       db.collection('managedAccounts').doc(managed.id).update({
         lastActiveAt: firebase.firestore.FieldValue.serverTimestamp()
       }).catch(() => {});
-      // Claim childUid if email path and not yet set
-      if (managed.authType === 'email' && !managed.childUid) {
-        await db.collection('managedAccounts').doc(managed.id).update({
-          childUid: user.uid
-        });
-        await addAllowedReader(user.uid);
-      }
     }
   }
 
