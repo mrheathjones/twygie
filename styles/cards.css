@@ -233,8 +233,11 @@
 .managed-btn{flex:1;padding:10px;border-radius:100px;font-family:Outfit,sans-serif;font-size:.82rem;font-weight:600;cursor:pointer;border:none;transition:opacity .15s}
 .managed-btn.primary{background:var(--gold);color:#04070c}
 .managed-btn.primary:disabled{opacity:.35;cursor:not-allowed}
-.managed-btn.secondary{background:rgba(255,255,255,.04);color:var(--muted);border:1px solid var(--border)}
+.managed-btn.primary:not(:disabled):hover{opacity:.85}
+.managed-btn.secondary{background:rgba(255,255,255,.08);color:var(--text);border:1px solid rgba(255,255,255,.15)}
+.managed-btn.secondary:hover{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.25)}
 .managed-btn.danger{background:rgba(224,107,107,.15);color:#e06b6b;border:1px solid rgba(224,107,107,.2)}
+.managed-btn.danger:hover{background:rgba(224,107,107,.25);border-color:rgba(224,107,107,.35)}
 .managed-field-group{margin-bottom:12px}
 .managed-field-label{display:block;font-size:.72rem;color:var(--muted);margin-bottom:4px;font-weight:500}
 .managed-input{width:100%;padding:10px 12px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:Outfit,sans-serif;font-size:.85rem;box-sizing:border-box}
