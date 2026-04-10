@@ -118,6 +118,7 @@ function onManagedNodeSelect() {
   if (!nodeId) {
     info.style.display = 'none';
     dobEntry.style.display = 'none';
+    document.getElementById('managed-name-entry').style.display = 'none';
     nextBtn.disabled = true;
     managedCreateState.selectedNodeId = null;
     managedCreateState.selectedNode = null;
@@ -145,6 +146,14 @@ function onManagedNodeSelect() {
   } else {
     dobEntry.style.display = 'none';
     nextBtn.disabled = false;
+  }
+
+  // Show editable display name, pre-filled from node
+  const nameEntry = document.getElementById('managed-name-entry');
+  const nameInput = document.getElementById('managed-display-name');
+  if (nameEntry && nameInput) {
+    nameInput.value = fullName(node);
+    nameEntry.style.display = '';
   }
 }
 
@@ -338,7 +347,7 @@ async function submitManagedAccount() {
       authType: type,
       childNodeId: managedCreateState.selectedNodeId,
       childDob: node.dob,
-      displayName: fullName(node),
+      displayName: document.getElementById('managed-display-name')?.value.trim() || fullName(node),
       permissions: perms
     };
 
