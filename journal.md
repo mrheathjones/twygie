@@ -897,3 +897,27 @@ Full architecture designed for supervised family member accounts with three-tier
 - `js/managed.js` (310 lines) — self-contained UI module
 - Loaded after settings.js, before linking.js
 - Reads from firebase.js globals (people[], managedAccounts[], utility functions)
+
+### Phase 4 — Managed Account Login & Experience
+
+#### Phase 4A — Login Page Changes
+- "Log in with family username" collapsible section below main auth
+- Username + PIN fields with green-tinted sign-in button
+- Firestore SDK added to login.html for managed account lookup
+- PIN login flow: lookup by username → verify PIN hash → sign in anonymously
+- First login: creates anonymous account, stores anonUid, adds to allowedReaders
+- Returning login: handles anonymous UID changes (device-bound), updates refs
+- Paused account check: blocks login with message
+
+#### Phase 4B — Managed Mode App Behavior
+- `applyManagedModeUI()`: applies permission-based restrictions after tree loads
+- Header badge: "🌱 Managed" green pill in header bar
+- Button hiding based on permissions:
+  - Edit: only own node if editOwnNode, hidden for all others
+  - Add a Twyg / Add Connection: hidden if !addRemoveTwygs
+  - Link Tree/Twyg: hidden if !linkTrees
+  - Remove: hidden if !deleteTwygs
+  - Connection chip edit/delete (✎ ×): hidden if !addRemoveTwygs
+- Settings gear hidden for Seedling tier
+- Export/Timeline/Leafs nav hidden per permissions
+- `window._managedPerms` + `window._managedTier` globals for card-level checks

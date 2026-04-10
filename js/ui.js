@@ -350,8 +350,8 @@ function fillCard(p){
           <div class="fi2"><div class="fn2">${fullName(cp)}</div><div class="frel" id="frel-${p.id}-${cp.id}">${rel}</div></div>
           <div class="fyr">${dobDisplay(cp).replace('b. ','')}</div>
         </div>
-        <button class="fchip-edit-btn" onclick="editConnRel('${p.id}','${cp.id}','${connType||'labeled'}');event.stopPropagation()" title="Edit relationship">✎</button>
-        <button onclick="removeConnFromCard('${p.id}','${cp.id}','${connType||'labeled'}');event.stopPropagation()" title="Remove this connection" style="background:transparent;border:none;cursor:pointer;color:rgba(200,100,100,.35);font-size:16px;padding:0 4px;line-height:1;flex-shrink:0;transition:color .2s" onmouseover="this.style.color='rgba(220,120,120,.9)'" onmouseout="this.style.color='rgba(200,100,100,.35)'">×</button>
+        <button class="fchip-edit-btn" onclick="editConnRel('${p.id}','${cp.id}','${connType||'labeled'}');event.stopPropagation()" title="Edit relationship" ${mp&&!mp.addRemoveTwygs?'style="display:none"':''}>✎</button>
+        <button onclick="removeConnFromCard('${p.id}','${cp.id}','${connType||'labeled'}');event.stopPropagation()" title="Remove this connection" style="background:transparent;border:none;cursor:pointer;color:rgba(200,100,100,.35);font-size:16px;padding:0 4px;line-height:1;flex-shrink:0;transition:color .2s${mp&&!mp.addRemoveTwygs?';display:none':''}" onmouseover="this.style.color='rgba(220,120,120,.9)'" onmouseout="this.style.color='rgba(200,100,100,.35)'">×</button>
       </div>`;
     });
     if(conns.length>MAX_SHOW){
@@ -389,30 +389,45 @@ function fillCard(p){
   // Bridge info for this node
   const bridgeLink=getBridgeInfo(p.id);
 
-  html+=`<div class="card-actions">
-    <button class="btn-sm btn-edit" onclick="editCard('${p.id}')">
+  html+=`<div class="card-actions">`;
+
+  // Managed mode: restrict buttons based on permissions
+  const mp = window._managedPerms;
+  const isOwnNode = mp && managedAccountDoc && p.id === managedAccountDoc.childNodeId;
+  const showEdit = !mp || (isOwnNode && mp.editOwnNode);
+  const showAdd = !mp || mp.addRemoveTwygs;
+  const showConn = !mp || mp.addRemoveTwygs;
+  const showLink = !mp || mp.linkTrees;
+  const showDel = !mp || mp.deleteTwygs;
+
+  if(showEdit) html+=`<button class="btn-sm btn-edit" onclick="editCard('${p.id}')">
       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
       Edit
-    </button>
-    <button class="btn-sm btn-twyg" onclick="closeCard();openModal('${p.id}')">
+    </button>`;
+  if(showAdd) html+=`<button class="btn-sm btn-twyg" onclick="closeCard();openModal('${p.id}')">
       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
       Add a Twyg
-    </button>
-    <button class="btn-sm btn-conn" onclick="openConnModal('${p.id}')">
+    </button>`;
+  if(showConn) html+=`<button class="btn-sm btn-conn" onclick="openConnModal('${p.id}')">
       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
       Add Connection
-    </button>
-    ${p.isYou?`<button class="btn-sm" onclick="generateLinkCode('${p.id}')" style="background:rgba(200,168,75,.08);border-color:rgba(200,168,75,.2);color:var(--gold)">
+    </button>`;
+  if(showLink){
+    html+=p.isYou?`<button class="btn-sm" onclick="generateLinkCode('${p.id}')" style="background:rgba(200,168,75,.08);border-color:rgba(200,168,75,.2);color:var(--gold)">
       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
       Link Tree
     </button>`:`<button class="btn-sm" onclick="closeCard();openLinkCard()" style="background:rgba(200,168,75,.08);border-color:rgba(200,168,75,.2);color:var(--gold)">
       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
       Link Twyg
-    </button>`}
-    ${p.isYou&&activeLinks.length?`<button class="btn-sm" onclick="openUnlinkModal()" style="background:rgba(180,80,80,.06);border-color:rgba(180,80,80,.2);color:rgba(200,100,100,.7)">Unlink</button>`:''}
-    ${!p.isYou&&bridgeLink?`<button class="btn-sm" onclick="revokeLink('${bridgeLink.linkId}')" style="background:rgba(180,80,80,.06);border-color:rgba(180,80,80,.2);color:rgba(200,100,100,.7)">Unlink</button>`:''}
-    ${!p.isYou?`<button class="btn-sm btn-del" onclick="removePerson('${p.id}')">Remove</button>`:''}
-  </div>`;
+    </button>`;
+  }
+  if(!mp){
+    if(p.isYou&&activeLinks.length) html+=`<button class="btn-sm" onclick="openUnlinkModal()" style="background:rgba(180,80,80,.06);border-color:rgba(180,80,80,.2);color:rgba(200,100,100,.7)">Unlink</button>`;
+    if(!p.isYou&&bridgeLink) html+=`<button class="btn-sm" onclick="revokeLink('${bridgeLink.linkId}')" style="background:rgba(180,80,80,.06);border-color:rgba(180,80,80,.2);color:rgba(200,100,100,.7)">Unlink</button>`;
+  }
+  if(showDel && !p.isYou) html+=`<button class="btn-sm btn-del" onclick="removePerson('${p.id}')">Remove</button>`;
+
+  html+=`</div>`;
 
   document.getElementById('cbody').innerHTML=html;
 }

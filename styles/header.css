@@ -51,3 +51,6 @@
 #btn-exit-immersive{transition:all .15s}
 a.hbtn,a.hbtn:visited,a.hbtn:hover,a.hbtn:active{text-decoration:none}
 .view-toggle-btn.leafs-toggle.active{background:rgba(100,180,100,.18);color:rgba(140,210,140,.95)}
+
+/* ─── MANAGED MODE BADGE ─────────────────────────────────────────────────── */
+.managed-mode-badge{display:flex;align-items:center;gap:4px;padding:3px 10px;border-radius:100px;background:rgba(100,180,100,.1);border:1px solid rgba(100,180,100,.2);color:#7bc67b;font-size:.68rem;font-weight:600;white-space:nowrap}

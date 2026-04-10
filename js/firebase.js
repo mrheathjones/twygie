@@ -544,6 +544,58 @@ async function triggerBlossom(accountId) {
 }
 
 
+function applyManagedModeUI(acct) {
+  const perms = acct.permissions || {};
+  const tier = acct.tier;
+
+  // Show managed mode indicator in header
+  const header = document.querySelector('.hdr');
+  if (header) {
+    const badge = document.createElement('div');
+    badge.className = 'managed-mode-badge';
+    const tierIcon = { seedling: '🌱', sprouted: '🌿', full: '🌳' }[tier] || '🌱';
+    badge.innerHTML = `${tierIcon} Managed`;
+    header.appendChild(badge);
+  }
+
+  // Hide "Add a Twyg" header button
+  if (!perms.addRemoveTwygs) {
+    const addBtn = document.getElementById('btn-add-node');
+    if (addBtn) addBtn.style.display = 'none';
+  }
+
+  // Hide settings gear (managed accounts can't change parent's settings)
+  if (tier === 'seedling') {
+    const settingsBtn = document.getElementById('btn-settings');
+    if (settingsBtn) settingsBtn.style.display = 'none';
+  }
+
+  // Hide timeline nav if not permitted
+  if (!perms.viewTimeline) {
+    const timelineLink = document.querySelector('a[href="/timeline"]');
+    if (timelineLink) timelineLink.style.display = 'none';
+  }
+
+  // Hide export button if not permitted
+  if (!perms.exportTree) {
+    const exportBtn = document.getElementById('btn-export');
+    if (exportBtn) exportBtn.style.display = 'none';
+  }
+
+  // Hide leafs nav if stories not permitted
+  if (!perms.viewStories) {
+    const leafsLink = document.querySelector('a[href="/leafs"]');
+    if (leafsLink) leafsLink.style.display = 'none';
+    const leafsBtn = document.getElementById('btn-leafs');
+    if (leafsBtn) leafsBtn.style.display = 'none';
+  }
+
+  // Store permissions globally for card-level UI (edit/remove buttons)
+  window._managedPerms = perms;
+  window._managedTier = tier;
+}
+
+
 // ─── AUTH ─────────────────────────────────────────────────────────────────────
 let currentUser=null, saveTimer=null, treeLoaded=false;
 auth.onAuthStateChanged(async user => {
@@ -624,6 +676,12 @@ auth.onAuthStateChanged(async user => {
   await loadSharedNodes();
   subscribeActiveLinks();
   window._appReady=true; // enable auto-adopt only after initial load
+
+  // Apply managed mode UI restrictions
+  if (isManagedSession && managedAccountDoc) {
+    applyManagedModeUI(managedAccountDoc);
+  }
+
   hideLoading();
 });
 async function signOut(){ if(!await appConfirm('Sign out of Twygie?','Sign Out','Stay')) return; await auth.signOut(); window.location.href='/login'; }

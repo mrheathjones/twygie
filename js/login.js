@@ -27,6 +27,7 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
+const db = firebase.firestore();
 
 // If already signed in, go straight to the app
 auth.onAuthStateChanged(user => {
@@ -188,3 +189,132 @@ document.getElementById('google-btn')?.addEventListener('click', signInGoogle);
 document.getElementById('apple-btn')?.addEventListener('click', signInApple);
 document.getElementById('btn-back-main')?.addEventListener('click', showMain);
 document.getElementById('reset-btn')?.addEventListener('click', sendReset);
+
+// ─── FAMILY USERNAME LOGIN ──────────────────────────────────────────────────
+function toggleFamilyLogin() {
+  const view = document.getElementById('family-view');
+  const btn = document.getElementById('family-toggle');
+  const isOpen = view.style.display !== 'none';
+  view.style.display = isOpen ? 'none' : '';
+  btn.classList.toggle('open', !isOpen);
+  // Change + to × when open
+  btn.querySelector('svg').innerHTML = isOpen
+    ? '<path d="M12 5v14"/><path d="M5 12h14"/>'
+    : '<path d="M18 6L6 18"/><path d="M6 6l12 12"/>';
+}
+
+async function hashPinLogin(pin, salt) {
+  const data = new TextEncoder().encode(salt + ':' + pin);
+  const hash = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(hash), b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function submitFamily() {
+  clearErr('family-err');
+  const username = document.getElementById('family-user').value.trim().toLowerCase();
+  const pin = document.getElementById('family-pin').value;
+
+  if (!username) { showErr('Enter your username.', 'family-err'); return; }
+  if (!pin) { showErr('Enter your PIN.', 'family-err'); return; }
+
+  const btn = document.getElementById('family-btn');
+  btn.classList.add('loading');
+  btn.disabled = true;
+
+  try {
+    // 1. Look up managed account by username
+    const snap = await db.collection('managedAccounts')
+      .where('username', '==', username)
+      .where('authType', '==', 'pin')
+      .limit(1)
+      .get();
+
+    if (snap.empty) {
+      showErr('Username not found.', 'family-err');
+      btn.classList.remove('loading');
+      btn.disabled = false;
+      return;
+    }
+
+    const acct = snap.docs[0].data();
+    const acctId = snap.docs[0].id;
+
+    // 2. Check if paused
+    if (acct.paused) {
+      showErr('This account has been paused. Contact your parent or guardian.', 'family-err');
+      btn.classList.remove('loading');
+      btn.disabled = false;
+      return;
+    }
+
+    // 3. Verify PIN
+    const hash = await hashPinLogin(pin, acct.pinSalt);
+    if (hash !== acct.pinHash) {
+      showErr('Incorrect PIN.', 'family-err');
+      btn.classList.remove('loading');
+      btn.disabled = false;
+      return;
+    }
+
+    // 4. Sign in anonymously
+    let userCred;
+    if (acct.anonUid) {
+      // Returning user — try to sign in. If the anonymous account was cleaned up,
+      // create a new one and update the doc
+      try {
+        // Anonymous accounts can't "sign back in" — they're device-bound.
+        // If we have an anonUid but no active session, create new anonymous and update.
+        userCred = await auth.signInAnonymously();
+        if (userCred.user.uid !== acct.anonUid) {
+          // New anonymous UID — update the managed account doc
+          await db.collection('managedAccounts').doc(acctId).update({
+            anonUid: userCred.user.uid
+          });
+          // Update allowedReaders: remove old, add new
+          if (acct.parentUid) {
+            const treeRef = db.collection('familyTrees').doc(acct.parentUid);
+            await treeRef.update({
+              allowedReaders: firebase.firestore.FieldValue.arrayRemove(acct.anonUid)
+            }).catch(() => {});
+            await treeRef.update({
+              allowedReaders: firebase.firestore.FieldValue.arrayUnion(userCred.user.uid)
+            }).catch(() => {});
+          }
+        }
+      } catch (e) {
+        userCred = await auth.signInAnonymously();
+        await db.collection('managedAccounts').doc(acctId).update({
+          anonUid: userCred.user.uid
+        });
+      }
+    } else {
+      // First login — create anonymous account
+      userCred = await auth.signInAnonymously();
+      await db.collection('managedAccounts').doc(acctId).update({
+        anonUid: userCred.user.uid
+      });
+      // Add to parent's allowedReaders
+      if (acct.parentUid && acct.tier === 'seedling') {
+        await db.collection('familyTrees').doc(acct.parentUid).update({
+          allowedReaders: firebase.firestore.FieldValue.arrayUnion(userCred.user.uid)
+        }).catch(() => {});
+      }
+    }
+
+    // 5. Go to app
+    goToApp();
+
+  } catch (e) {
+    console.error('Family login error:', e);
+    showErr('Something went wrong. Please try again.', 'family-err');
+    btn.classList.remove('loading');
+    btn.disabled = false;
+  }
+}
+
+// Event listeners
+document.getElementById('family-toggle')?.addEventListener('click', toggleFamilyLogin);
+document.getElementById('family-btn')?.addEventListener('click', submitFamily);
+document.getElementById('family-pin')?.addEventListener('keydown', e => {
+  if (e.key === 'Enter') submitFamily();
+});
