@@ -90,18 +90,16 @@ async function submitEmail() {
   const rawInput = document.getElementById('email').value.trim();
   const pass = document.getElementById('pass').value;
 
-  if (!rawInput) { showErr('Please enter your email or @username.'); return; }
+  if (!rawInput) { showErr('Please enter your email or username.'); return; }
   if (!pass) { showErr('Please enter your password or PIN.'); return; }
 
   setLoading('email-btn', true);
   setSocialLoading(true);
 
-  // Detect: username or email?
-  // Username: starts with @ or has no @ at all (pure alphanumeric/underscore)
-  // Email: contains @ followed by a dot-domain
-  const isUser = /^@/.test(rawInput) || (/^[a-z0-9_]+$/i.test(rawInput) && !rawInput.includes('@'));
+  // Detect: email has @domain.something, everything else is username
+  const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawInput);
 
-  if (isUser && mode === 'in') {
+  if (!isEmail && mode === 'in') {
     // USERNAME + PIN PATH
     const username = rawInput.replace(/^@/, '').toLowerCase();
     try {
