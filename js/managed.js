@@ -96,14 +96,28 @@ function resetManagedCredFields() {
 }
 
 // Step 1: Node selection
+function populateDobDropdowns() {
+  const months = ['','January','February','March','April','May','June','July','August','September','October','November','December'];
+  const mSel = document.getElementById('managed-dob-month');
+  const dSel = document.getElementById('managed-dob-day');
+  const ySel = document.getElementById('managed-dob-year');
+  if (!mSel || mSel.options.length > 1) return; // already populated
+  months.forEach((m, i) => { if (i > 0) { const o = document.createElement('option'); o.value = i; o.textContent = m; mSel.appendChild(o); }});
+  for (let d = 1; d <= 31; d++) { const o = document.createElement('option'); o.value = d; o.textContent = d; dSel.appendChild(o); }
+  const curYear = new Date().getFullYear();
+  for (let y = curYear; y >= curYear - 120; y--) { const o = document.createElement('option'); o.value = y; o.textContent = y; ySel.appendChild(o); }
+}
+
 function onManagedNodeSelect() {
   const picker = document.getElementById('managed-node-picker');
   const nodeId = picker.value;
   const info = document.getElementById('managed-node-info');
   const nextBtn = document.getElementById('managed-next-1');
+  const dobEntry = document.getElementById('managed-dob-entry');
 
   if (!nodeId) {
     info.style.display = 'none';
+    dobEntry.style.display = 'none';
     nextBtn.disabled = true;
     managedCreateState.selectedNodeId = null;
     managedCreateState.selectedNode = null;
@@ -114,21 +128,66 @@ function onManagedNodeSelect() {
   managedCreateState.selectedNodeId = nodeId;
   managedCreateState.selectedNode = node;
 
-  const age = node.dob ? getAgeFromDob(node.dob) : null;
+  const hasDob = node.dob && node.dob.year;
+  const age = hasDob ? getAgeFromDob(node.dob) : null;
   const ageStr = age !== null ? `Age: ${age}` : 'No birthdate set';
   info.innerHTML = `<strong>${fullName(node)}</strong> · ${ageStr}`;
   info.style.display = '';
-  nextBtn.disabled = false;
 
-  // Check if DOB exists
-  if (!node.dob || !node.dob.year) {
-    info.innerHTML += `<br><span style="color:#e8a87c">⚠ Birthdate is required for managed accounts. Add it to this Twyg first.</span>`;
+  if (!hasDob) {
+    // Show inline DOB entry
+    populateDobDropdowns();
+    document.getElementById('managed-dob-month').value = '';
+    document.getElementById('managed-dob-day').value = '';
+    document.getElementById('managed-dob-year').value = '';
+    dobEntry.style.display = '';
+    nextBtn.disabled = true;
+  } else {
+    dobEntry.style.display = 'none';
+    nextBtn.disabled = false;
+  }
+}
+
+function onManagedDobChange() {
+  const m = document.getElementById('managed-dob-month').value;
+  const d = document.getElementById('managed-dob-day').value;
+  const y = document.getElementById('managed-dob-year').value;
+  const nextBtn = document.getElementById('managed-next-1');
+  const info = document.getElementById('managed-node-info');
+  const node = managedCreateState.selectedNode;
+  if (!node) return;
+
+  if (m && d && y) {
+    // Preview age
+    const age = getAgeFromDob({ month: m, day: d, year: y });
+    info.innerHTML = `<strong>${fullName(node)}</strong> · Age: ${age}`;
+    nextBtn.disabled = false;
+  } else {
+    info.innerHTML = `<strong>${fullName(node)}</strong> · No birthdate set`;
     nextBtn.disabled = true;
   }
 }
 
+function saveManagedInlineDob() {
+  const node = managedCreateState.selectedNode;
+  if (!node) return;
+  const hasDob = node.dob && node.dob.year;
+  if (hasDob) return; // already has DOB
+
+  const m = document.getElementById('managed-dob-month').value;
+  const d = document.getElementById('managed-dob-day').value;
+  const y = document.getElementById('managed-dob-year').value;
+  if (!m || !d || !y) return;
+
+  // Update the node's DOB in-memory and save
+  node.dob = { month: m, day: d, year: y };
+  managedCreateState.selectedNode = node;
+  if (typeof scheduleSave === 'function') scheduleSave();
+}
+
 // Step 2: Auth method
 function onManagedStep2() {
+  saveManagedInlineDob(); // persist inline DOB if entered
   const node = managedCreateState.selectedNode;
   const emailAllowed = canUseEmailAuth(node.dob);
   managedCreateState.emailAllowed = emailAllowed;
@@ -495,8 +554,11 @@ function initManagedUI() {
   // Detail modal close
   document.getElementById('managed-detail-close')?.addEventListener('click', closeManagedDetail);
 
-  // Step 1: node picker
+  // Step 1: node picker + inline DOB
   document.getElementById('managed-node-picker')?.addEventListener('change', onManagedNodeSelect);
+  document.getElementById('managed-dob-month')?.addEventListener('change', onManagedDobChange);
+  document.getElementById('managed-dob-day')?.addEventListener('change', onManagedDobChange);
+  document.getElementById('managed-dob-year')?.addEventListener('change', onManagedDobChange);
   document.getElementById('managed-next-1')?.addEventListener('click', onManagedStep2);
 
   // Step 2: auth type
