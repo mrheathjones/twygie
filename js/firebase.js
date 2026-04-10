@@ -103,6 +103,168 @@ function makeDefaultTree(user) {
   ];
 }
 
+// ─── USERNAME SYSTEM ─────────────────────────────────────────────────────────
+let currentUsername = null;
+
+const USERNAME_RESERVED = new Set([
+  'admin','twygie','support','help','system','null','undefined',
+  'root','moderator','mod','staff','official','bot','api',
+  'login','signup','settings','app','timeline','leafs','map'
+]);
+
+function validateUsername(name) {
+  if (!name) return 'Username is required';
+  if (name.length < 3) return 'Must be at least 3 characters';
+  if (name.length > 20) return 'Must be 20 characters or fewer';
+  if (!/^[a-z0-9_]+$/.test(name)) return 'Only lowercase letters, numbers, and underscores';
+  if (/^_|_$/.test(name)) return 'Cannot start or end with underscore';
+  if (/__/.test(name)) return 'Cannot have consecutive underscores';
+  if (USERNAME_RESERVED.has(name)) return 'This username is reserved';
+  return null; // valid
+}
+
+function suggestUsername(user) {
+  let base = '';
+  if (user.displayName) {
+    base = user.displayName.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20);
+  } else if (user.email) {
+    base = user.email.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 20);
+  }
+  return base || '';
+}
+
+async function checkUsernameAvailable(name) {
+  const snap = await db.collection('usernames').doc(name).get();
+  return !snap.exists;
+}
+
+async function claimUsername(username) {
+  const uid = currentUser.uid;
+  // 1. Write to usernames/{username} first — fails if taken
+  await db.collection('usernames').doc(username).set({
+    uid,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  // 2. Write to userProfiles/{uid}
+  await db.collection('userProfiles').doc(uid).set({
+    username,
+    displayName: currentUser.displayName || '',
+    email: currentUser.email || '',
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  currentUsername = username;
+}
+
+async function changeUsername(newUsername) {
+  const uid = currentUser.uid;
+  const oldUsername = currentUsername;
+  if (!oldUsername || newUsername === oldUsername) return;
+  // 1. Claim new
+  await db.collection('usernames').doc(newUsername).set({
+    uid,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  // 2. Update profile
+  await db.collection('userProfiles').doc(uid).update({ username: newUsername });
+  // 3. Delete old
+  await db.collection('usernames').doc(oldUsername).delete();
+  currentUsername = newUsername;
+}
+
+async function loadUserProfile() {
+  const snap = await db.collection('userProfiles').doc(currentUser.uid).get();
+  if (snap.exists) {
+    currentUsername = snap.data().username;
+    return true;
+  }
+  return false;
+}
+
+function showUsernameModal() {
+  return new Promise(resolve => {
+    const overlay = document.getElementById('username-modal-bg');
+    const input = document.getElementById('username-input');
+    const feedback = document.getElementById('username-feedback');
+    const claimBtn = document.getElementById('username-claim-btn');
+    const suggestion = suggestUsername(currentUser);
+    input.value = suggestion;
+    feedback.textContent = '';
+    feedback.className = 'username-feedback';
+    claimBtn.disabled = true;
+    overlay.classList.add('open');
+
+    let debounceTimer = null;
+    let lastChecked = '';
+
+    function checkInput() {
+      const val = input.value.toLowerCase().replace(/[^a-z0-9_]/g, '');
+      input.value = val; // enforce lowercase in field
+      const err = validateUsername(val);
+      if (err) {
+        feedback.textContent = err;
+        feedback.className = 'username-feedback error';
+        claimBtn.disabled = true;
+        return;
+      }
+      if (val === lastChecked) return;
+      feedback.textContent = 'Checking…';
+      feedback.className = 'username-feedback checking';
+      claimBtn.disabled = true;
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(async () => {
+        lastChecked = val;
+        try {
+          const avail = await checkUsernameAvailable(val);
+          if (input.value !== val) return; // stale
+          if (avail) {
+            feedback.textContent = '✓ Available';
+            feedback.className = 'username-feedback available';
+            claimBtn.disabled = false;
+          } else {
+            feedback.textContent = 'Already taken';
+            feedback.className = 'username-feedback error';
+            claimBtn.disabled = true;
+          }
+        } catch (e) {
+          feedback.textContent = 'Error checking availability';
+          feedback.className = 'username-feedback error';
+        }
+      }, 400);
+    }
+
+    input.oninput = checkInput;
+    if (suggestion) checkInput();
+
+    claimBtn.onclick = async () => {
+      const val = input.value;
+      const err = validateUsername(val);
+      if (err) return;
+      claimBtn.disabled = true;
+      claimBtn.textContent = 'Claiming…';
+      try {
+        await claimUsername(val);
+        overlay.classList.remove('open');
+        resolve(val);
+      } catch (e) {
+        if (e.code === 'permission-denied' || e.message?.includes('already exists')) {
+          feedback.textContent = 'Already taken — try another';
+          feedback.className = 'username-feedback error';
+        } else {
+          feedback.textContent = 'Something went wrong. Try again.';
+          feedback.className = 'username-feedback error';
+        }
+        claimBtn.textContent = 'Claim username';
+        claimBtn.disabled = false;
+      }
+    };
+
+    // Allow Enter key
+    input.onkeydown = (e) => {
+      if (e.key === 'Enter' && !claimBtn.disabled) claimBtn.click();
+    };
+  });
+}
+
 
 // ─── AUTH ─────────────────────────────────────────────────────────────────────
 let currentUser=null, saveTimer=null, treeLoaded=false;
@@ -113,6 +275,16 @@ auth.onAuthStateChanged(async user => {
   const avatarEl=document.getElementById('uavatar');
   if(avatarEl&&user.photoURL){ if(initEl) initEl.style.display='none'; const img=document.createElement('img'); img.src=user.photoURL; avatarEl.appendChild(img); }
   else if(initEl) initEl.textContent=(user.displayName||user.email||'?')[0].toUpperCase();
+
+  // Check for username — required before tree access
+  const hasProfile = await loadUserProfile();
+  if (!hasProfile) {
+    await showUsernameModal();
+  }
+  // Show username in header if available
+  const unameEl = document.getElementById('sp-username');
+  if (unameEl && currentUsername) unameEl.textContent = '@' + currentUsername;
+
   await loadTree();
   await loadLeafs();
   await loadActiveLinks();

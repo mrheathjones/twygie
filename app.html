@@ -186,6 +186,22 @@
   </div>
 </div>
 
+<!-- USERNAME SELECTION MODAL -->
+<div id="username-modal-bg">
+  <div id="username-modal">
+    <div class="username-modal-icon">🌱</div>
+    <div class="username-modal-title">Choose your username</div>
+    <div class="username-modal-sub">This is how you'll appear on linked trees and to family members.</div>
+    <div class="username-input-wrap">
+      <span class="username-at">@</span>
+      <input type="text" id="username-input" maxlength="20" placeholder="your_username" autocomplete="off" spellcheck="false" />
+    </div>
+    <div id="username-feedback" class="username-feedback"></div>
+    <div class="username-rules">Lowercase letters, numbers, and underscores · 3–20 characters</div>
+    <button id="username-claim-btn" disabled>Claim username</button>
+  </div>
+</div>
+
 <!-- LINK CODE MODAL -->
 <div id="link-bg">
   <div id="link-modal">
@@ -246,6 +262,18 @@
         <div class="sp-user-info">
           <div class="sp-user-name" id="sp-name"></div>
           <div class="sp-user-email" id="sp-email"></div>
+          <div class="sp-user-username" id="sp-username"></div>
+          <div class="sp-username-edit" id="sp-username-edit" style="display:none">
+            <div class="username-input-wrap" style="margin-bottom:4px">
+              <span class="username-at">@</span>
+              <input type="text" id="sp-username-input" maxlength="20" autocomplete="off" spellcheck="false" style="font-size:.8rem;padding:8px 0" />
+            </div>
+            <div id="sp-username-feedback" class="username-feedback" style="font-size:.7rem"></div>
+            <div style="display:flex;gap:6px;margin-top:6px">
+              <button id="sp-username-save" class="sp-username-btn save" disabled>Save</button>
+              <button id="sp-username-cancel" class="sp-username-btn cancel">Cancel</button>
+            </div>
+          </div>
         </div>
         <button class="sp-signout" id="btn-signout">Sign out</button>
       </div>

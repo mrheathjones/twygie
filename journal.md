@@ -770,3 +770,58 @@ Built as a separate HTML page (timeline.html) with:
 
 **Leafs Page Left-Align:**
 - Grid margin changed from `0 auto` to `0 auto 0 24px`
+
+---
+
+## Session 15 — April 10, 2026 — Universal Usernames + Managed Accounts Design
+
+### Design Phase — Managed Accounts (Child Accounts)
+
+Full architecture designed for supervised family member accounts with three-tier blossom protocol:
+
+**Three Tiers:**
+- **Seedling** (Non-Blossomed): Full parent supervision, reads parent's tree with swapped isYou, all permissions toggleable
+- **Sprouted** (Blossomed, Under 18): Light supervision, own tree copy, some permissions locked open, parent controls structural changes
+- **Full Bloom** (18+): Auto-triggers on login when DOB indicates 18+, all supervision revoked, peer-to-peer tree link remains
+
+**Auth Paths:**
+- **Email (13+)**: Normal Firebase Auth, system detects managed account on login
+- **Username + PIN (any age, required under 13)**: Firebase Anonymous Auth, COPPA-compliant
+- COPPA age gate: hard gate — if node's DOB indicates under 13, email path is not rendered at all
+
+**Key Design Decisions:**
+- Managed accounts read from parent's `familyTrees/{parentUid}` (Seedling) or own copy (Sprouted+)
+- Two-collection uniqueness pattern for usernames: `usernames/{name}` + `userProfiles/{uid}`
+- Blossom can be parent-triggered or child-requested (parent approves)
+- PIN accounts use `linkWithCredential()` for auth upgrade during blossom
+- COPPA defense: reasonable age gate + no child PII collection under 13 = "actual knowledge" standard met
+
+**Universal Usernames Decision:**
+- Every account (regular + managed) gets a unique @username
+- Replaces email exposure in social features (linking, sharing, managed account references)
+- Required step after Firebase Auth before tree access
+- Existing users get one-time migration prompt
+
+### Phase 1 — Universal Usernames (Implementation Started)
+
+#### Phase 1A — Schema & Validation
+- `userProfiles/{uid}` collection: username, displayName, email, createdAt
+- `usernames/{username}` collection: uid, createdAt (uniqueness enforcer)
+- Validation: lowercase alphanumeric + underscores, 3–20 chars
+- Reserved words: admin, twygie, support, help, system, null, undefined, etc.
+- Firestore security rules updated for new collections
+
+#### Phase 1B — Username Selection Flow (New Users)
+- Post-auth modal: "Choose your username" with real-time availability check
+- Debounced Firestore lookup on `usernames/{input}`
+- Green checkmark / red X feedback
+- Write `usernames/{name}` first, then `userProfiles/{uid}` — atomic uniqueness
+- Blocks tree access until username is set
+
+#### Phase 1C — Username Selection Flow (Existing Users)
+- One-time prompt on next login if no `userProfiles/{uid}` doc exists
+- Pre-suggest from display name (lowercase, stripped, truncated)
+
+#### Phase 1D — Display Integration
+- Settings → Account shows @username (editable with availability check)
+- Linked tree data uses username instead of email

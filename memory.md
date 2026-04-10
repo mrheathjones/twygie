@@ -69,6 +69,7 @@ familyTrees/{userId}
   people: [Person]
   updatedAt: Timestamp
   ownerEmail: string
+  allowedReaders: [uid]          // managed account UIDs with read access
 
 userSettings/{userId}
   defaultView: 'simple' | 'complex' | 'bloodline' | 'bonds'
@@ -78,6 +79,48 @@ userSettings/{userId}
   autoConnections: boolean
   customLineTypes: [{ id, name, color }]
   updatedAt: Timestamp
+
+userProfiles/{uid}                // universal username system
+  username: string               // lowercase, 3-20 chars, alphanumeric + underscores
+  displayName: string
+  email: string
+  createdAt: Timestamp
+
+usernames/{username}              // uniqueness enforcer (lowercase key)
+  uid: string
+  createdAt: Timestamp
+
+managedAccounts/{id}              // child/managed accounts
+  authType: 'email' | 'pin'
+  email: string | null
+  childUid: string | null
+  username: string | null
+  pinHash: string | null          // SHA-256 with per-account salt
+  pinSalt: string | null
+  anonUid: string | null
+  parentUid: string
+  childNodeId: string
+  childDob: { month, day, year }
+  displayName: string
+  tier: 'seedling' | 'sprouted' | 'full'
+  permissions: {
+    viewPhotos: boolean,
+    viewStories: boolean,
+    viewTimeline: boolean,
+    viewLinkedTrees: boolean,
+    exportTree: boolean,
+    editOwnNode: boolean,
+    addRemoveTwygs: boolean,
+    deleteTwygs: boolean,
+    linkTrees: boolean,
+    shareTrees: boolean
+  }
+  paused: boolean
+  blossomRequestedAt: Timestamp | null
+  blossomApprovedAt: Timestamp | null
+  autoBlossomAt: Timestamp | null
+  lastActiveAt: Timestamp
+  createdAt: Timestamp
 ```
 
 ## Person Object

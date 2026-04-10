@@ -55,6 +55,7 @@
 .sp-user-info{flex:1;min-width:0}
 .sp-user-name{font-size:.88rem;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sp-user-email{font-size:.74rem;color:var(--muted)}
+.sp-user-username{font-size:.74rem;color:var(--gold);font-weight:500;margin-top:1px}
 .sp-signout{padding:6px 12px;background:transparent;border:1px solid rgba(180,80,80,.25);border-radius:7px;color:rgba(200,100,100,.6);font-family:'Outfit',sans-serif;font-size:.76rem;cursor:pointer;transition:all .2s;white-space:nowrap}
 .sp-signout:hover{border-color:rgba(200,100,100,.5);color:rgba(220,120,120,.9)}
 
@@ -87,3 +88,11 @@
 /* Burn Twygs danger button */
 .sp-burn-btn{width:100%;padding:10px;background:rgba(180,60,60,.12);border:1px solid rgba(180,60,60,.3);border-radius:100px;color:rgba(220,100,100,.9);font-family:'Outfit',sans-serif;font-size:.82rem;font-weight:600;cursor:pointer;transition:all .2s;letter-spacing:.03em}
 .sp-burn-btn:hover{background:rgba(180,60,60,.25);border-color:rgba(180,60,60,.5)}
+.sp-user-username{cursor:pointer;transition:opacity .15s}
+.sp-user-username:hover{opacity:.7}
+.sp-user-username::after{content:' ✎';font-size:.62rem;opacity:.4}
+.sp-username-edit{margin-top:6px}
+.sp-username-btn{padding:5px 14px;border-radius:100px;font-family:Outfit,sans-serif;font-size:.72rem;font-weight:500;cursor:pointer;border:none;transition:opacity .15s}
+.sp-username-btn.save{background:var(--gold);color:#04070c}
+.sp-username-btn.save:disabled{opacity:.35;cursor:not-allowed}
+.sp-username-btn.cancel{background:rgba(255,255,255,.04);color:var(--muted);border:1px solid var(--border)}

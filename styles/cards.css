@@ -195,3 +195,25 @@
 .leaf-tag-cb{display:none}
 .leaf-tag-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
 .leaf-tag-name{white-space:nowrap}
+
+/* ─── USERNAME MODAL ──────────────────────────────────────────────────────── */
+#username-modal-bg{position:fixed;inset:0;z-index:9999;background:rgba(4,7,12,.85);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .3s}
+#username-modal-bg.open{opacity:1;pointer-events:auto}
+#username-modal{background:rgba(20,24,32,.92);border:1px solid rgba(200,168,75,.15);border-radius:18px;padding:36px 32px 28px;max-width:380px;width:90vw;text-align:center;transform:scale(.92);transition:transform .3s}
+#username-modal-bg.open #username-modal{transform:scale(1)}
+.username-modal-icon{font-size:2.4rem;margin-bottom:12px}
+.username-modal-title{font-family:'Cormorant Garamond',serif;font-size:1.4rem;color:var(--text);margin-bottom:6px;font-weight:600}
+.username-modal-sub{font-size:.78rem;color:var(--muted);margin-bottom:20px;line-height:1.4}
+.username-input-wrap{display:flex;align-items:center;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:0 14px;margin-bottom:6px;transition:border-color .2s}
+.username-input-wrap:focus-within{border-color:var(--gold)}
+.username-at{color:var(--gold);font-size:.95rem;font-weight:600;margin-right:2px;font-family:Outfit,sans-serif}
+#username-input{flex:1;background:none;border:none;outline:none;color:var(--text);font-size:.92rem;font-family:Outfit,sans-serif;padding:11px 0;letter-spacing:.02em}
+#username-input::placeholder{color:rgba(255,255,255,.2)}
+.username-feedback{font-size:.75rem;min-height:18px;margin-bottom:4px;transition:color .15s}
+.username-feedback.available{color:#4caf7d}
+.username-feedback.error{color:#e06b6b}
+.username-feedback.checking{color:var(--muted)}
+.username-rules{font-size:.68rem;color:rgba(255,255,255,.25);margin-bottom:18px}
+#username-claim-btn{width:100%;padding:11px;background:var(--gold);border:none;border-radius:100px;color:#04070c;font-family:Outfit,sans-serif;font-size:.85rem;font-weight:600;cursor:pointer;transition:opacity .2s}
+#username-claim-btn:disabled{opacity:.35;cursor:not-allowed}
+#username-claim-btn:not(:disabled):hover{opacity:.9}

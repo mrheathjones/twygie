@@ -286,13 +286,118 @@ An interactive, beautiful family tree web app. Each family member is a "Twyg" �
     - Person C + Person D had a baby
     - Person E passed away
   - Interactive timeline of all family events
-- [ ] **Child Accounts**
-  - Create accounts for children under a certain age
-    - Option: email or username-based
-    - Option: password or account PIN for easy use
-    - Ability to reset password/PIN
-  - Manage child account permissions
-    - Allow/disallow features: CRUD nodes, stories, timeline, contribute
+- [ ] **Universal Usernames** — unique @handle for every Twygie account
+  
+  #### Overview
+  Every Twygie account (regular and managed) gets a unique username. Replaces email as the
+  primary identity in social features (tree linking, shared trees, managed accounts).
+  
+  #### Schema
+  ```
+  userProfiles/{uid}
+    username: string          // "@heathj"
+    displayName: string       // "Heath Jones"
+    email: string
+    createdAt: Timestamp
+
+  usernames/{username}        // lowercase, uniqueness enforcer
+    uid: string
+    createdAt: Timestamp
+  ```
+  
+  #### Validation Rules
+  - Lowercase alphanumeric + underscores, 3–20 characters
+  - No spaces, no special characters
+  - Reserved words blocked: admin, twygie, support, help, system, null, undefined
+  - Two-collection pattern: write `usernames/{name}` first (fails if taken), then `userProfiles/{uid}`
+  
+  #### UX Flow
+  - New users: "Choose your username" modal after Firebase Auth, required before tree access
+  - Existing users: one-time prompt on next login, pre-suggest from display name
+  - Settings → Account: username editable with real-time availability check
+  - Username displayed on linked trees, shared data, and managed account references
+  
+  #### Implementation Phases
+  - [ ] **Phase 1A**: Schema, validation, reserved words, Firestore security rules
+  - [ ] **Phase 1B**: Username selection flow for new users (post-auth modal)
+  - [ ] **Phase 1C**: Username selection flow for existing users (migration prompt)
+  - [ ] **Phase 1D**: Display integration (Settings, node cards, linked trees)
+
+- [ ] **Managed Accounts (Child Accounts)** — supervised family member access
+  
+  #### Overview
+  Tree owners can create managed accounts for family members (especially children). Managed
+  accounts view the parent's tree from their own perspective (their node becomes isYou).
+  Three-tier progression: Seedling → Sprouted → Full Bloom.
+  
+  #### Auth Paths
+  - **Email (13+)**: Child's email address, normal Firebase Auth login
+  - **Username + PIN (any age, required under 13)**: Anonymous Firebase Auth, COPPA-compliant
+  - COPPA age gate: if node's DOB indicates under 13, email path is not rendered
+  
+  #### Three-Tier Blossom Protocol
+  
+  **Tier 1 — Seedling (Full Supervision)**
+  - Reads parent's `familyTrees/{parentUid}` with swapped isYou
+  - All permissions controlled by parent (viewPhotos, viewStories, viewTimeline,
+    viewLinkedTrees, exportTree, editOwnNode, addRemoveTwygs, deleteTwygs, linkTrees, shareTrees)
+  - Parent can pause account, view last active timestamp
+  - Child can request blossom (parent approves/denies)
+  
+  **Tier 2 — Sprouted (Light Supervision, Under 18)**
+  - Deep-copy of parent's tree into `familyTrees/{childUid}`, isYou swapped
+  - Auto-generated TWYG tree link between parent and child
+  - Locked-open permissions: viewPhotos, viewStories, viewTimeline, exportTree, editOwnNode
+  - Parent still controls: addRemoveTwygs, deleteTwygs, linkTrees, shareTrees
+  - PIN accounts prompted to add email via `linkWithCredential()`
+  
+  **Tier 3 — Full Bloom (18+, Fully Independent)**
+  - Auto-triggers when DOB indicates age >= 18 (checked on login)
+  - All parent supervision revoked
+  - Tree link remains as peer-to-peer connection
+  - Full access to all features, can create own managed accounts
+  - Parent can also manually trigger Full Bloom
+  
+  #### Schema
+  ```
+  managedAccounts/{id}
+    authType: 'email' | 'pin'
+    email: string | null
+    childUid: string | null
+    username: string | null         // from universal usernames system
+    pinHash: string | null          // SHA-256 with per-account salt
+    anonUid: string | null
+    parentUid: string
+    childNodeId: string
+    childDob: { month, day, year }
+    displayName: string
+    tier: 'seedling' | 'sprouted' | 'full'
+    permissions: { viewPhotos, viewStories, viewTimeline, viewLinkedTrees,
+                   exportTree, editOwnNode, addRemoveTwygs, deleteTwygs,
+                   linkTrees, shareTrees }
+    paused: boolean
+    blossomRequestedAt: Timestamp | null
+    blossomApprovedAt: Timestamp | null
+    autoBlossomAt: Timestamp | null
+    lastActiveAt: Timestamp
+    createdAt: Timestamp
+  ```
+  
+  #### Implementation Phases
+  - [ ] **Phase 2A**: Schema + COPPA age gate logic
+  - [ ] **Phase 2B**: Firestore security rules (allowedReaders on familyTrees)
+  - [ ] **Phase 3A**: Settings → Managed Accounts section (list + create button)
+  - [ ] **Phase 3B**: Creation flow (node picker, age gate, email/PIN fork, permissions)
+  - [ ] **Phase 3C**: Management UI (edit permissions, reset PIN, pause, delete, trigger blossom)
+  - [ ] **Phase 4A**: Login page — "Log in with family username" section
+  - [ ] **Phase 4B**: Managed mode app behavior (swapped isYou, permission-based UI, read-only)
+  - [ ] **Phase 4C**: Blossom request (child-initiated)
+  - [ ] **Phase 5A**: Seedling → Sprouted blossom (tree copy, auto-link, permission lock)
+  - [ ] **Phase 5B**: Sprouted → Full Bloom auto-blossom (age check on login)
+  - [ ] **Phase 5C**: PIN → full auth upgrade via linkWithCredential()
+  - [ ] **Phase 6A**: Data integrity (parent deletion, node deletion edge cases)
+  - [ ] **Phase 6B**: Visual polish (tier badges, blossom animation)
+  - [ ] **Phase 6C**: Security hardening (PIN rate limiting, salt, Firestore rules audit)
 - [ ] Mobile app (iOS/Android)
 - [ ] AI story generation from notes
 - [ ] Birthday/anniversary notifications

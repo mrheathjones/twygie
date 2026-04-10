@@ -237,6 +237,8 @@ function openSettings(){
   else spAv.textContent=(u.displayName||u.email||'?')[0].toUpperCase();
   document.getElementById('sp-name').textContent=u.displayName||'';
   document.getElementById('sp-email').textContent=u.email||'';
+  const unameEl=document.getElementById('sp-username');
+  if(unameEl) unameEl.textContent=currentUsername?'@'+currentUsername:'';
   // Sync current setting
   setSettingsMode(settingsMode);
   // Count generations
@@ -271,3 +273,95 @@ function closeSettings(){
     document.getElementById('scrim').classList.remove('on');
 }
 
+
+// ─── USERNAME EDITING (Settings) ─────────────────────────────────────────────
+function initUsernameEdit(){
+  const display=document.getElementById('sp-username');
+  const editor=document.getElementById('sp-username-edit');
+  const input=document.getElementById('sp-username-input');
+  const feedback=document.getElementById('sp-username-feedback');
+  const saveBtn=document.getElementById('sp-username-save');
+  const cancelBtn=document.getElementById('sp-username-cancel');
+  if(!display||!editor) return;
+
+  let debounceTimer=null;
+
+  display.addEventListener('click',()=>{
+    input.value=currentUsername||'';
+    feedback.textContent='';
+    feedback.className='username-feedback';
+    saveBtn.disabled=true;
+    display.style.display='none';
+    editor.style.display='block';
+    input.focus();
+  });
+
+  cancelBtn.addEventListener('click',()=>{
+    editor.style.display='none';
+    display.style.display='';
+  });
+
+  input.addEventListener('input',()=>{
+    const val=input.value.toLowerCase().replace(/[^a-z0-9_]/g,'');
+    input.value=val;
+    const err=validateUsername(val);
+    if(err){
+      feedback.textContent=err;
+      feedback.className='username-feedback error';
+      saveBtn.disabled=true;
+      return;
+    }
+    if(val===currentUsername){
+      feedback.textContent='This is your current username';
+      feedback.className='username-feedback checking';
+      saveBtn.disabled=true;
+      return;
+    }
+    feedback.textContent='Checking…';
+    feedback.className='username-feedback checking';
+    saveBtn.disabled=true;
+    clearTimeout(debounceTimer);
+    debounceTimer=setTimeout(async()=>{
+      try{
+        const avail=await checkUsernameAvailable(val);
+        if(input.value!==val) return;
+        if(avail){
+          feedback.textContent='✓ Available';
+          feedback.className='username-feedback available';
+          saveBtn.disabled=false;
+        }else{
+          feedback.textContent='Already taken';
+          feedback.className='username-feedback error';
+          saveBtn.disabled=true;
+        }
+      }catch(e){
+        feedback.textContent='Error checking';
+        feedback.className='username-feedback error';
+      }
+    },400);
+  });
+
+  saveBtn.addEventListener('click',async()=>{
+    const val=input.value;
+    const err=validateUsername(val);
+    if(err||val===currentUsername) return;
+    saveBtn.disabled=true;
+    saveBtn.textContent='Saving…';
+    try{
+      await changeUsername(val);
+      display.textContent='@'+val;
+      editor.style.display='none';
+      display.style.display='';
+      saveBtn.textContent='Save';
+    }catch(e){
+      feedback.textContent='Failed — username may be taken';
+      feedback.className='username-feedback error';
+      saveBtn.textContent='Save';
+      saveBtn.disabled=false;
+    }
+  });
+}
+
+// Init when DOM is ready
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',initUsernameEdit);
+else initUsernameEdit();
