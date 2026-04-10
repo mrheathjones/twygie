@@ -411,34 +411,39 @@ function drawNodes(){
       G.appendChild(innerA);
     }
 
-    // Managed account indicator — small icon below node
+    // Managed account indicator — visible ring + badge outside glow
     if(typeof managedAccounts!=='undefined'){
       const ma=managedAccounts.find(a=>a.childNodeId===p.id);
       if(ma){
-        const tierColor={seedling:'rgba(100,180,100,0.6)',sprouted:'rgba(200,168,75,0.6)',full:'rgba(120,160,220,0.6)'}[ma.tier]||'rgba(100,180,100,0.6)';
-        // Small ring indicator
+        const tierColor={seedling:'rgba(100,180,100,0.8)',sprouted:'rgba(200,168,75,0.8)',full:'rgba(120,160,220,0.8)'}[ma.tier]||'rgba(100,180,100,0.8)';
+        const tierFill={seedling:'rgba(100,180,100,0.2)',sprouted:'rgba(200,168,75,0.2)',full:'rgba(120,160,220,0.2)'}[ma.tier]||'rgba(100,180,100,0.2)';
+        // Dashed ring outside the glow
         const mRing=createSvgElement('circle');
-        mRing.setAttribute('r',String(R+7));
+        mRing.setAttribute('r',String(GR+6));
         mRing.setAttribute('fill','none');
         mRing.setAttribute('stroke',tierColor);
-        mRing.setAttribute('stroke-width','1.5');
-        mRing.setAttribute('stroke-dasharray','3,2');
+        mRing.setAttribute('stroke-width','2');
+        mRing.setAttribute('stroke-dasharray','5,3');
         mRing.setAttribute('class','managed-ring');
         G.appendChild(mRing);
-        // Small seedling dot
-        const mDot=createSvgElement('circle');
-        mDot.setAttribute('cx',String(R+4));
-        mDot.setAttribute('cy',String(-(R+4)));
-        mDot.setAttribute('r','4');
-        mDot.setAttribute('fill',tierColor);
-        G.appendChild(mDot);
-        const mIcon=createSvgElement('text');
-        mIcon.setAttribute('x',String(R+4));
-        mIcon.setAttribute('y',String(-(R+1)));
-        mIcon.setAttribute('text-anchor','middle');
-        mIcon.setAttribute('font-size','6');
-        mIcon.textContent={seedling:'🌱',sprouted:'🌿',full:'🌳'}[ma.tier]||'🌱';
-        G.appendChild(mIcon);
+        // Badge circle with tier icon text at top-right
+        const badgeX=Math.round((GR+2)*0.7);
+        const badgeY=-Math.round((GR+2)*0.7);
+        const mBg=createSvgElement('circle');
+        mBg.setAttribute('cx',String(badgeX));
+        mBg.setAttribute('cy',String(badgeY));
+        mBg.setAttribute('r','8');
+        mBg.setAttribute('fill',tierFill);
+        mBg.setAttribute('stroke',tierColor);
+        mBg.setAttribute('stroke-width','1.5');
+        G.appendChild(mBg);
+        const mTxt=createSvgElement('text');
+        mTxt.setAttribute('x',String(badgeX));
+        mTxt.setAttribute('y',String(badgeY+3.5));
+        mTxt.setAttribute('text-anchor','middle');
+        mTxt.setAttribute('font-size','9');
+        mTxt.textContent={seedling:'🌱',sprouted:'🌿',full:'🌳'}[ma.tier]||'🌱';
+        G.appendChild(mTxt);
       }
     }
 
