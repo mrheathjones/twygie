@@ -124,6 +124,44 @@ An interactive, beautiful family tree web app. Each family member is a "Twyg" �
 - [x] Timeline view (by birth year) ✅ DONE (Session 10)
 - [x] Export tree as image/PDF ✅ DONE (Session 10)
 - [ ] GEDCOM import (Ancestry/FamilySearch)
+
+- [ ] **Twyg Map** — interactive world map showing family locations
+  
+  #### Overview
+  A global map underlay where Twygs appear at their location (current location if set, birthplace as fallback).
+  Pan and zoom from world view → country → state → city level for precise location context.
+  
+  #### Key Features
+  - World map with dark theme tiles matching Twygie aesthetic
+  - Twyg markers: glowing dots color-coded by relationship category
+  - Clustering: zoomed-out groups show "3 Twygs" badge, click to expand
+  - Zoom progression: world → country → state → city (smooth animation)
+  - Dual search: search by Twyg name (zooms to their location) or city/state (zooms to area)
+  - Connection lines between Twygs on map (optional toggle — shows migration/spread)
+  - "X Twygs missing location" indicator
+  
+  #### Data Model
+  - New field: `currentLocation` (city/state/country string) — optional
+  - Fallback: existing `birthplace` field
+  - Geocoded coordinates cached as `lat`/`lng` on person object
+  
+  #### Technical Stack
+  - Leaflet.js or Mapbox GL for map rendering
+  - Geocoding API for address→coordinates conversion
+  - Marker clustering library for zoom-level grouping
+  - New page: map.html + styles/map.css + js/map-page.js
+  
+  #### Complexity: Medium-High (~4-5 hours)
+  - Map library setup + dark theme tiles
+  - Geocoding integration + coordinate caching
+  - Custom Twygie-branded markers with clustering
+  - Dual search (twyg name + location)
+  - Page shell + header navigation link
+  
+  #### Future Enhancements
+  - Timeline slider: see where family was at different decades
+  - Migration lines: animated paths showing family movement over time
+  - Leafs on map: show story/moment locations
 - [x] **Anniversary Capture** (Session 10)
   - When spouse connection is made, branded modal prompts for Wedding Date
   - Shows 💍 Married [date] · [years] in node card info section
