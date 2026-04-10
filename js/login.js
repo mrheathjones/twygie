@@ -148,12 +148,15 @@ async function submitEmail() {
       goToApp();
     } catch (err) {
       const code = err.code;
-      if (code === 'auth/user-not-found') {
-        showErr('Username not found.');
-      } else if (code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
-        showErr('Username not found.');
+      if (code === 'auth/user-not-found' || code === 'auth/invalid-credential') {
+        showErr('Account not found. Check your username.');
+      } else if (code === 'auth/wrong-password') {
+        showErr('Account error. Please contact your parent to recreate.');
+      } else if (code === 'auth/too-many-requests') {
+        showErr('Too many attempts. Please try again later.');
       } else {
-        showErr('Something went wrong. Please try again.');
+        console.error('Login error:', code, err.message);
+        showErr('Sign in failed. Please try again.');
       }
       setLoading('email-btn', false);
       setSocialLoading(false);
