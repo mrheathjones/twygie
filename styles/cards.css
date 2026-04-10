@@ -44,7 +44,7 @@
 #link-modal{background:#080f1d;border:1px solid rgba(200,168,75,.2);border-radius:16px;width:380px;max-width:92vw;padding:28px;box-shadow:0 30px 60px rgba(0,0,0,.6);text-align:center}
 
 /* BRANDED CONFIRM/ALERT MODAL */
-#app-modal-bg{position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);opacity:0;pointer-events:none;transition:opacity .2s;display:flex;align-items:center;justify-content:center}
+#app-modal-bg{position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);opacity:0;pointer-events:none;transition:opacity .2s;display:flex;align-items:center;justify-content:center}
 #app-modal-bg.open{opacity:1;pointer-events:all}
 #app-modal{background:#080f1d;border:1px solid rgba(200,168,75,.2);border-radius:14px;width:340px;max-width:90vw;padding:24px;box-shadow:0 20px 50px rgba(0,0,0,.6);text-align:center}
 #app-modal.leaf-modal{background:rgba(10,20,14,.97);border-color:rgba(100,180,100,.25)}
