@@ -51,7 +51,7 @@ function renderMembersList(){
       html+=`<div class="mp-item" onclick="closeMembersPanel();selectNode('${p.id}')">
         <div class="mp-photo" style="color:${c}">${p.photo?`<img src="${p.photo}"/>`:`<span>${initials(p)}</span>`}</div>
         <div class="mp-info">
-          <div class="mp-name">${fullName(p)}${p.isYou?' (You)':''}</div>
+          <div class="mp-name">${fullName(p)}${p.isYou?' (You)':''}${p.nickname?' <span style="font-style:italic;color:var(--muted);font-size:.78rem">"'+p.nickname+'"</span>':''}</div>
           <div class="mp-sub">${rel||''}${dobDisplay(p)?` · ${dobDisplay(p)}`:''}</div>
         </div>
         <div class="mp-dot" style="background:${c};box-shadow:0 0 5px ${c}"></div>
@@ -87,7 +87,8 @@ function showTooltip(e,p){
   const rel=getRelToYou(p.id);
   const age=calcAge(p);
   const ageStr=age?(p.death||(p.dod&&p.dod.year)?` · ${age} yrs`:(` · Age ${age}`)):'';
-  t.innerHTML=`${photoHtml}<span>${fullName(p)}${rel?' · '+rel:''}${ageStr}</span>`;
+  const nickStr=p.nickname?' "'+p.nickname+'"':'';
+  t.innerHTML=`${photoHtml}<span>${fullName(p)}${nickStr}${rel?' · '+rel:''}${ageStr}</span>`;
   t.style.left=(e.clientX+14)+'px'; t.style.top=(e.clientY-12)+'px';
   t.classList.add('show');
 }

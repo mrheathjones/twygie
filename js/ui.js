@@ -234,6 +234,8 @@ function fillCard(p){
   av.style.borderColor=c;
   av.innerHTML=p.photo?`<img src="${p.photo}"/>`:`<span style="color:${c}">${initials(p)}</span>`;
   document.getElementById('cname').textContent=p.isYou?'You':fullName(p);
+  const nickEl=document.getElementById('cnick');
+  if(nickEl){ nickEl.textContent=p.nickname?'"'+p.nickname+'"':''; nickEl.style.display=p.nickname?'':'none'; }
   // Show birth + death dates
   let dateText=dobDisplay(p);
   if(p.death||(p.dod&&p.dod.year)){
@@ -419,6 +421,7 @@ function editCard(id){
       <div><label class="el">First Name</label><input class="ei" id="ei-first" value="${(p.firstName||'').replace(/"/g,'&quot;')}" placeholder="First"/></div>
       <div><label class="el">Last Name</label><input class="ei" id="ei-last" value="${(p.lastName||'').replace(/"/g,'&quot;')}" placeholder="Last"/></div>
     </div>
+    <div class="ef"><label class="el">Nickname</label><input class="ei" id="ei-nickname" value="${(p.nickname||'').replace(/"/g,'&quot;')}" placeholder="e.g. Pops, Nana, Bear"/></div>
     <div class="ef"><label class="el">Gender</label>
       <select class="ei" style="appearance:none"  id="ei-gender">${gOpts}</select>
     </div>
@@ -510,6 +513,7 @@ function saveCard(id){
   const last=document.getElementById('ei-last').value.trim();
   p.firstName=first; p.lastName=last;
   p.name=[first,last].filter(Boolean).join(' ')||p.name;
+  p.nickname=(document.getElementById('ei-nickname')?.value||'').trim()||null;
   p.gender=document.getElementById('ei-gender').value;
   p.dob={
     month:document.getElementById('ei-dob-month').value,

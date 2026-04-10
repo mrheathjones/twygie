@@ -15,6 +15,7 @@
 .cmeta{flex:1;min-width:0;padding-right:28px}
 .cbar{height:3px;border-radius:3px;margin-bottom:10px;width:34px}
 .cname{font-family:'Cormorant Garamond',serif;font-size:1.6rem;font-weight:600;color:var(--text);line-height:1.15;margin-bottom:3px}
+.cnick{font-family:'Cormorant Garamond',serif;font-size:.92rem;font-style:italic;color:var(--muted);margin-bottom:2px}
 .cdob{font-size:.82rem;color:var(--muted);margin-bottom:2px}
 .cplace{font-size:.78rem;color:rgba(200,168,75,.62);font-style:italic}
 .canniv{font-size:.75rem;color:rgba(200,168,75,.5);margin-top:4px;display:flex;align-items:center;gap:5px}
